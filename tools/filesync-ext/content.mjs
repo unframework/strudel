@@ -77,6 +77,32 @@ async function ensureDirectoryAccess() {
 }
 
 /**
+ * Clean up existing files with same ID but different filenames
+ *
+ * @param {FileSystemDirectoryHandle} dirHandle
+ * @param {string} id
+ * @param {string} filename current filename to keep
+ */
+async function removeMismatchingPatternFiles(dirHandle, id, filename) {
+  // Avoid weird scenarios where a super short ID matches many files and destroys a lot of data
+  if (id.length !== 12) {
+    console.warn(`filesync-ext: skipping cleanup for pattern ${id} with non-standard ID length`);
+    return;
+  }
+
+  for await (const [name, entry] of dirHandle.entries()) {
+    if (entry.kind !== 'file') {
+      continue;
+    }
+
+    if (name !== filename && name.includes(id) && name.endsWith('.strudel.js')) {
+      console.log(`filesync-ext: removing old file for pattern ${id}: ${name}`);
+      await dirHandle.removeEntry(name);
+    }
+  }
+}
+
+/**
  *
  * @param {string} id
  * @param {string} code
@@ -84,12 +110,17 @@ async function ensureDirectoryAccess() {
 async function syncPattern(id, code) {
   console.log(`filesync-ext: syncing pattern ${id} to local filesystem`);
 
+  if (fileNameSanitize(id) !== id) {
+    console.error(`filesync-ext: pattern ID ${id} contains unsafe filename characters`);
+    return;
+  }
+
   const meta = getMetadata(code);
   const title = meta.title || 'unnamed';
   const author = Array.isArray(meta.by) ? meta.by.join(',') : 'Anonymous';
 
-  const prefix = `${fileNameSanitize(title).slice(0, 50)}_${fileNameSanitize(author).slice(0, 30)}`;
-  const filename = `${prefix}_${fileNameSanitize(id)}.strudel.js`;
+  const prefix = `${fileNameSanitize(title).slice(0, 50)} - ${fileNameSanitize(author).slice(0, 30)}`;
+  const filename = `${prefix} (${id}).strudel.js`;
 
   console.log(`filesync-ext: writing file: ${filename}`);
 
@@ -102,6 +133,8 @@ async function syncPattern(id, code) {
     await writable.close();
 
     console.log(`filesync-ext: successfully wrote pattern ${id} to ${filename}`);
+
+    await removeMismatchingPatternFiles(dirHandle, id, filename);
   } catch (e) {
     console.error(`filesync-ext: error writing pattern ${id} to file`, e);
   }
