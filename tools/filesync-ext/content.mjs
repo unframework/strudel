@@ -6,7 +6,7 @@ import { getMetadata } from '../../website/src/metadata_parser';
 console.log('filesync-ext: active');
 
 const STORAGE_KEY = 'strudel-settingsuserPatterns';
-const KV_KEY_DIR_HANDLE = 'strudel-filesync-ext-directory-handle';
+const KV_KEY_DIR_HANDLE = 'strudel-filesync-ext-dir-handle';
 
 /**
  * @param {string} key
@@ -64,6 +64,10 @@ function fileNameSanitize(name) {
 // TODO: run this in advance before saving somehow
 async function ensureDirectoryAccess() {
   const existingHandle = await kvGet(KV_KEY_DIR_HANDLE);
+  if (existingHandle) {
+    await existingHandle.requestPermission({ mode: 'readwrite' });
+  }
+
   const dirHandle = existingHandle || (await window.showDirectoryPicker());
 
   const testFileHandle = await dirHandle.getFileHandle('strudel filesync.txt', { create: true });
