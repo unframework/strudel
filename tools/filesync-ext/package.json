@@ -1,6 +1,17 @@
 {
   "name": "filesync-ext",
+  "version": "0.1.0",
+  "description": "Browser extension for syncing Strudel patterns with local filesystem",
+  "type": "module",
+  "scripts": {
+    "build": "mkdirp dist && copy manifest.json dist && esbuild content.mjs --bundle --outfile=dist/content.js --format=iife --platform=browser --target=chrome90",
+    "dev": "npm run build && esbuild content.mjs --bundle --outfile=dist/content.js --format=iife --platform=browser --target=chrome90 --watch"
+  },
   "dependencies": {
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.2",
+    "mkdirp": "^3.0.1"
   },
   "engines": {
     "node": ">=18.0.0"

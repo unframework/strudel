@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Strudel Filesystem Sync",
+  "version": "0.1.0",
+  "description": "Browser extension for syncing Strudel patterns with local filesystem",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://strudel.cc/*",
+    "http://localhost:4321/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://strudel.cc/*",
+        "http://localhost:4321/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
