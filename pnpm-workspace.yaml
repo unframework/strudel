@@ -2,6 +2,7 @@ packages:
   - packages/*
   - examples/*
   - tools/dbpatch
+  - tools/filesync-ext
   - website/
 
 onlyBuiltDependencies:
