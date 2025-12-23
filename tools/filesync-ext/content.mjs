@@ -32,6 +32,16 @@ const userPatternSchema = z.object({
   collection: z.literal('user'),
 });
 
+/**
+ *
+ * @template T extends z.ZodTypeAny
+ * @param {T} schema
+ * @returns {z.ZodRecord<z.ZodString, T | undefined>}
+ */
+function safeMap(schema) {
+  return z.record(schema.optional().catch(undefined));
+}
+
 function jsonParse(raw) {
   return new Promise((resolve, reject) => {
     try {
@@ -50,8 +60,8 @@ createStorageListener(STORAGE_KEY, (newValue, oldValue) => {
     const newPatternsRaw = await jsonParse(newValue || '{}');
     const oldPatternsRaw = await jsonParse(oldValue).catch(() => ({}));
 
-    const newPatterns = await z.record(userPatternSchema.optional().catch(undefined)).parseAsync(newPatternsRaw);
-    const oldPatterns = await z.record(userPatternSchema.optional().catch(undefined)).parseAsync(oldPatternsRaw);
+    const newPatterns = await safeMap(userPatternSchema).parseAsync(newPatternsRaw);
+    const oldPatterns = await safeMap(userPatternSchema).parseAsync(oldPatternsRaw);
 
     // Determine added or updated patterns
     for (const newPattern of Object.values(newPatterns)) {
