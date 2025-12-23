@@ -686,6 +686,10 @@ importers:
         version: 6.3.11
 
   tools/filesync-ext:
+    dependencies:
+      zod:
+        specifier: ^3.24.1
+        version: 3.24.1
     devDependencies:
       esbuild:
         specifier: ^0.24.2
