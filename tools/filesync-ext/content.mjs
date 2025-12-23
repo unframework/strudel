@@ -162,3 +162,49 @@ createStorageListener(STORAGE_KEY, (newValue, oldValue) => {
     }
   })();
 });
+
+const eventSchema = z.object({
+  namespace: z.literal('strudel-filesync-ext'),
+  type: z.string(),
+});
+
+async function onEvent(event) {
+  if (event.type === 'load') {
+    console.log('filesync-ext: load event');
+    const dirHandle = await ensureDirectoryAccess();
+
+    const codeUpdates = {};
+    for await (const [name, entry] of dirHandle.entries()) {
+      if (entry.kind !== 'file') {
+        continue;
+      }
+
+      console.log(`filesync-ext: found file: ${name}`);
+
+      const patternIdMatch = name.match(/\(([^)]{12})\)\.strudel\.js$/);
+      if (!patternIdMatch) {
+        continue;
+      }
+
+      const id = patternIdMatch[1];
+      const fileHandle = await dirHandle.getFileHandle(name);
+      const file = await fileHandle.getFile();
+      const code = await file.text();
+
+      codeUpdates[id] = code;
+      console.log(`filesync-ext: loaded pattern ${id} from file ${name}`);
+    }
+
+    console.log('filesync-ext: sending code updates to REPL', codeUpdates);
+  }
+}
+
+// window.postMessage({namespace: 'strudel-filesync-ext', type: 'load'})
+window.addEventListener('message', async (event) => {
+  const parsed = eventSchema.safeParse(event.data);
+  if (!parsed.success) {
+    return;
+  }
+
+  onEvent(parsed.data);
+});
