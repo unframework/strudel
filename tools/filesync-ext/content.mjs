@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { getMetadata } from '../../website/src/metadata_parser';
+
 console.log('filesync-ext: active');
 
 const STORAGE_KEY = 'strudel-settingsuserPatterns';
@@ -53,6 +55,38 @@ function jsonParse(raw) {
   });
 }
 
+function fileNameSanitize(name) {
+  return name.replace(/[^ a-z0-9_\-(),.]/gi, '-');
+}
+
+/**
+ *
+ * @param {string} id
+ * @param {string} code
+ */
+async function syncPattern(id, code) {
+  console.log(`filesync-ext: syncing pattern ${id} to local filesystem`);
+
+  const meta = getMetadata(code);
+  const title = meta.title || 'unnamed';
+  const author = Array.isArray(meta.by) ? meta.by.join(',') : 'Anonymous';
+
+  const prefix = `${fileNameSanitize(title).slice(0, 50)}_${fileNameSanitize(author).slice(0, 30)}`;
+  const filename = `${prefix}_${fileNameSanitize(id)}.strudel.js`;
+
+  console.log(`filesync-ext: writing file: ${filename}`);
+
+  try {
+    const handle = await window.showDirectoryPicker().then((dir) => dir.getFileHandle(filename, { create: true }));
+    const writable = await handle.createWritable();
+    await writable.write(code);
+    await writable.close();
+    console.log(`filesync-ext: successfully wrote pattern ${id} to ${filename}`);
+  } catch (e) {
+    console.error(`filesync-ext: error writing pattern ${id} to file`, e);
+  }
+}
+
 createStorageListener(STORAGE_KEY, (newValue, oldValue) => {
   console.log('filesync-ext: detected change in userPatterns');
 
@@ -70,6 +104,7 @@ createStorageListener(STORAGE_KEY, (newValue, oldValue) => {
       const oldPattern = oldPatterns[id];
       if (oldPattern?.code !== code) {
         console.log(`filesync-ext: pattern updated: ${id}`);
+        await syncPattern(id, code);
       }
     }
   })();
