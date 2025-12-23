@@ -27,6 +27,21 @@ function createStorageListener(key, onChange) {
       initialValue = currentValue;
     }
   }, 500);
+
+  return {
+    get() {
+      return initialValue;
+    },
+
+    /**
+     * Update without triggering the listener
+     * @param {string} value
+     */
+    update(value) {
+      initialValue = value;
+      localStorage.setItem(key, value);
+    },
+  };
 }
 
 const userPatternSchema = z.object({
@@ -144,7 +159,7 @@ async function syncPattern(id, code) {
   }
 }
 
-createStorageListener(STORAGE_KEY, (newValue, oldValue) => {
+const store = createStorageListener(STORAGE_KEY, (newValue, oldValue) => {
   console.log('filesync-ext: detected change in userPatterns');
 
   (async () => {
@@ -200,6 +215,17 @@ async function onEvent(event) {
     }
 
     console.log('filesync-ext: sending code updates to REPL', codeUpdates);
+    if (Object.keys(codeUpdates).length > 0) {
+      const data = await jsonParse(store.get() || '{}');
+
+      for (const [id, code] of Object.entries(codeUpdates)) {
+        const existing = data[id] || { id, code: '', collection: 'user', created_at: Date.now() };
+        data[id] = { ...existing, code };
+      }
+
+      store.update(JSON.stringify(data));
+      console.log('filesync-ext: code updates sent to REPL');
+    }
   }
 }
 
