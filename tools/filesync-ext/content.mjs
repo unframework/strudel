@@ -129,7 +129,7 @@ const eventSchema = z
   .and(
     z
       .discriminatedUnion('type', [
-        z.object({ type: z.literal('load') }),
+        z.object({ type: z.literal('load'), rpcCallId: z.string() }),
         z.object({ type: z.literal('userPatternUpdated'), data: userPatternSchema }),
       ])
       .catch(({ input }) => ({
@@ -169,6 +169,15 @@ async function onEvent(event) {
     }
 
     console.log('filesync-ext: sending code updates to REPL', codeUpdates);
+    window.postMessage(
+      {
+        namespace: 'strudel-main',
+        type: 'rpcResponse',
+        id: event.rpcCallId,
+        response: codeUpdates,
+      },
+      window.origin,
+    );
   } else if (event.type === 'unknown') {
     console.error('filesync-ext: unknown event received', event.input);
   }
