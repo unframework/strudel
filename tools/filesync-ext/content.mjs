@@ -152,8 +152,6 @@ async function onEvent(event) {
         continue;
       }
 
-      console.log(`filesync-ext: found file: ${name}`);
-
       const patternIdMatch = name.match(/\(([^)]{12})\)\.strudel\.js$/);
       if (!patternIdMatch) {
         continue;
@@ -192,3 +190,6 @@ window.addEventListener('message', async (event) => {
 
   onEvent(parsed.data);
 });
+
+// Indicate presence of the extension
+document.body.classList.add('strudel-filesync-ext-active');

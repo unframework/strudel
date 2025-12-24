@@ -37,6 +37,11 @@ export async function saveFilesyncExtPattern(id, data) {
 }
 
 export async function loadFilesyncExtData() {
+  if (!document.body.classList.contains('strudel-filesync-ext-active')) {
+    console.log('filesync-ext: extension not active, skipping load');
+    return {};
+  }
+
   const { promise, id } = initRPCSink();
   window.postMessage(
     {
