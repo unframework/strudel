@@ -141,6 +141,9 @@ export const userPattern = {
     const userPatterns = this.getAll();
     data = { ...data, id, collection: this.collection };
     setUserPatterns({ ...userPatterns, [id]: data });
+
+    window.postMessage?.({ namespace: 'strudel-filesync-ext', type: 'userPatternUpdated', data }, window.origin);
+
     return { id, data };
   },
   duplicate(data) {

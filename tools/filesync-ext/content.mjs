@@ -5,44 +5,7 @@ import { getMetadata } from '../../website/src/metadata_parser';
 
 console.log('filesync-ext: active');
 
-const STORAGE_KEY = 'strudel-settingsuserPatterns';
 const KV_KEY_DIR_HANDLE = 'strudel-filesync-ext-dir-handle';
-
-/**
- * @param {string} key
- * @param {(newValue: string, oldValue: string) => void} onChange
- */
-function createStorageListener(key, onChange) {
-  let initialValue = localStorage.getItem(key) || '';
-
-  setInterval(() => {
-    const currentValue = localStorage.getItem(key);
-    if (currentValue !== initialValue) {
-      try {
-        onChange(currentValue, initialValue);
-      } catch (e) {
-        console.error('filesync-ext: error in storage listener', e);
-      }
-
-      initialValue = currentValue;
-    }
-  }, 500);
-
-  return {
-    get() {
-      return initialValue;
-    },
-
-    /**
-     * Update without triggering the listener
-     * @param {string} value
-     */
-    update(value) {
-      initialValue = value;
-      localStorage.setItem(key, value);
-    },
-  };
-}
 
 const userPatternSchema = z.object({
   id: z.string(),
@@ -159,36 +122,27 @@ async function syncPattern(id, code) {
   }
 }
 
-const store = createStorageListener(STORAGE_KEY, (newValue, oldValue) => {
-  console.log('filesync-ext: detected change in userPatterns');
-
-  (async () => {
-    const newPatternsRaw = await jsonParse(newValue || '{}');
-    const oldPatternsRaw = await jsonParse(oldValue).catch(() => ({}));
-
-    const newPatterns = await safeMap(userPatternSchema).parseAsync(newPatternsRaw);
-    const oldPatterns = await safeMap(userPatternSchema).parseAsync(oldPatternsRaw);
-
-    // Determine added or updated patterns
-    for (const newPattern of Object.values(newPatterns)) {
-      const { id, code } = newPattern;
-
-      const oldPattern = oldPatterns[id];
-      if (oldPattern?.code !== code) {
-        console.log(`filesync-ext: pattern updated: ${id}`);
-        await syncPattern(id, code);
-      }
-    }
-  })();
-});
-
-const eventSchema = z.object({
-  namespace: z.literal('strudel-filesync-ext'),
-  type: z.string(),
-});
+const eventSchema = z
+  .object({
+    namespace: z.literal('strudel-filesync-ext'),
+  })
+  .and(
+    z
+      .discriminatedUnion('type', [
+        z.object({ type: z.literal('load') }),
+        z.object({ type: z.literal('userPatternUpdated'), data: userPatternSchema }),
+      ])
+      .catch(({ input }) => ({
+        type: 'unknown',
+        input,
+      })),
+  );
 
 async function onEvent(event) {
-  if (event.type === 'load') {
+  if (event.type === 'userPatternUpdated') {
+    const patternData = event.data;
+    await syncPattern(patternData.id, patternData.code);
+  } else if (event.type === 'load') {
     console.log('filesync-ext: load event');
     const dirHandle = await ensureDirectoryAccess();
 
@@ -215,17 +169,8 @@ async function onEvent(event) {
     }
 
     console.log('filesync-ext: sending code updates to REPL', codeUpdates);
-    if (Object.keys(codeUpdates).length > 0) {
-      const data = await jsonParse(store.get() || '{}');
-
-      for (const [id, code] of Object.entries(codeUpdates)) {
-        const existing = data[id] || { id, code: '', collection: 'user', created_at: Date.now() };
-        data[id] = { ...existing, code };
-      }
-
-      store.update(JSON.stringify(data));
-      console.log('filesync-ext: code updates sent to REPL');
-    }
+  } else if (event.type === 'unknown') {
+    console.error('filesync-ext: unknown event received', event.input);
   }
 }
 
