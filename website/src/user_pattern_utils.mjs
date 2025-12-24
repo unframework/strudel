@@ -4,6 +4,7 @@ import { logger } from '@strudel/core';
 import { nanoid } from 'nanoid';
 import { settingsMap } from './settings.mjs';
 import { confirmDialog, parseJSON, supabase } from './repl/util.mjs';
+import { loadFilesyncExtData, saveFilesyncExtPattern } from './filesync.mjs';
 
 export let $publicPatterns = atom([]);
 export let $featuredPatterns = atom([]);
@@ -104,6 +105,25 @@ export function getActivePattern() {
 }
 export function useActivePattern() {
   return useStore($activePattern);
+}
+
+export async function loadAllPatterns() {
+  const codeUpdates = [];
+
+  const userPatterns = userPattern.getAll();
+  const updatedPatterns = {};
+  Object.entries(codeUpdates).forEach(([id, code]) => {
+    updatedPatterns[id] = {
+      ...(userPatterns[id] || {
+        id,
+        created_at: Date.now(),
+        collection: patternFilterName.user,
+      }),
+      code,
+    };
+  });
+
+  setUserPatterns({ ...userPatterns, ...updatedPatterns });
 }
 
 export const setLatestCode = (code) => settingsMap.setKey('latestCode', code);
