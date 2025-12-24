@@ -4,6 +4,7 @@ import { logger } from '@strudel/core';
 import { nanoid } from 'nanoid';
 import { settingsMap } from './settings.mjs';
 import { confirmDialog, parseJSON, supabase } from './repl/util.mjs';
+import { loadFilesyncExtData, saveFilesyncExtPattern } from './filesync.mjs';
 
 export let $publicPatterns = atom([]);
 export let $featuredPatterns = atom([]);
@@ -106,63 +107,23 @@ export function useActivePattern() {
   return useStore($activePattern);
 }
 
-function initRPCSink() {
-  const rpcCallId = `strudel-rpc-${nanoid()}`;
-  const promise = new Promise((resolve, reject) => {
-    const listener = async ({ data }) => {
-      if (!data || data.namespace !== 'strudel-main' || data.type !== 'rpcResponse') {
-        return;
-      }
+export async function loadAllPatterns() {
+  const codeUpdates = await loadFilesyncExtData();
 
-      if (data.id === rpcCallId) {
-        window.removeEventListener('message', listener);
-        resolve(data.response);
-      }
+  const userPatterns = userPattern.getAll();
+  const updatedPatterns = {};
+  Object.entries(codeUpdates).forEach(([id, code]) => {
+    updatedPatterns[id] = {
+      ...(userPatterns[id] || {
+        id,
+        created_at: Date.now(),
+        collection: patternFilterName.user,
+      }),
+      code,
     };
-
-    window.addEventListener('message', listener);
-    setTimeout(() => {
-      // always just clean up after 30 seconds
-      window.removeEventListener('message', listener);
-      reject(new Error(`RPC call ${rpcCallId} timed out`));
-    }, 5000);
   });
 
-  return { promise, id: rpcCallId };
-}
-
-export async function loadFilesyncExtData() {
-  const { promise, id } = initRPCSink();
-  window.postMessage(
-    {
-      namespace: 'strudel-filesync-ext',
-      type: 'load',
-      rpcCallId: id,
-    },
-    window.origin,
-  );
-
-  try {
-    const codeUpdates = await promise;
-    console.log('filesync-ext: received code updates from filesync-ext', codeUpdates);
-
-    const userPatterns = userPattern.getAll();
-    const updatedPatterns = {};
-    Object.entries(codeUpdates).forEach(([id, code]) => {
-      updatedPatterns[id] = {
-        ...(userPatterns[id] || {
-          id,
-          created_at: Date.now(),
-          collection: patternFilterName.user,
-        }),
-        code,
-      };
-    });
-
-    setUserPatterns({ ...userPatterns, ...updatedPatterns });
-  } catch (err) {
-    console.error('filesync-ext: error receiving code updates from filesync-ext', err);
-  }
+  setUserPatterns({ ...userPatterns, ...updatedPatterns });
 }
 
 export const setLatestCode = (code) => settingsMap.setKey('latestCode', code);
@@ -201,7 +162,7 @@ export const userPattern = {
     data = { ...data, id, collection: this.collection };
     setUserPatterns({ ...userPatterns, [id]: data });
 
-    window.postMessage?.({ namespace: 'strudel-filesync-ext', type: 'userPatternUpdated', data }, window.origin);
+    saveFilesyncExtPattern(id, data);
 
     return { id, data };
   },
