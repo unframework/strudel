@@ -26,6 +26,18 @@ function initRPCSink() {
 }
 
 export async function saveFilesyncExtPattern(id, data) {
+  if (data === null) {
+    window.postMessage?.(
+      {
+        namespace: 'strudel-filesync-ext',
+        type: 'userPatternDeleted',
+        id,
+      },
+      window.origin,
+    );
+    return;
+  }
+
   window.postMessage?.(
     {
       namespace: 'strudel-filesync-ext',

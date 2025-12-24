@@ -131,6 +131,7 @@ const eventSchema = z
       .discriminatedUnion('type', [
         z.object({ type: z.literal('load'), rpcCallId: z.string() }),
         z.object({ type: z.literal('userPatternUpdated'), data: userPatternSchema }),
+        z.object({ type: z.literal('userPatternDeleted'), id: z.string() }),
       ])
       .catch(({ input }) => ({
         type: 'unknown',
@@ -142,6 +143,10 @@ async function onEvent(event) {
   if (event.type === 'userPatternUpdated') {
     const patternData = event.data;
     await syncPattern(patternData.id, patternData.code);
+  } else if (event.type === 'userPatternDeleted') {
+    const dirHandle = await ensureDirectoryAccess();
+    // TODO: preserve deleted files somehow? eg remove the ID from the name
+    await removeMismatchingPatternFiles(dirHandle, event.id, '');
   } else if (event.type === 'load') {
     console.log('filesync-ext: load event');
     const dirHandle = await ensureDirectoryAccess();

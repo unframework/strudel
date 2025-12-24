@@ -192,6 +192,9 @@ export const userPattern = {
       setActivePattern(null);
     }
     setUserPatterns(userPatterns);
+
+    saveFilesyncExtPattern(id, null);
+
     const viewingPatternData = getViewingPatternData();
     const viewingID = viewingPatternData?.id;
     if (viewingID === id) {
