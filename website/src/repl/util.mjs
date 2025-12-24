@@ -6,7 +6,7 @@ import { isTauri } from '../tauri.mjs';
 import './Repl.css';
 import { createClient } from '@supabase/supabase-js';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
-import { $featuredPatterns /* , loadDBPatterns */ } from '@src/user_pattern_utils.mjs';
+import { $featuredPatterns /* , loadDBPatterns */, loadFilesyncExtData } from '@src/user_pattern_utils.mjs';
 
 // Create a single supabase client for interacting with your database
 export const supabase = createClient(
@@ -20,6 +20,8 @@ let dbLoaded;
 } */
 
 export async function getCodeFromURL() {
+  await loadFilesyncExtData();
+
   // load code from url hash (either short hash from database or decode long hash)
   try {
     const initialUrl = window.location.href;

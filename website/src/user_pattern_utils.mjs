@@ -125,13 +125,13 @@ function initRPCSink() {
       // always just clean up after 30 seconds
       window.removeEventListener('message', listener);
       reject(new Error(`RPC call ${rpcCallId} timed out`));
-    }, 10000);
+    }, 5000);
   });
 
   return { promise, id: rpcCallId };
 }
 
-async function loadFiles() {
+export async function loadFilesyncExtData() {
   const { promise, id } = initRPCSink();
   window.postMessage(
     {
@@ -142,17 +142,28 @@ async function loadFiles() {
     window.origin,
   );
 
-  return promise;
-}
-
-loadFiles().then(
-  (codeUpdates) => {
+  try {
+    const codeUpdates = await promise;
     console.log('filesync-ext: received code updates from filesync-ext', codeUpdates);
-  },
-  (err) => {
+
+    const userPatterns = userPattern.getAll();
+    const updatedPatterns = {};
+    Object.entries(codeUpdates).forEach(([id, code]) => {
+      updatedPatterns[id] = {
+        ...(userPatterns[id] || {
+          id,
+          created_at: Date.now(),
+          collection: patternFilterName.user,
+        }),
+        code,
+      };
+    });
+
+    setUserPatterns({ ...userPatterns, ...updatedPatterns });
+  } catch (err) {
     console.error('filesync-ext: error receiving code updates from filesync-ext', err);
-  },
-);
+  }
+}
 
 export const setLatestCode = (code) => settingsMap.setKey('latestCode', code);
 
