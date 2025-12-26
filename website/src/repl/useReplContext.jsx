@@ -30,6 +30,7 @@ import {
   getViewingPatternData,
   setViewingPatternData,
   savePatternCode,
+  initializeViewingPattern,
 } from '../user_pattern_utils.mjs';
 import { superdirtOutput } from '@strudel/osc/superdirtoutput';
 import { audioEngineTargets } from '../settings.mjs';
@@ -137,9 +138,11 @@ export function useReplContext() {
       if (codeFromURL) {
         code = codeFromURL;
         msg = `I have loaded the code from the URL.`;
+        initializeViewingPattern(code);
       } else if (latestCode) {
         code = latestCode;
         msg = `Your last session has been loaded!`;
+        initializeViewingPattern(code);
       } else {
         /* const { code: randomTune, name } = await getRandomTune();
         code = randomTune; */
