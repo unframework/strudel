@@ -217,3 +217,33 @@ export async function exportPatterns() {
   downloadLink.click();
   document.body.removeChild(downloadLink);
 }
+
+/**
+ * Save updated code to user pattern or fork example pattern.
+ * @param {string} code
+ * @returns {string} id of updated active pattern
+ */
+export function savePatternCode(code) {
+  // Save updated code to user pattern
+  const viewingPatternData = getViewingPatternData();
+
+  const isExamplePattern = viewingPatternData.collection !== userPattern.collection;
+  if (isExamplePattern) {
+    const codeHasChanged = code !== viewingPatternData.code;
+    if (codeHasChanged) {
+      // fork example
+      const newPattern = userPattern.duplicate({ ...viewingPatternData, code });
+      setViewingPatternData(newPattern.data);
+      return newPattern.id;
+    }
+
+    return viewingPatternData.id;
+  }
+
+  const patternData = userPattern.isValidID(viewingPatternData.id) ? viewingPatternData : userPattern.create();
+
+  const { data: finalPatternData } = userPattern.update(patternData.id, { ...patternData, code });
+  setViewingPatternData(finalPatternData);
+
+  return finalPatternData.id;
+}
