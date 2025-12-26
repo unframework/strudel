@@ -233,6 +233,18 @@ export class MidiInput {
         output.sendControlChange(ccn, scaled, channel);
       }
     }
+
+    for (const [chan, toggles] of Object.entries(this._togglesByChan)) {
+      const channel = Number(chan);
+      for (const [noteNumStr, isOn] of Object.entries(toggles)) {
+        const noteNum = Number(noteNumStr);
+        if (isOn) {
+          output.sendNoteOn(noteNum, { channels: channel, rawAttack: 127 });
+        } else {
+          output.sendNoteOff(noteNum, { channels: channel, rawAttack: 0 });
+        }
+      }
+    }
   }
 
   _sendToggleState(device, chan, noteNum, isOn) {
