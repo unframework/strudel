@@ -228,17 +228,18 @@ export function initializeViewingPattern(loadedCode) {
     return;
   }
 
-  // Try to find a user pattern that matches the loaded code
+  // Try to find the latest user pattern that matches the loaded code
   const userPatterns = userPattern.getAll();
-  for (const patternData of Object.values(userPatterns)) {
+  for (const patternData of Object.values(userPatterns).reverse()) {
     if (patternData.code === loadedCode) {
       setViewingPatternData(patternData);
       return;
     }
   }
 
-  // No matching pattern found, update the viewing pattern code
-  setViewingPatternData({ ...viewingPatternData, code: loadedCode });
+  // No matching pattern found, set up a brand new pattern with the loaded code (but don't save it yet)
+  const newPattern = userPattern.create();
+  setViewingPatternData({ ...newPattern, code: loadedCode });
 }
 
 /**
