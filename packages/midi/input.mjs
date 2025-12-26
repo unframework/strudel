@@ -138,16 +138,16 @@ export class MidiInput {
     const isNoteOn = e.message.type === 'noteon' && velocity > 0;
 
     if (isNoteOn) {
-      const newValueAll = !this._toggles[noteNum] ? 1 : 0;
-      this._toggles[noteNum] = newValueAll;
+      const newState = !this._togglesByChan[noteNum][chan];
+      const newVal = newState ? 1 : 0;
 
-      const newValueChan = !this._togglesByChan[noteNum][chan] ? 1 : 0;
-      this._togglesByChan[noteNum][chan] = newValueChan;
+      this._toggles[noteNum] = newVal;
+      this._togglesByChan[noteNum][chan] = newVal;
 
-      this._saveState(undefined, '-tog', noteNum, newValueAll);
-      this._saveState(chan, '-tog', noteNum, newValueChan);
+      this._saveState(undefined, '-tog', noteNum, newVal);
+      this._saveState(chan, '-tog', noteNum, newVal);
 
-      this._sendToggleState(e.port, chan, noteNum, newValueChan ? true : false);
+      this._sendToggleState(e.port, chan, noteNum, newState);
     } else {
       // Note off - resend current state to keep the hardware button lit up
       const curValue = this._togglesByChan[noteNum][chan];
