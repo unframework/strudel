@@ -23,7 +23,6 @@ import { clearHydra } from '@strudel/hydra';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { parseBoolean, settingsMap, useSettings } from '../settings.mjs';
 import {
-  setActivePattern,
   setLatestCode,
   createPatternID,
   userPattern,
@@ -72,6 +71,8 @@ function useReplInstance() {
   const shouldUseWebaudio = audioEngineTarget !== audioEngineTargets.osc;
   const defaultOutput = shouldUseWebaudio ? webaudioOutput : superdirtOutput;
   const getTime = shouldUseWebaudio ? getAudioContextCurrentTime : getPerformanceTimeSeconds;
+  const [activePattern, setActivePattern] = useState(null);
+
   const init = useCallback(() => {
     const drawTime = [-2, 2];
     const drawContext = getDrawContext();
@@ -228,7 +229,6 @@ function useReplInstance() {
     const patternData = await getRandomTune();
     const code = patternData.code;
     logger(`[repl] ✨ loading random tune "${patternData.id}"`);
-    setActivePattern(patternData.id);
     setViewingPatternData(patternData);
     await resetEditor();
     editorRef.current.setCode(code);
@@ -247,6 +247,7 @@ function useReplInstance() {
     pending,
     isDirty,
     activeCode,
+    activePattern,
     handleTogglePlay,
     handleUpdate,
     handleShuffle,

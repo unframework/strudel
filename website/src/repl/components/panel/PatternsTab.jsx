@@ -4,7 +4,6 @@ import {
   loadAndSetFeaturedPatterns,
   loadAndSetPublicPatterns,
   patternFilterName,
-  useActivePattern,
   useViewingPatternData,
   userPattern,
 } from '../../../user_pattern_utils.mjs';
@@ -81,7 +80,7 @@ const updateCodeWindow = (context, patternData, reset = false) => {
 
 function UserPatterns() {
   const context = useReplState();
-  const activePattern = useActivePattern();
+  const { started, activePattern, handleEvaluate } = context;
   const viewingPatternData = useViewingPatternData();
   const { userPatterns, patternAutoStart } = useSettings();
   const viewingPatternID = viewingPatternData?.id;
@@ -137,12 +136,12 @@ function UserPatterns() {
           onClick={(id) => {
             updateCodeWindow(context, { ...userPatterns[id], collection: userPattern.collection }, patternAutoStart);
 
-            if (context.started && activePattern === id) {
-              context.handleEvaluate();
+            if (started && activePattern === id) {
+              handleEvaluate();
             }
           }}
           patterns={userPatterns}
-          started={context.started}
+          started={started}
           activePattern={activePattern}
           viewingPatternID={viewingPatternID}
         />

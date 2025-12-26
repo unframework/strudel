@@ -99,19 +99,6 @@ export async function loadDBPatterns() {
   }
 }
 
-// reason: https://codeberg.org/uzu/strudel/issues/857
-const $activePattern = sessionAtom('activePattern', '');
-
-export function setActivePattern(key) {
-  $activePattern.set(key);
-}
-export function getActivePattern() {
-  return $activePattern.get();
-}
-export function useActivePattern() {
-  return useStore($activePattern);
-}
-
 export const setLatestCode = (code) => settingsMap.setKey('latestCode', code);
 
 export const defaultCode = '';
@@ -164,16 +151,13 @@ export const userPattern = {
       if (viewingPatternData.collection !== this.collection) {
         return { id: viewingPatternData.id, data: viewingPatternData };
       }
-      setActivePattern(null);
       return this.create();
     });
   },
   delete(id) {
     const userPatterns = this.getAll();
     delete userPatterns[id];
-    if (getActivePattern() === id) {
-      setActivePattern(null);
-    }
+
     setUserPatterns(userPatterns);
     const viewingPatternData = getViewingPatternData();
     const viewingID = viewingPatternData?.id;
