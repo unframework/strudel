@@ -52,8 +52,7 @@ function PatternButton({ showOutline, onClick, pattern, showHiglight }) {
 }
 
 function PatternButtons({ patterns, activePattern, onClick, started }) {
-  const viewingPatternStore = useViewingPatternData();
-  const viewingPatternData = parseJSON(viewingPatternStore);
+  const viewingPatternData = useViewingPatternData();
   const viewingPatternID = viewingPatternData.id;
   return (
     <div className="">
@@ -81,8 +80,7 @@ const updateCodeWindow = (context, patternData, reset = false) => {
 
 function UserPatterns({ context }) {
   const activePattern = useActivePattern();
-  const viewingPatternStore = useViewingPatternData();
-  const viewingPatternData = parseJSON(viewingPatternStore);
+  const viewingPatternData = useViewingPatternData();
   const { userPatterns, patternAutoStart } = useSettings();
   const viewingPatternID = viewingPatternData?.id;
 

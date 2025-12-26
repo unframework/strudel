@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { atom } from 'nanostores';
 import { useStore } from '@nanostores/react';
 import { logger } from '@strudel/core';
@@ -40,7 +41,9 @@ export const getViewingPatternData = () => {
   return parseJSON($viewingPatternData.get());
 };
 export const useViewingPatternData = () => {
-  return useStore($viewingPatternData);
+  const rawData = useStore($viewingPatternData);
+  const viewingPatternData = useMemo(() => parseJSON(rawData), [rawData]);
+  return viewingPatternData;
 };
 
 export const setViewingPatternData = (data) => {

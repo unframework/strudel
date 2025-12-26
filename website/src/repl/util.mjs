@@ -50,11 +50,10 @@ export async function getCodeFromURL() {
 }
 
 export const parseJSON = (json) => {
-  json = json != null && json.length ? json : '{}';
   try {
-    return JSON.parse(json);
+    return JSON.parse(json || '{}');
   } catch {
-    return '{}';
+    return {};
   }
 };
 
