@@ -130,11 +130,9 @@ export function useReplContext() {
       if (codeFromURL) {
         code = codeFromURL;
         msg = `I have loaded the code from the URL.`;
-        initializeViewingPattern(code);
       } else if (latestCode) {
         code = latestCode;
         msg = `Your last session has been loaded!`;
-        initializeViewingPattern(code);
       } else {
         /* const { code: randomTune, name } = await getRandomTune();
         code = randomTune; */
@@ -143,6 +141,7 @@ export function useReplContext() {
       }
       editor.setCode(code);
       setDocumentTitle(code);
+      initializeViewingPattern(code);
       logger(`Welcome to Strudel! ${msg} Press play or hit ctrl+enter to run it!`, 'highlight');
     })();
   }, []);
