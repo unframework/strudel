@@ -238,7 +238,7 @@ export function initializeViewingPattern(loadedCode) {
   }
 
   // No matching pattern found, set up a brand new pattern with the loaded code (but don't save it yet)
-  const newPattern = userPattern.create();
+  const newPattern = userPattern.create().data;
   setViewingPatternData({ ...newPattern, code: loadedCode });
 }
 
@@ -264,7 +264,7 @@ export function savePatternCode(code) {
     return viewingPatternData.id;
   }
 
-  const patternData = userPattern.isValidID(viewingPatternData.id) ? viewingPatternData : userPattern.create();
+  const patternData = userPattern.isValidID(viewingPatternData.id) ? viewingPatternData : userPattern.create().data;
 
   const { data: finalPatternData } = userPattern.update(patternData.id, { ...patternData, code });
   setViewingPatternData(finalPatternData);
