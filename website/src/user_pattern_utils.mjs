@@ -219,6 +219,31 @@ export async function exportPatterns() {
 }
 
 /**
+ * Update viewing pattern state to match the loaded code if possible.
+ * @param {string} loadedCode
+ */
+export function initializeViewingPattern(loadedCode) {
+  const viewingPatternData = getViewingPatternData();
+
+  // If the loaded code matches the current viewing pattern (rehydrated from sessionStorage), do nothing
+  if (loadedCode === viewingPatternData.code) {
+    return;
+  }
+
+  // Try to find a user pattern that matches the loaded code
+  const userPatterns = userPattern.getAll();
+  for (const patternData of Object.values(userPatterns)) {
+    if (patternData.code === loadedCode) {
+      setViewingPatternData(patternData);
+      return;
+    }
+  }
+
+  // No matching pattern found, update the viewing pattern code
+  setViewingPatternData({ ...viewingPatternData, code: loadedCode });
+}
+
+/**
  * Save updated code to user pattern or fork example pattern.
  * @param {string} code
  * @returns {string} id of updated active pattern
