@@ -24,6 +24,8 @@ export class MidiInput {
 
     this._refs = {};
     this._refsByChan = {};
+    this._toggles = {};
+    this._togglesByChan = {};
 
     this._loadAllStates();
 
@@ -38,7 +40,7 @@ export class MidiInput {
   createCC(cc, chan) {
     const lookupMap = chan === undefined ? this._refs : this._refsByChan[chan];
     if (!(cc in lookupMap)) {
-      const initialState = this._loadState(chan);
+      const initialState = this._loadState(chan, ''); // TODO is this needed?
       lookupMap[cc] = initialState[cc] || 0;
     }
 
@@ -122,9 +124,24 @@ export class MidiInput {
 
       case 'noteon':
       case 'noteoff':
-        console.log(`[midi] ${e.message.type} received - ${e.dataBytes[0]}, ${e.dataBytes[1]}`);
+        this._onNote(e);
         break;
     }
+  }
+
+  _onNote(e) {
+    const noteNum = e.dataBytes[0];
+    const velocity = e.dataBytes[1];
+    const chan = e.message.channel;
+
+    const isNoteOn = e.message.type === 'noteon' && velocity > 0;
+
+    this._toggles[noteNum] = isNoteOn ? 1 : 0;
+    this._togglesByChan[noteNum] ??= {};
+    this._togglesByChan[noteNum][chan] = isNoteOn ? 1 : 0;
+
+    this._saveState(undefined, '-tog', noteNum, isNoteOn ? 1 : 0);
+    this._saveState(chan, '-tog', noteNum, isNoteOn ? 1 : 0);
   }
 
   _onControlChange(e) {
@@ -137,26 +154,29 @@ export class MidiInput {
     this._refsByChan[chan] ??= {};
     this._refsByChan[chan][ccNum] = scaled;
 
-    this._saveState(undefined, ccNum, scaled);
-    this._saveState(chan, ccNum, scaled);
+    this._saveState(undefined, '', ccNum, scaled);
+    this._saveState(chan, '', ccNum, scaled);
   }
 
   _loadAllStates() {
-    Object.assign(this._refs, this._loadState(undefined));
+    Object.assign(this._refs, this._loadState(undefined, ''));
+    Object.assign(this._toggles, this._loadState(undefined, '-tog'));
 
     for (let chan = 1; chan <= 16; chan++) {
       this._refsByChan[chan] ??= {};
-      Object.assign(this._refsByChan[chan], this._loadState(chan));
+      this._togglesByChan[chan] ??= {};
+      Object.assign(this._refsByChan[chan], this._loadState(chan, ''));
+      Object.assign(this._togglesByChan[chan], this._loadState(chan, '-tog'));
     }
   }
 
-  _loadState(chan) {
+  _loadState(chan, suffix) {
     if (!this.stateKey) {
       return {};
     }
 
     const initialDataRaw = localStorage.getItem(
-      `strudel-midin-${this.stateKey}-chan${chan !== undefined ? chan : 'all'}`,
+      `strudel-midin-${this.stateKey}-chan${chan !== undefined ? chan : 'all'}${suffix}`,
     );
     if (!initialDataRaw) {
       return {};
@@ -174,15 +194,15 @@ export class MidiInput {
     }
   }
 
-  _saveState(chan, cc, value) {
+  _saveState(chan, suffix, cc, value) {
     if (!this.stateKey) {
       return;
     }
 
-    const state = this._loadState(chan);
+    const state = this._loadState(chan, suffix);
     state[cc] = value;
     localStorage.setItem(
-      `strudel-midin-${this.stateKey}-chan${chan !== undefined ? chan : 'all'}`,
+      `strudel-midin-${this.stateKey}-chan${chan !== undefined ? chan : 'all'}${suffix}`,
       JSON.stringify(state),
     );
   }
