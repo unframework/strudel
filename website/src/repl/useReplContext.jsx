@@ -34,7 +34,7 @@ import { superdirtOutput } from '@strudel/osc/superdirtoutput';
 import { audioEngineTargets } from '../settings.mjs';
 import { useStore } from '@nanostores/react';
 import { prebake } from './prebake.mjs';
-import { getRandomTune, initCode, loadModules, shareCode } from './util.mjs';
+import { getRandomTune, getCodeFromURL, loadModules, shareCode } from './util.mjs';
 import './Repl.css';
 import { setInterval, clearInterval } from 'worker-timers';
 import { getMetadata } from '../metadata_parser';
@@ -142,11 +142,14 @@ export function useReplContext() {
     window.strudelMirror = editor;
     window.debugAudiograph = debugAudiograph;
 
+    editorRef.current = editor;
+
     // init settings
-    initCode().then(async (decoded) => {
+    (async () => {
+      const codeFromURL = await getCodeFromURL();
       let code, msg;
-      if (decoded) {
-        code = decoded;
+      if (codeFromURL) {
+        code = codeFromURL;
         msg = `I have loaded the code from the URL.`;
       } else if (latestCode) {
         code = latestCode;
@@ -160,9 +163,7 @@ export function useReplContext() {
       editor.setCode(code);
       setDocumentTitle(code);
       logger(`Welcome to Strudel! ${msg} Press play or hit ctrl+enter to run it!`, 'highlight');
-    });
-
-    editorRef.current = editor;
+    })();
   }, []);
 
   const [replState, setReplState] = useState({});

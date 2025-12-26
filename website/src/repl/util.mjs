@@ -19,7 +19,7 @@ let dbLoaded;
   dbLoaded = loadDBPatterns();
 } */
 
-export async function initCode() {
+export async function getCodeFromURL() {
   // load code from url hash (either short hash from database or decode long hash)
   try {
     const initialUrl = window.location.href;
