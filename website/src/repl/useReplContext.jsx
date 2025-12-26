@@ -29,6 +29,7 @@ import {
   userPattern,
   getViewingPatternData,
   setViewingPatternData,
+  savePatternCode,
 } from '../user_pattern_utils.mjs';
 import { superdirtOutput } from '@strudel/osc/superdirtoutput';
 import { audioEngineTargets } from '../settings.mjs';
@@ -117,25 +118,10 @@ export function useReplContext() {
           console.warn('[useReplContext] Failed to update hash:', e.message);
         }
         setDocumentTitle(fullBufferCode);
-        const viewingPatternData = getViewingPatternData();
         setVersionDefaultsFrom(fullBufferCode);
-        const data = { ...viewingPatternData, code: fullBufferCode };
-        let id = data.id;
-        const isExamplePattern = viewingPatternData.collection !== userPattern.collection;
 
-        if (isExamplePattern) {
-          const codeHasChanged = fullBufferCode !== viewingPatternData.code;
-          if (codeHasChanged) {
-            // fork example
-            const newPattern = userPattern.duplicate(data);
-            id = newPattern.id;
-            setViewingPatternData(newPattern.data);
-          }
-        } else {
-          id = userPattern.isValidID(id) ? id : createPatternID();
-          setViewingPatternData(userPattern.update(id, data).data);
-        }
-        setActivePattern(id);
+        const patternId = savePatternCode(fullBufferCode);
+        setActivePattern(patternId);
       },
       bgFill: false,
     });
