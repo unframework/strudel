@@ -134,14 +134,25 @@ export class MidiInput {
     const velocity = e.dataBytes[1];
     const chan = e.message.channel;
 
+    this._togglesByChan[noteNum] ??= {};
     const isNoteOn = e.message.type === 'noteon' && velocity > 0;
 
-    this._toggles[noteNum] = isNoteOn ? 1 : 0;
-    this._togglesByChan[noteNum] ??= {};
-    this._togglesByChan[noteNum][chan] = isNoteOn ? 1 : 0;
+    if (isNoteOn) {
+      const newValueAll = !this._toggles[noteNum] ? 1 : 0;
+      this._toggles[noteNum] = newValueAll;
 
-    this._saveState(undefined, '-tog', noteNum, isNoteOn ? 1 : 0);
-    this._saveState(chan, '-tog', noteNum, isNoteOn ? 1 : 0);
+      const newValueChan = !this._togglesByChan[noteNum][chan] ? 1 : 0;
+      this._togglesByChan[noteNum][chan] = newValueChan;
+
+      this._saveState(undefined, '-tog', noteNum, newValueAll);
+      this._saveState(chan, '-tog', noteNum, newValueChan);
+
+      this._sendToggleState(e.port, chan, noteNum, newValueChan ? true : false);
+    } else {
+      // Note off - resend current state to keep the hardware button lit up
+      const curValue = this._togglesByChan[noteNum][chan];
+      this._sendToggleState(e.port, chan, noteNum, curValue ? true : false);
+    }
   }
 
   _onControlChange(e) {
@@ -221,6 +232,19 @@ export class MidiInput {
         const scaled = Math.round(value * 127);
         output.sendControlChange(ccn, scaled, channel);
       }
+    }
+  }
+
+  _sendToggleState(device, chan, noteNum, isOn) {
+    const output = WebMidi.outputs.find((o) => o.name === device.name);
+    if (!output) {
+      return;
+    }
+
+    if (isOn) {
+      output.sendNoteOn(noteNum, { channels: chan, rawAttack: 127 });
+    } else {
+      output.sendNoteOff(noteNum, { channels: chan, rawAttack: 0 });
     }
   }
 }
