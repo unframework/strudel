@@ -3,14 +3,13 @@ import { HorizontalPanel } from '@src/repl/components/panel/Panel';
 import { Code } from '@src/repl/components/Code';
 import BigPlayButton from '@src/repl/components/BigPlayButton';
 import UserFacingErrorMessage from '@src/repl/components/UserFacingErrorMessage';
+import { useReplState } from '@src/repl/useReplContext';
 
 // type Props = {
-//  context: replcontext,
 // }
 
-export default function UdelsEditor(Props) {
-  const { context, ...editorProps } = Props;
-  const { containerRef, editorRef, error, init, pending, started, handleTogglePlay } = context;
+export default function UdelsEditor(editorProps) {
+  const { containerRef, editorRef, error, init, pending, started, handleTogglePlay } = useReplState();
 
   return (
     <div className={'h-full flex w-full flex-col relative'} {...editorProps}>
@@ -20,7 +19,7 @@ export default function UdelsEditor(Props) {
         <Code containerRef={containerRef} editorRef={editorRef} init={init} />
       </div>
       <UserFacingErrorMessage error={error} />
-      <HorizontalPanel context={context} />
+      <HorizontalPanel />
     </div>
   );
 }

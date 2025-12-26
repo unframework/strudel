@@ -3,7 +3,7 @@ import { useSettings } from '@src/settings.mjs';
 const { BASE_URL } = import.meta.env;
 const baseNoTrailing = BASE_URL.endsWith('/') ? BASE_URL.slice(0, -1) : BASE_URL;
 
-export function WelcomeTab({ context }) {
+export function WelcomeTab() {
   const { fontFamily } = useSettings();
   return (
     <div className="prose dark:prose-invert min-w-full pt-2 font-sans pb-8 px-4 " style={{ fontFamily }}>

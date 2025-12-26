@@ -3,18 +3,17 @@ import { Code } from '@src/repl/components/Code';
 import BigPlayButton from '@src/repl/components/BigPlayButton';
 import UserFacingErrorMessage from '@src/repl/components/UserFacingErrorMessage';
 import { Header } from './Header';
+import { useReplState } from '../useReplContext';
 
 // type Props = {
-//  context: replcontext,
 // }
 
-export default function EmbeddedReplEditor(Props) {
-  const { context, ...editorProps } = Props;
-  const { pending, started, handleTogglePlay, containerRef, editorRef, error, init } = context;
+export default function EmbeddedReplEditor(editorProps) {
+  const { pending, started, handleTogglePlay, containerRef, editorRef, error, init } = useReplState();
   return (
     <div className="h-full flex flex-col relative" {...editorProps}>
       <Loader active={pending} />
-      <Header context={context} embedded={true} />
+      <Header embedded={true} />
       <BigPlayButton started={started} handleTogglePlay={handleTogglePlay} />
       <div className="grow flex relative overflow-hidden">
         <Code containerRef={containerRef} editorRef={editorRef} init={init} />

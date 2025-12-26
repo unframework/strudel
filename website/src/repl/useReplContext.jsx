@@ -20,7 +20,7 @@ import {
 import { setVersionDefaultsFrom } from './util.mjs';
 import { StrudelMirror, defaultSettings } from '@strudel/codemirror';
 import { clearHydra } from '@strudel/hydra';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { parseBoolean, settingsMap, useSettings } from '../settings.mjs';
 import {
   setActivePattern,
@@ -67,7 +67,7 @@ async function getModule(name) {
 
 const initialCode = `// LOADING`;
 
-export function useReplContext() {
+function useReplInstance() {
   const { isSyncEnabled, audioEngineTarget, prebakeScript, includePrebakeScriptInShare } = useSettings();
   const shouldUseWebaudio = audioEngineTarget !== audioEngineTargets.osc;
   const defaultOutput = shouldUseWebaudio ? webaudioOutput : superdirtOutput;
@@ -258,5 +258,20 @@ export function useReplContext() {
     editorRef,
     containerRef,
   };
+  return context;
+}
+
+const ReplContext = createContext(null);
+
+export function ReplProvider({ children }) {
+  const context = useReplInstance();
+  return <ReplContext.Provider value={context}>{children}</ReplContext.Provider>;
+}
+
+export function useReplState() {
+  const context = useContext(ReplContext);
+  if (!context) {
+    throw new Error('useReplState must be used within a ReplProvider');
+  }
   return context;
 }

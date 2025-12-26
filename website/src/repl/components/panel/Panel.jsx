@@ -13,7 +13,7 @@ import ExportTab from './ExportTab';
 
 const TAURI = typeof window !== 'undefined' && window.__TAURI__;
 
-export function HorizontalPanel({ context }) {
+export function HorizontalPanel() {
   const settings = useSettings();
   const { isPanelOpen, activeFooter: tab } = settings;
 
@@ -24,7 +24,7 @@ export function HorizontalPanel({ context }) {
     >
       {isPanelOpen && (
         <div className="flex h-full overflow-auto pr-10 ">
-          <PanelContent context={context} tab={tab} />
+          <PanelContent tab={tab} />
         </div>
       )}
 
@@ -39,7 +39,7 @@ export function HorizontalPanel({ context }) {
   );
 }
 
-export function VerticalPanel({ context }) {
+export function VerticalPanel() {
   const settings = useSettings();
   const { activeFooter: tab, isPanelOpen } = settings;
 
@@ -56,7 +56,7 @@ export function VerticalPanel({ context }) {
           </div>
 
           <div className="overflow-auto h-full">
-            <PanelContent context={context} tab={tab} />
+            <PanelContent tab={tab} />
           </div>
         </div>
       ) : (
@@ -117,11 +117,11 @@ function PanelNav({ children, className, settings, ...props }) {
   );
 }
 
-function PanelContent({ context, tab }) {
+function PanelContent({ tab }) {
   useLogger();
   switch (tab) {
     case tabNames.patterns:
-      return <PatternsTab context={context} />;
+      return <PatternsTab />;
     case tabNames.console:
       return <ConsoleTab />;
     case tabNames.sounds:
@@ -129,13 +129,13 @@ function PanelContent({ context, tab }) {
     case tabNames.reference:
       return <Reference />;
     case tabNames.export:
-      return <ExportTab handleExport={context.handleExport} />;
+      return <ExportTab />;
     case tabNames.settings:
-      return <SettingsTab started={context.started} />;
+      return <SettingsTab />;
     case tabNames.files:
       return <FilesTab />;
     default:
-      return <WelcomeTab context={context} />;
+      return <WelcomeTab />;
   }
 }
 

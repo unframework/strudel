@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Textbox } from '../textbox/Textbox';
 import { getAudioContext } from '@strudel/webaudio';
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon';
+import { useReplState } from '@src/repl/useReplContext';
 
 function Checkbox({ label, value, onChange, disabled = false }) {
   return (
@@ -24,8 +25,8 @@ function FormItem({ label, children, disabled }) {
   );
 }
 
-export default function ExportTab(Props) {
-  const { handleExport } = Props;
+export default function ExportTab() {
+  const { handleExport } = useReplState();
 
   const [downloadName, setDownloadName] = useState('');
   const [startCycle, setStartCycle] = useState(0);

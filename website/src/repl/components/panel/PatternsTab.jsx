@@ -18,6 +18,7 @@ import { Pagination } from '../pagination/Pagination.jsx';
 import { useState } from 'react';
 import { useDebounce } from '../usedebounce.jsx';
 import cx from '@src/cx.mjs';
+import { useReplState } from '@src/repl/useReplContext.jsx';
 
 export function PatternLabel({ pattern } /* : { pattern: Tables<'code'> } */) {
   const meta = useMemo(() => getMetadata(pattern.code), [pattern]);
@@ -78,7 +79,8 @@ const updateCodeWindow = (context, patternData, reset = false) => {
   context.handleUpdate(patternData, reset);
 };
 
-function UserPatterns({ context }) {
+function UserPatterns() {
+  const context = useReplState();
   const activePattern = useActivePattern();
   const viewingPatternData = useViewingPatternData();
   const { userPatterns, patternAutoStart } = useSettings();
@@ -150,12 +152,12 @@ function UserPatterns({ context }) {
   );
 }
 
-export function PatternsTab({ context }) {
+export function PatternsTab() {
   const { patternFilter } = useSettings();
 
   return (
     <div className="px-4 w-full text-foreground  space-y-2  flex flex-col overflow-hidden max-h-full h-full">
-      <UserPatterns context={context} />
+      <UserPatterns />
     </div>
   );
   /* return (

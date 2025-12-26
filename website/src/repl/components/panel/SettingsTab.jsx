@@ -88,7 +88,8 @@ const fontFamilyOptions = {
 
 const RELOAD_MSG = 'Changing this setting requires the window to reload itself. OK?';
 
-export function SettingsTab({ started }) {
+export function SettingsTab() {
+  const { started } = useReplState();
   const {
     theme,
     keybindings,
