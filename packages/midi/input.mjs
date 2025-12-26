@@ -115,6 +115,19 @@ export class MidiInput {
   }
 
   _onMidiMessage(e) {
+    switch (e.message.type) {
+      case 'controlchange':
+        this._onControlChange(e);
+        break;
+
+      case 'noteon':
+      case 'noteoff':
+        console.log(`[midi] ${e.message.type} received - ${e.dataBytes[0]}, ${e.dataBytes[1]}`);
+        break;
+    }
+  }
+
+  _onControlChange(e) {
     const ccNum = e.dataBytes[0];
     const v = e.dataBytes[1];
     const chan = e.message.channel;
