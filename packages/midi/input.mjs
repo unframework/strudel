@@ -47,6 +47,15 @@ export class MidiInput {
     return ref(() => lookupMap[cc]);
   }
 
+  createNoteToggle(noteNum, chan) {
+    const lookupMap = chan === undefined ? this._toggles : this._togglesByChan[chan];
+    if (!(noteNum in lookupMap)) {
+      lookupMap[noteNum] = 0;
+    }
+
+    return ref(() => lookupMap[noteNum]); // TODO align to cycles?
+  }
+
   _startDeviceListener() {
     const initialDevice = getDevice(this.input, WebMidi.inputs);
 
