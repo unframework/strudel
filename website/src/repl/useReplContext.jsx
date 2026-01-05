@@ -4,7 +4,7 @@ Copyright (C) 2022 Strudel contributors - see <https://codeberg.org/uzu/strudel/
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more details. You should have received a copy of the GNU Affero General Public License along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { code2hash, getPerformanceTimeSeconds, logger, silence } from '@strudel/core';
+import { code2hash, getPerformanceTimeSeconds, logger, silence, repl } from '@strudel/core';
 import { getDrawContext } from '@strudel/draw';
 import { evaluate, transpiler } from '@strudel/transpiler';
 import {
@@ -66,6 +66,13 @@ async function getModule(name) {
 
 const initialCode = `// LOADING`;
 
+// helper function to generate repl ids
+function s4() {
+  return Math.floor((1 + Math.random()) * 0x10000)
+    .toString(16)
+    .substring(1);
+}
+
 function useReplInstance() {
   const { isSyncEnabled, audioEngineTarget, prebakeScript, includePrebakeScriptInShare } = useSettings();
   const shouldUseWebaudio = audioEngineTarget !== audioEngineTargets.osc;
@@ -76,13 +83,71 @@ function useReplInstance() {
   const init = useCallback(() => {
     const drawTime = [-2, 2];
     const drawContext = getDrawContext();
-    const editor = new StrudelMirror({
+
+    const id = s4();
+
+    /**
+     * @type {StrudelMirror}
+     */
+    let editor;
+
+    const replInstance = repl({
+      id,
       sync: isSyncEnabled,
       defaultOutput,
       getTime,
       setInterval,
       clearInterval,
       transpiler,
+
+      onUpdateState: (state) => {
+        // orig useReplContext onUpdateState
+        setReplState({ ...state });
+      },
+
+      onToggle: (started) => {
+        // orig useReplContext onToggle
+        if (!started) {
+          clearHydra();
+        }
+
+        // StrudelMirror onToggle
+        if (started) {
+          editor.onReplStart();
+        } else {
+          editor.onReplStop();
+        }
+      },
+      beforeEval: async () => {
+        // StrudelMirror beforeEval
+        await editor.beforeEval();
+
+        // orig useReplContext beforeEval
+        await audioReady;
+      },
+      afterEval: ({ meta, pattern }) => {
+        // StrudelMirror afterEval
+        editor.afterEval(pattern, meta);
+
+        // orig useReplContext afterEval
+        {
+          const { code } = all;
+          //post to iframe parent (like Udels) if it exists...
+          window.parent?.postMessage(code);
+
+          setLatestCode(code);
+          window.location.hash = '#' + code2hash(code);
+          setDocumentTitle(code);
+          setVersionDefaultsFrom(code);
+
+          const patternId = savePatternCode(code);
+          setActivePattern(patternId);
+        }
+      },
+    });
+
+    editor = new StrudelMirror({
+      replInstance,
       autodraw: false,
       root: containerRef.current,
       initialCode,
@@ -95,28 +160,7 @@ function useReplInstance() {
             return evaluate(prebakeScript ?? '');
           }
         }),
-      onUpdateState: (state) => {
-        setReplState({ ...state });
-      },
-      onToggle: (playing) => {
-        if (!playing) {
-          clearHydra();
-        }
-      },
-      beforeEval: () => audioReady,
-      afterEval: (all) => {
-        const { code } = all;
-        //post to iframe parent (like Udels) if it exists...
-        window.parent?.postMessage(code);
 
-        setLatestCode(code);
-        window.location.hash = '#' + code2hash(code);
-        setDocumentTitle(code);
-        setVersionDefaultsFrom(code);
-
-        const patternId = savePatternCode(code);
-        setActivePattern(patternId);
-      },
       bgFill: false,
     });
     window.strudelMirror = editor;

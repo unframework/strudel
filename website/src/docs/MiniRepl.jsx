@@ -76,6 +76,8 @@ export function MiniRepl({
         return pat;
       },
       prebake: async () => Promise.all([modulesLoading, prebaked]),
+
+      // TODO replOptions
       onUpdateState: (state) => {
         setReplState({ ...state });
       },
@@ -86,7 +88,7 @@ export function MiniRepl({
       },
       beforeStart: () => audioReady,
       afterEval: ({ code }) => setVersionDefaultsFrom(code),
-      mondo,
+      mondo, // also StrudelMirror option
     });
     // init settings
     editor.setCode(code);

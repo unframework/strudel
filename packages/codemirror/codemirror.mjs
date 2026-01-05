@@ -12,7 +12,7 @@ import {
   lineNumbers,
 } from '@codemirror/view';
 import { persistentAtom } from '@nanostores/persistent';
-import { logger, registerControl, repl } from '@strudel/core';
+import { logger, registerControl } from '@strudel/core';
 import { cleanupDraw, Drawer } from '@strudel/draw';
 
 import { isAutoCompletionEnabled } from './autocomplete.mjs';
@@ -143,6 +143,7 @@ export class StrudelMirror {
     const {
       root,
       id,
+      replInstance,
       initialCode = '',
       onDraw,
       drawContext,
@@ -151,8 +152,9 @@ export class StrudelMirror {
       prebake,
       bgFill = true,
       solo = true,
-      ...replOptions
+      mondo,
     } = options;
+    this.id = id;
     this.code = initialCode;
     this.root = root;
     this.miniLocations = [];
@@ -160,7 +162,6 @@ export class StrudelMirror {
     this.drawTime = drawTime;
     this.drawContext = drawContext;
     this.onDraw = onDraw || this.draw;
-    this.id = id || s4();
     this.solo = solo;
 
     this.drawer = new Drawer((haps, time, _, painters) => {
@@ -171,50 +172,8 @@ export class StrudelMirror {
 
     this.prebaked = prebake();
     autodraw && this.drawFirstFrame();
-    this.repl = repl({
-      ...replOptions,
-      id,
-      onToggle: (started) => {
-        replOptions?.onToggle?.(started);
-        if (started) {
-          this.drawer.start(this.repl.scheduler);
-          if (this.solo) {
-            // stop other repls when this one is started
-            document.dispatchEvent(
-              new CustomEvent('start-repl', {
-                detail: this.id,
-              }),
-            );
-          }
-        } else {
-          this.drawer.stop();
-          updateMiniLocations(this.editor, []);
-          cleanupDraw(true, id);
-        }
-      },
-      beforeEval: async () => {
-        cleanupDraw(true, id);
-        await this.prebaked;
-        await replOptions?.beforeEval?.();
-      },
-      afterEval: (options) => {
-        // remember for when highlighting is toggled on
-        this.miniLocations = options.meta?.miniLocations;
-        this.widgets = options.meta?.widgets;
-        const sliders = this.widgets.filter((w) => w.type === 'slider');
-        updateSliderWidgets(this.editor, sliders);
-        const widgets = this.widgets.filter((w) => w.type !== 'slider');
-        updateWidgets(this.editor, widgets);
-        updateMiniLocations(this.editor, this.miniLocations);
-        replOptions?.afterEval?.(options);
-        // if no painters are set (.onPaint was not called), then we only need
-        // the present moment (for highlighting)
-        const drawTime = options.pattern.getPainters().length ? this.drawTime : [0, 0];
-        this.drawer.setDrawTime(drawTime);
-        // invalidate drawer after we've set the appropriate drawTime
-        this.drawer.invalidate(this.repl.scheduler);
-      },
-    });
+    this.repl = replInstance; // TODO eliminate these
+
     this.editor = initEditor({
       root,
       initialCode,
@@ -226,7 +185,7 @@ export class StrudelMirror {
       },
       onEvaluate: () => this.evaluate(),
       onStop: () => this.stop(),
-      mondo: replOptions.mondo,
+      mondo,
     });
     const cmEditor = this.root.querySelector('.cm-editor');
     if (cmEditor) {
@@ -275,8 +234,54 @@ export class StrudelMirror {
     };
     document.addEventListener('repl-toggle-comment', this.onToggleComment);
   }
+
+  onReplStart() {
+    this.drawer.start(this.repl.scheduler);
+    if (this.solo) {
+      // stop other repls when this one is started
+      document.dispatchEvent(
+        new CustomEvent('start-repl', {
+          detail: this.id,
+        }),
+      );
+    }
+  }
+
+  onReplStop() {
+    this.drawer.stop();
+    updateMiniLocations(this.editor, []);
+    cleanupDraw(true, this.id);
+  }
+  // TBD: old impl, not used?
+  // async stop() {
+  //   this.repl.scheduler.stop();
+  // }
+
   draw(haps, time, painters) {
     painters?.forEach((painter) => painter(this.drawContext, time, haps, this.drawTime));
+  }
+  async beforeEval() {
+    cleanupDraw(true, this.id);
+    await this.prebaked;
+  }
+  afterEval(pattern, meta) {
+    // remember for when highlighting is toggled on
+    this.miniLocations = meta?.miniLocations;
+    this.widgets = meta?.widgets;
+    const sliders = this.widgets.filter((w) => w.type === 'slider');
+    updateSliderWidgets(this.editor, sliders);
+    const widgets = this.widgets.filter((w) => w.type !== 'slider');
+    updateWidgets(this.editor, widgets);
+    updateMiniLocations(this.editor, this.miniLocations);
+
+    // then parent afterEval - TBD
+
+    // if no painters are set (.onPaint was not called), then we only need
+    // the present moment (for highlighting)
+    const drawTime = pattern.getPainters().length ? this.drawTime : [0, 0];
+    this.drawer.setDrawTime(drawTime);
+    // invalidate drawer after we've set the appropriate drawTime
+    this.drawer.invalidate(this.repl.scheduler);
   }
   async drawFirstFrame() {
     if (!this.onDraw) {
@@ -297,14 +302,11 @@ export class StrudelMirror {
     this.flash();
     await this.repl.evaluate(this.code, autostart);
   }
-  async stop() {
-    this.repl.scheduler.stop();
-  }
 
-  // Listen for global stop requests (e.g., from Vim :q)
+  // Listen for global stop requests (e.g., from Vim :q) TODO: move
   onStopRequest = (e) => {
     try {
-      this.stop();
+      this.repl.stop();
       e?.cancelable && e.preventDefault?.();
     } catch (err) {
       console.error('Error handling repl-stop event', err);
@@ -413,13 +415,6 @@ export class StrudelMirror {
 
 export function parseBooleans(value) {
   return { true: true, false: false }[value] ?? value;
-}
-
-// helper function to generate repl ids
-function s4() {
-  return Math.floor((1 + Math.random()) * 0x10000)
-    .toString(16)
-    .substring(1);
 }
 
 /**
