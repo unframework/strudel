@@ -138,6 +138,7 @@ function useReplInstance() {
     });
 
     editor = new StrudelMirror({
+      id,
       replInstance,
       autodraw: false,
       root: containerRef.current,
