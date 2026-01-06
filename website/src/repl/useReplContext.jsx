@@ -91,6 +91,7 @@ function useReplInstance() {
      */
     let editor;
 
+    // TODO: allow attaching to an existing repl, alternate repl renderers, and/or multiple editors per repl
     const replInstance = repl({
       id,
       sync: isSyncEnabled,
@@ -144,6 +145,13 @@ function useReplInstance() {
           setActivePattern(patternId);
         }
       },
+
+      prebake: async () =>
+        Promise.all([modulesLoading, presets]).then(() => {
+          if (prebakeScript?.length) {
+            return evaluate(prebakeScript ?? '');
+          }
+        }),
     });
 
     editor = new StrudelMirror({
@@ -154,12 +162,6 @@ function useReplInstance() {
       pattern: silence,
       drawTime,
       drawContext,
-      prebake: async () =>
-        Promise.all([modulesLoading, presets]).then(() => {
-          if (prebakeScript?.length) {
-            return evaluate(prebakeScript ?? '');
-          }
-        }),
 
       bgFill: false,
     });

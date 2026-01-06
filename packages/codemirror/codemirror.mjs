@@ -145,11 +145,10 @@ export class StrudelMirror {
       id,
       replInstance,
       initialCode = '',
-      onDraw,
+      onDraw, // TODO remove
       drawContext,
       drawTime = [0, 0],
       autodraw,
-      prebake,
       bgFill = true,
       solo = true,
       mondo,
@@ -170,7 +169,6 @@ export class StrudelMirror {
       this.onDraw(haps, time, painters);
     }, drawTime);
 
-    this.prebaked = prebake();
     autodraw && this.drawFirstFrame();
     this.repl = replInstance; // TODO eliminate these
 
@@ -262,7 +260,6 @@ export class StrudelMirror {
   }
   async beforeEval() {
     cleanupDraw(true, this.id);
-    await this.prebaked;
   }
   afterEval(pattern, meta) {
     // remember for when highlighting is toggled on
@@ -288,7 +285,6 @@ export class StrudelMirror {
       return;
     }
     // draw first frame instantly
-    await this.prebaked;
     try {
       await this.repl.evaluate(this.code, false);
       this.drawer.invalidate(this.repl.scheduler, -0.001);

@@ -75,9 +75,9 @@ export function MiniRepl({
         }
         return pat;
       },
-      prebake: async () => Promise.all([modulesLoading, prebaked]),
 
       // TODO replOptions
+      prebake: async () => Promise.all([modulesLoading, prebaked]),
       onUpdateState: (state) => {
         setReplState({ ...state });
       },

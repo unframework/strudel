@@ -18,6 +18,7 @@ export function repl({
   onToggle,
   editPattern,
   onUpdateState,
+  prebake,
   sync = false,
   setInterval,
   clearInterval,
@@ -39,6 +40,8 @@ export function repl({
   const transpilerOptions = {
     id,
   };
+
+  const prebakedPromise = prebake?.();
 
   const updateState = (update) => {
     Object.assign(state, update);
@@ -209,7 +212,10 @@ export function repl({
       updateState({ code, pending: true });
       await injectPatternMethods();
       setTime(() => scheduler.now()); // TODO: refactor?
+
       await beforeEval?.({ code });
+      await prebakedPromise;
+
       allTransforms = []; // reset all transforms
       shouldHush && hush();
 
