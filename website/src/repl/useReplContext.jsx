@@ -101,49 +101,9 @@ function useReplInstance() {
       clearInterval,
       transpiler,
 
-      onUpdateState: (state) => {
-        // orig useReplContext onUpdateState
-        setReplState({ ...state });
-      },
-
-      onToggle: (started) => {
-        // orig useReplContext onToggle
-        if (!started) {
-          clearHydra();
-        }
-
-        // StrudelMirror onToggle
-        if (started) {
-          editor.handleReplStart();
-        } else {
-          editor.handleReplStop();
-        }
-      },
       beforeEval: async () => {
-        // StrudelMirror beforeEval
-        editor.handleBeforeEval();
-
         // orig useReplContext beforeEval
         await audioReady;
-      },
-      afterEval: ({ meta, pattern }) => {
-        // StrudelMirror afterEval
-        editor.handleAfterEval(pattern, meta);
-
-        // orig useReplContext afterEval
-        {
-          const { code } = all;
-          //post to iframe parent (like Udels) if it exists...
-          window.parent?.postMessage(code);
-
-          setLatestCode(code);
-          window.location.hash = '#' + code2hash(code);
-          setDocumentTitle(code);
-          setVersionDefaultsFrom(code);
-
-          const patternId = savePatternCode(code);
-          setActivePattern(patternId);
-        }
       },
 
       prebake: async () =>
@@ -152,6 +112,29 @@ function useReplInstance() {
             return evaluate(prebakeScript ?? '');
           }
         }),
+    });
+
+    replInstance.addListener('state', (state) => {
+      setReplState({ ...state });
+    });
+
+    replInstance.addListener('toggle', (started) => {
+      if (!started) {
+        clearHydra();
+      }
+    });
+
+    replInstance.addListener('afterEval', ({ code }) => {
+      //post to iframe parent (like Udels) if it exists...
+      window.parent?.postMessage(code);
+
+      setLatestCode(code);
+      window.location.hash = '#' + code2hash(code);
+      setDocumentTitle(code);
+      setVersionDefaultsFrom(code);
+
+      const patternId = savePatternCode(code);
+      setActivePattern(patternId);
     });
 
     editor = new StrudelMirror({

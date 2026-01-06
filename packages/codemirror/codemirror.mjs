@@ -172,6 +172,17 @@ export class StrudelMirror {
     autodraw && this.drawFirstFrame();
     this.repl = replInstance; // TODO eliminate these
 
+    this.repl.addListener('toggle', (started) => {
+      if (started) {
+        this.handleReplStart();
+      } else {
+        this.handleReplStop();
+      }
+    });
+
+    this.repl.addListener('beforeEval', () => this.handleBeforeEval());
+    this.repl.addListener('afterEval', ({ pattern, meta }) => this.handleAfterEval(pattern, meta));
+
     this.editor = initEditor({
       root,
       initialCode,
@@ -182,7 +193,7 @@ export class StrudelMirror {
         }
       },
       onEvaluate: () => this.evaluate(),
-      onStop: () => this.stop(),
+      onStop: () => this.repl.scheduler.stop(),
       mondo,
     });
     const cmEditor = this.root.querySelector('.cm-editor');
@@ -200,7 +211,7 @@ export class StrudelMirror {
     // stop this repl when another repl is started
     this.onStartRepl = (e) => {
       if (this.solo && e.detail !== this.id) {
-        this.stop();
+        this.repl.scheduler.stop();
       }
     };
     document.addEventListener('start-repl', this.onStartRepl);
@@ -250,10 +261,6 @@ export class StrudelMirror {
     updateMiniLocations(this.editor, []);
     cleanupDraw(true, this.id);
   }
-  // TBD: old impl, not used?
-  // async stop() {
-  //   this.repl.scheduler.stop();
-  // }
 
   draw(haps, time, painters) {
     painters?.forEach((painter) => painter(this.drawContext, time, haps, this.drawTime));

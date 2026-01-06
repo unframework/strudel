@@ -15,9 +15,7 @@ export function repl({
   afterEval,
   getTime,
   transpiler,
-  onToggle,
   editPattern,
-  onUpdateState,
   prebake,
   sync = false,
   setInterval,
@@ -43,11 +41,36 @@ export function repl({
 
   const prebakedPromise = prebake?.();
 
+  const listeners = {
+    state: [],
+    toggle: [],
+    beforeEval: [],
+    afterEval: [],
+  };
+  const addListener = (type, listener) => {
+    listeners[type].push(listener);
+  };
+  const removeListener = (type, listener) => {
+    const index = listeners[type].indexOf(listener);
+    if (index !== -1) {
+      listeners[type].splice(index, 1);
+    }
+  };
+  const notifyListeners = (type, update) => {
+    for (const listener of listeners[type]) {
+      try {
+        listener(update);
+      } catch (err) {
+        errorLogger(err, 'repl.notifyListeners');
+      }
+    }
+  };
+
   const updateState = (update) => {
     Object.assign(state, update);
     state.isDirty = state.code !== state.activeCode;
     state.error = state.evalError || state.schedulerError;
-    onUpdateState?.(state);
+    notifyListeners('state', state);
   };
 
   const schedulerOptions = {
@@ -55,7 +78,7 @@ export function repl({
     getTime,
     onToggle: (started) => {
       updateState({ started });
-      onToggle?.(started);
+      notifyListeners('toggle', started);
       if (!started) {
         reset_state();
       }
@@ -213,6 +236,8 @@ export function repl({
       await injectPatternMethods();
       setTime(() => scheduler.now()); // TODO: refactor?
 
+      notifyListeners('beforeEval', { code });
+
       await beforeEval?.({ code });
       await prebakedPromise;
 
@@ -267,6 +292,7 @@ export function repl({
         schedulerError: undefined,
         pending: false,
       });
+      notifyListeners('afterEval', { code, pattern, meta });
       afterEval?.({ code, pattern, meta });
       return pattern;
     } catch (err) {
@@ -277,7 +303,20 @@ export function repl({
     }
   };
   const setCode = (code) => updateState({ code });
-  return { scheduler, evaluate, start, stop, pause, setCps, setPattern, setCode, toggle, state };
+  return {
+    scheduler,
+    evaluate,
+    start,
+    stop,
+    pause,
+    setCps,
+    setPattern,
+    setCode,
+    toggle,
+    state,
+    addListener,
+    removeListener,
+  };
 }
 
 export const getTrigger =
