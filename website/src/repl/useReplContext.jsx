@@ -114,21 +114,21 @@ function useReplInstance() {
 
         // StrudelMirror onToggle
         if (started) {
-          editor.onReplStart();
+          editor.handleReplStart();
         } else {
-          editor.onReplStop();
+          editor.handleReplStop();
         }
       },
       beforeEval: async () => {
         // StrudelMirror beforeEval
-        await editor.beforeEval();
+        editor.handleBeforeEval();
 
         // orig useReplContext beforeEval
         await audioReady;
       },
       afterEval: ({ meta, pattern }) => {
         // StrudelMirror afterEval
-        editor.afterEval(pattern, meta);
+        editor.handleAfterEval(pattern, meta);
 
         // orig useReplContext afterEval
         {

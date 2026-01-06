@@ -233,7 +233,7 @@ export class StrudelMirror {
     document.addEventListener('repl-toggle-comment', this.onToggleComment);
   }
 
-  onReplStart() {
+  handleReplStart() {
     this.drawer.start(this.repl.scheduler);
     if (this.solo) {
       // stop other repls when this one is started
@@ -245,7 +245,7 @@ export class StrudelMirror {
     }
   }
 
-  onReplStop() {
+  handleReplStop() {
     this.drawer.stop();
     updateMiniLocations(this.editor, []);
     cleanupDraw(true, this.id);
@@ -258,10 +258,10 @@ export class StrudelMirror {
   draw(haps, time, painters) {
     painters?.forEach((painter) => painter(this.drawContext, time, haps, this.drawTime));
   }
-  async beforeEval() {
+  handleBeforeEval() {
     cleanupDraw(true, this.id);
   }
-  afterEval(pattern, meta) {
+  handleAfterEval(pattern, meta) {
     // remember for when highlighting is toggled on
     this.miniLocations = meta?.miniLocations;
     this.widgets = meta?.widgets;
