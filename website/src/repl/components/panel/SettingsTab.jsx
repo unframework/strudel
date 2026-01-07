@@ -9,6 +9,7 @@ import { confirmDialog } from '../../util.mjs';
 import { DEFAULT_MAX_POLYPHONY, setMaxPolyphony, setMultiChannelOrbits } from '@strudel/webaudio';
 import { ActionButton, SpecialActionButton } from '../button/action-button.jsx';
 import { ImportPrebakeScriptButton } from './ImportPrebakeScriptButton.jsx';
+import { useReplState } from '@src/repl/useReplContext';
 
 function Checkbox({ label, value, onChange, disabled = false }) {
   return (
