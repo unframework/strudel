@@ -1,13 +1,16 @@
 # strudel
 
 Live coding patterns on the web
-https://strudel.cc/
+
 
 - Try it here: <https://strudel.cc>
 - Docs: <https://strudel.cc/learn>
+- Source: https://codeberg.org/uzu/strudel/
+  * Along with many other live coding projects, we have moved from Microsoft's Github platform to Codeberg for ethical reasons. **Please don't fork the project back to github**.
 - Technical Blog Post: <https://loophole-letters.vercel.app/strudel>
 - 1 Year of Strudel Blog Post: <https://loophole-letters.vercel.app/strudel1year>
 - 2 Years of Strudel Blog Post: <https://strudel.cc/blog/#year-2>
+
 
 ## Running Locally
 

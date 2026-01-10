@@ -42,4 +42,18 @@ describe('transpiler', () => {
       [12, 14],
     ]);
   });
+  it('allows disabling mini', () => {
+    const code = `/* mini-off */
+      const randPrefix = Math.random() > 0.5 ? "b" : "s";
+      const drumPat = \`\${randPrefix}d\`;
+      // mini-on
+      s(drumPat).lpf("5000 10000") // make sure mini still runs;
+    `;
+    const { output, miniLocations } = transpiler(code, { ...simple, emitMiniLocations: true });
+    expect(output).not.toContain("m('b'");
+    expect(output).not.toContain("m('s'");
+    const cutoffIdx = code.indexOf('5000 10000');
+    expect(miniLocations).toHaveLength(2);
+    expect(miniLocations[0][0]).toEqual(cutoffIdx);
+  });
 });

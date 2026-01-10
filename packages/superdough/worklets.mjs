@@ -124,8 +124,8 @@ class LFOProcessor extends AudioWorkletProcessor {
       { name: 'shape', defaultValue: 0 },
       { name: 'curve', defaultValue: 1 },
       { name: 'dcoffset', defaultValue: 0 },
-      { name: 'min', defaultValue: 0 },
-      { name: 'max', defaultValue: 1 },
+      { name: 'min', defaultValue: -1e9 },
+      { name: 'max', defaultValue: 1e9 },
     ];
   }
 
@@ -143,7 +143,8 @@ class LFOProcessor extends AudioWorkletProcessor {
 
   process(_inputs, outputs, parameters) {
     const begin = parameters['begin'][0];
-    if (currentTime >= parameters.end[0]) {
+    const end = parameters['end'][0];
+    if (currentTime >= end) {
       return false;
     }
     if (currentTime <= begin) {
@@ -161,6 +162,7 @@ class LFOProcessor extends AudioWorkletProcessor {
     const curve = parameters['curve'][0];
 
     const dcoffset = parameters['dcoffset'][0];
+
     const min = parameters['min'][0];
     const max = parameters['max'][0];
     const shape = waveShapeNames[parameters['shape'][0]];
@@ -967,7 +969,9 @@ class EnvelopeProcessor extends AudioWorkletProcessor {
       { name: 'attackCurve', defaultValue: 0, minValue: -1, maxValue: 1 },
       { name: 'decayCurve', defaultValue: 0, minValue: -1, maxValue: 1 },
       { name: 'releaseCurve', defaultValue: 0, minValue: -1, maxValue: 1 },
-      { name: 'peak', defaultValue: 1 },
+      { name: 'depth', defaultValue: 1 },
+      { name: 'min', defaultValue: -1e9 },
+      { name: 'max', defaultValue: 1e9 },
       { name: 'retrigger', defaultValue: 1, minValue: 0, maxValue: 1 },
     ];
   }
@@ -1009,9 +1013,15 @@ class EnvelopeProcessor extends AudioWorkletProcessor {
   }
 
   process(_inputs, outputs, params) {
+    const begin = params['begin'][0];
+    const end = params['end'][0];
+    if (currentTime >= end) {
+      return false;
+    }
+    if (currentTime <= begin) {
+      return true;
+    }
     const out = outputs[0][0];
-    if (!out) return true;
-    const begin = pv(params.begin, 0);
     const retrigger = pv(params.retrigger, 0) >= 0.5; // convert to bool
     if (begin !== this.beginTime && (this.state === 0 || retrigger)) {
       // triggered
@@ -1029,7 +1039,9 @@ class EnvelopeProcessor extends AudioWorkletProcessor {
       const aCurve = pv(params.attackCurve, i);
       const dCurve = pv(params.decayCurve, i);
       const rCurve = pv(params.releaseCurve, i);
-      const peak = pv(params.peak, i);
+      const depth = pv(params.depth, i);
+      const min = pv(params.min, i);
+      const max = pv(params.max, i);
       const states = [
         { time: Number.POSITIVE_INFINITY, start: 0, target: 0 }, // idle
         { time: attack, start: this.attackStart, target: 1, curve: aCurve },
@@ -1043,7 +1055,7 @@ class EnvelopeProcessor extends AudioWorkletProcessor {
         this.state = (this.state + 1) % states.length;
         time = states[this.state].time;
       }
-      out[i] = this.val * peak;
+      out[i] = clamp(this.val * depth, min, max);
     }
     return true;
   }

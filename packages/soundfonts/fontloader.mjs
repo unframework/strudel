@@ -166,7 +166,7 @@ export function registerSoundfonts() {
         let envEnd = holdEnd + release + 0.01;
 
         // vibrato
-        let vibratoOscillator = getVibratoOscillator(bufferSource.detune, value, time);
+        const vibratoHandle = getVibratoOscillator(bufferSource.detune, value, time);
         // pitch envelope
         getPitchEnvelope(bufferSource.detune, value, time, holdEnd);
 
@@ -174,10 +174,10 @@ export function registerSoundfonts() {
         const stop = (releaseTime) => {};
         onceEnded(bufferSource, () => {
           releaseAudioNode(bufferSource);
-          releaseAudioNode(vibratoOscillator);
+          vibratoHandle?.stop();
           onended();
         });
-        return { node, stop };
+        return { node, stop, nodes: { source: [bufferSource], ...vibratoHandle?.nodes } };
       },
       { type: 'soundfont', prebake: true, fonts },
     );

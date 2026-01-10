@@ -35,3 +35,24 @@ Troubleshooting
 
 - If :w logs but evaluation doesn't apply, ensure Vim keybindings are active and try again. You can also use Ctrl+Enter as a fallback.
 - For :q / gc, ensure focus is inside the editor. If an error occurs, reload the page to reset editor state and try again.
+
+## Adding custom keybindings
+
+To add custom keybindings the `Vim` object can be used (either from within a pattern or in a prebake script)
+
+Example:
+
+```javascript
+// Map 'jk' to Escape in normal mode
+Vim.map('jk', '<Esc>', 'insert');
+// Map 'U' to :w (Evaluate the current code)
+Vim.map('U', ':w<CR>', 'normal');
+// Map 'Q' to :q — Stop/pause playback
+Vim.map('Q', ':q<CR>', 'normal');
+// Map 'J' to find next '$' (jump to next label)
+Vim.map('J', '/\\$<CR>', 'normal');
+// Map 'K' to find previous '$' (jump to previous label)
+Vim.map('K', '?\\$<CR>', 'normal');
+```
+
+For more information on how to use the `Vim` object see [CodeMirror Vim](https://github.com/replit/codemirror-vim)

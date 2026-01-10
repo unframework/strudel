@@ -90,6 +90,7 @@ export function registerZZFXSounds() {
         });
         return {
           node: o,
+          nodes: { source: [o] },
           stop: () => {},
         };
       },

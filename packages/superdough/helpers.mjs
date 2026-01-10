@@ -104,22 +104,40 @@ function getModulationShapeInput(val) {
   return { tri: 0, triangle: 0, sine: 1, ramp: 2, saw: 3, square: 4 }[val] ?? 0;
 }
 
-export function getLfo(audioContext, begin, end, properties = {}) {
-  const { shape = 0, ...props } = properties;
-  const { dcoffset = -0.5, depth = 1 } = properties;
+export function getEnvelope(audioContext, properties = {}) {
+  return getWorklet(audioContext, 'envelope-processor', properties);
+}
+
+export function getLfo(audioContext, properties = {}) {
+  const {
+    shape = 0,
+    begin = 0,
+    end = 0,
+    time,
+    depth = 1,
+    dcoffset = -0.5,
+    frequency = 1,
+    skew = 0.5,
+    phaseoffset = 0,
+    curve = 1,
+    min,
+    max,
+    ...props
+  } = properties;
+
   const lfoprops = {
-    frequency: 1,
-    depth,
-    skew: 0.5,
-    phaseoffset: 0,
-    time: begin,
     begin,
     end,
-    shape: getModulationShapeInput(shape),
+    time: time ?? begin,
+    depth,
     dcoffset,
-    min: dcoffset * depth,
-    max: dcoffset * depth + depth,
-    curve: 1,
+    frequency,
+    skew,
+    phaseoffset,
+    curve,
+    shape: getModulationShapeInput(shape),
+    min: min ?? dcoffset * depth,
+    max: max ?? dcoffset * depth + depth,
     ...props,
   };
 
@@ -161,7 +179,9 @@ export function getParamLfo(audioContext, param, start, end, lfoValues) {
   }
   let lfo;
   if (depth) {
-    lfo = getLfo(audioContext, start, end, {
+    lfo = getLfo(audioContext, {
+      begin: start,
+      end,
       depth,
       dcoffset,
       ...getLfoInputs,
@@ -331,7 +351,7 @@ export function getVibratoOscillator(param, value, t) {
       releaseAudioNode(vibratoOscillator);
     });
     vibratoOscillator.start(t);
-    return vibratoOscillator;
+    return { stop: (t) => vibratoOscillator.stop(t), nodes: { vib: [vibratoOscillator], vib_gain: [gain] } };
   }
 }
 
@@ -387,6 +407,7 @@ export function applyFM(param, value, begin) {
   const ac = getAudioContext();
   const toStop = []; // fm oscillators we will expose `stop` for
   const fms = {};
+  const nodes = {};
   // Matrix
   for (let i = 1; i <= 8; i++) {
     for (let j = 0; j <= 8; j++) {
@@ -437,11 +458,14 @@ export function applyFM(param, value, begin) {
             output = osc.connect(envGain);
           }
           fms[idx] = { input: osc.frequency, output, freq, osc, toCleanup };
+          nodes[`fm_${idx}`] = [osc];
         }
         const { input, output, freq, osc, toCleanup } = fms[idx];
-        const g = gainNode(amt * freq);
-        io.push(isMod ? output.connect(g) : input);
-        cleanupOnEnd(osc, [...toCleanup, g]);
+        const gAmt = gainNode(amt);
+        const gFreq = gainNode(freq);
+        io.push(isMod ? output.connect(gAmt).connect(gFreq) : input);
+        cleanupOnEnd(osc, [...toCleanup, gAmt, gFreq]);
+        nodes[`fm_${idx}_gain`] = [gAmt];
       }
       if (!io[1]) {
         logger(
@@ -454,6 +478,7 @@ export function applyFM(param, value, begin) {
     }
   }
   return {
+    nodes,
     stop: (t) => toStop.forEach((m) => m?.stop(t)),
   };
 }

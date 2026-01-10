@@ -11,9 +11,9 @@ import { JsDoc } from '../../docs/JsDoc';
 You can optionally add some music metadata in your Strudel code, by using tags in code comments:
 
 ```js
-// @title Hey Hoo
-// @by Sam Tagada
-// @license CC BY-NC-SA
+// @title My Cool Song
+// @by John Doe
+// @license CC-BY-SA-4.0
 ```
 
 Like other comments, those are ignored by Strudel, but it can be used by other tools to retrieve some information about the music.
@@ -24,22 +24,22 @@ You can also use comment blocks:
 
 ```js
 /*
-@title Hey Hoo
-@by Sam Tagada
-@license CC BY-NC-SA
+@title My Cool Song
+@by John Doe
+@license CC-BY-SA-4.0
 */
 ```
 
 Or define multiple tags in one line:
 
 ```js
-// @title Hey Hoo @by Sam Tagada @license CC BY-NC-SA
+// @title My Cool Song @by John Doe @license CC-BY-SA-4.0
 ```
 
 The `title` tag has an alternative syntax using quotes (must be defined at the very begining):
 
 ```js
-// "Hey Hoo" @by Sam Tagada
+// "My Cool Song" @by John Doe
 ```
 
 ## Tags list
@@ -48,11 +48,13 @@ Available tags are:
 
 - `@title`: music title
 - `@by`: music author(s), separated by comma, eventually followed with a link in `<>` (ex: `@by John Doe <https://example.com>`)
-- `@license`: music license(s), e.g. CC BY-NC-SA. Unsure? [Choose a creative commons license here](https://creativecommons.org/choose/)
+- `@license`: music license(s), separated by comma. Each license should be specified by using the correct identifier in the [https://spdx.org/licenses/](SPDX License List). Example: CC-BY-SA-4.0. Unsure? [Choose a Creative Commons license here](https://creativecommons.org/choose/).
 - `@details`: some additional information about the music
-- `@url`: web page(s) related to the music (git repo, soundcloud link, etc.)
-- `@genre`: music genre(s) (pop, jazz, etc)
+- `@url`: web page(s) related to the music (git repository, Soundcloud link, etc.)
+- `@genre`: music genre(s) (pop, jazz, etc.)
 - `@album`: music album name
+
+Note to tool authors: _Never_ trust that a song has filled those fields with syntactically correct values; make sure your software is robust enough it doesn't break if it encounters bad values
 
 ## Multiple values
 
@@ -60,8 +62,8 @@ Some of them accepts several values, using the comma or new line separator, or d
 
 ```js
 /*
-@by Sam Tagada
-    Jimmy
+@by John Doe
+    Jane Doe
 @genre pop, jazz
 @url https://example.com
 @url https://example.org
@@ -72,11 +74,11 @@ You can also add optional prefixes and use tags where you want:
 
 ```js
 /*
-song @by Sam Tagada
-samples @by Jimmy
+song @by John Doe
+samples @by Jane Doe
 */
 ...
-note("a3 c#4 e4 a4") // @by Sandy
+note("a3 c#4 e4 a4") // @by Sandy Sue
 ```
 
 ## Multiline

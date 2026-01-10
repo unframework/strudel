@@ -21,12 +21,15 @@ export function registerLanguage(type, config) {
 export function transpiler(input, options = {}) {
   const { wrapAsync = false, addReturn = true, emitMiniLocations = true, emitWidgets = true } = options;
 
+  const comments = [];
   let ast = parse(input, {
     ecmaVersion: 2022,
     allowAwaitOutsideFunction: true,
     locations: true,
+    onComment: comments,
   });
 
+  const miniDisableRanges = findMiniDisableRanges(comments, input.length);
   let miniLocations = [];
   const collectMiniLocations = (value, node) => {
     const minilang = languages.get('minilang');
@@ -66,6 +69,9 @@ export function transpiler(input, options = {}) {
         return this.replace(tidalWithLocation(raw, offset));
       }
       if (isBackTickString(node, parent)) {
+        if (isMiniDisabled(node.start, miniDisableRanges)) {
+          return;
+        }
         const { quasis } = node;
         const { raw } = quasis[0].value;
         this.skip();
@@ -73,6 +79,9 @@ export function transpiler(input, options = {}) {
         return this.replace(miniWithLocation(raw, node));
       }
       if (isStringWithDoubleQuotes(node)) {
+        if (isMiniDisabled(node.start, miniDisableRanges)) {
+          return;
+        }
         const { value } = node;
         this.skip();
         emitMiniLocations && collectMiniLocations(value, node);
@@ -326,4 +335,33 @@ function languageWithLocation(name, value, offset) {
     ],
     optional: false,
   };
+}
+
+function findMiniDisableRanges(comments, codeEnd) {
+  const ranges = [];
+  const stack = []; // used to track on/off pairs
+  for (const comment of comments) {
+    const value = comment.value.trim();
+    if (value.startsWith('mini-off')) {
+      stack.push(comment.start);
+    } else if (value.startsWith('mini-on')) {
+      const start = stack.pop();
+      ranges.push([start, comment.end]);
+    }
+  }
+  while (stack.length) {
+    // If no closing mini-on is found, just turn it off until `codeEnd`
+    const start = stack.pop();
+    ranges.push([start, codeEnd]);
+  }
+  return ranges;
+}
+
+function isMiniDisabled(offset, miniDisableRanges) {
+  for (const [start, end] of miniDisableRanges) {
+    if (offset >= start && offset < end) {
+      return true;
+    }
+  }
+  return false;
 }

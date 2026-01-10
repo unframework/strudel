@@ -2,7 +2,10 @@ import { effectSend, getWorklet, webAudioTimeout } from './helpers.mjs';
 import { errorLogger } from './logger.mjs';
 import { clamp } from './util.mjs';
 
-let hasChanged = (now, before) => now !== undefined && now !== before;
+const hasChanged = (now, before) => now !== undefined && now !== before;
+// Node with fixed stereo channel count to prevent clicking when the input signal
+// switches from mono to stereo
+const getStereoNode = (ac) => new GainNode(ac, { gain: 1, channelCount: 2, channelCountMode: 'explicit' });
 
 export class Orbit {
   reverbNode;
@@ -11,10 +14,11 @@ export class Orbit {
   summingNode;
   djfNode;
   audioContext;
+
   constructor(audioContext) {
     this.audioContext = audioContext;
-    this.output = new GainNode(audioContext, { gain: 1, channelCount: 2, channelCountMode: 'explicit' });
-    this.summingNode = new GainNode(audioContext, { gain: 1, channelCount: 2, channelCountMode: 'explicit' });
+    this.output = getStereoNode(audioContext);
+    this.summingNode = getStereoNode(audioContext);
     this.summingNode.connect(this.output);
   }
 
@@ -34,6 +38,7 @@ export class Orbit {
     }
     const val = this.djfNode.parameters.get('value');
     val.setValueAtTime(value, t);
+    return this.djfNode;
   }
 
   getDelay(delaytime = 0, feedback = 0.5, t) {
@@ -164,6 +169,7 @@ export class SuperdoughAudioController {
   audioContext;
   output;
   nodes = {};
+  buses = {};
 
   constructor(audioContext) {
     this.audioContext = audioContext;
@@ -171,10 +177,14 @@ export class SuperdoughAudioController {
   }
 
   reset() {
-    Array.from(this.nodes).forEach((node) => {
+    Object.values(this.nodes).forEach((node) => {
       node.disconnect();
     });
+    Object.values(this.buses).forEach((bus) => {
+      bus.disconnect();
+    });
     this.nodes = {};
+    this.buses = {};
     this.output.reset();
   }
 
@@ -205,5 +215,12 @@ export class SuperdoughAudioController {
       this.output.connectToDestination(this.nodes[orbitNum].output, channels);
     }
     return this.nodes[orbitNum];
+  }
+
+  getBus(busNum) {
+    if (this.buses[busNum] == null) {
+      this.buses[busNum] = getStereoNode(this.audioContext);
+    }
+    return this.buses[busNum];
   }
 }

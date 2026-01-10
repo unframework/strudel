@@ -41,7 +41,7 @@ note("c3 [e3 g3]*2")
 is transpiled to:
 
 ```strudel
-note(m('c3 [e3 g3]', 5))
+note(m('c3 [e3 g3]*2', 5))
 ```
 
 Here, the string is wrapped in `m`, which will create a pattern from a mini-notation string. As the second parameter, it gets passed source code location of the string, which enables highlighting active events later.
