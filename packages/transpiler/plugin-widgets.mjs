@@ -33,6 +33,25 @@ const widgetTranspilerPlugin = {
   }),
 };
 
+const deviceTranspilerPlugin = {
+  walk: (context) => ({
+    enter: function (node, parent, prop, index) {
+      if (!isDeviceFunction(node)) return;
+      context.widgets ??= [];
+      const { widgets, options } = context;
+      const { emitWidgets } = options;
+      const widgetConfig = {
+        to: node.end,
+        index: widgets.filter((w) => w.type === 'device').length,
+        type: 'device',
+        id: options.id,
+      };
+      emitWidgets && widgets.push(widgetConfig);
+      return this.replace(deviceWithLocation(node, widgetConfig));
+    },
+  }),
+};
+
 const sliderTranspilerPlugin = {
   walk: (context) => ({
     enter: function (node, parent, prop, index) {
@@ -61,12 +80,27 @@ const sliderTranspilerPlugin = {
   }),
 };
 
-export const widgetTranspilerPlugins = [sliderTranspilerPlugin, widgetTranspilerPlugin];
+export const widgetTranspilerPlugins = [sliderTranspilerPlugin, deviceTranspilerPlugin, widgetTranspilerPlugin];
 
 // these functions are connected to @strudel/codemirror -> slider.mjs
 // maybe someday there will be pluggable transpiler functions, then move this there
 function isSliderFunction(node) {
   return node.type === 'CallExpression' && node.callee.name === 'slider';
+}
+
+function isDeviceFunction(node) {
+  return node.type === 'CallExpression' && node.callee.name === 'midin';
+}
+
+function deviceWithLocation(node, widgetConfig) {
+  const id = getWidgetID(widgetConfig);
+  node.arguments.unshift({
+    type: 'Literal',
+    value: id,
+    raw: id,
+  });
+  node.callee.name = 'midinWithID';
+  return node;
 }
 
 function isWidgetMethod(node) {

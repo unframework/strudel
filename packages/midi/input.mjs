@@ -26,10 +26,12 @@ export class MidiInput {
     this._refsByChan = {};
     this._toggles = {};
     this._togglesByChan = {};
+    this._widgetListeners = [];
 
     this._loadAllStates();
 
     this.initialDevice = this._startDeviceListener();
+    this.isConnected = !!this.initialDevice;
   }
 
   /**
@@ -69,6 +71,13 @@ export class MidiInput {
           device = await this._waitForDevice();
         }
 
+        this.isConnected = true;
+        try {
+          this._widgetListeners.forEach((cb) => cb());
+        } catch (err) {
+          console.error('[midi] error in widget listener callback:', err);
+        }
+
         // Wait a bit for device to be ready to receive last state
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -86,6 +95,13 @@ export class MidiInput {
 
         device.removeListener('midimessage', midiListener);
         device = null; // Clear var to trigger wait for connection
+
+        this.isConnected = false;
+        try {
+          this._widgetListeners.forEach((cb) => cb());
+        } catch (err) {
+          console.error('[midi] error in widget listener callback:', err);
+        }
       }
     })();
 
@@ -267,5 +283,12 @@ export class MidiInput {
     } else {
       output.sendNoteOff(noteNum, { channels: chan, rawAttack: 0 });
     }
+  }
+
+  registerWidgetListener(callback) {
+    // TODO clean up (elsewhere?)
+    this._widgetListeners.push(callback);
+
+    callback();
   }
 }
