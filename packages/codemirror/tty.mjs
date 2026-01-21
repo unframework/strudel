@@ -14,10 +14,13 @@ class TTYMirrorView {
     // Virtual text mode buffer params
     this.termTop = 0; // Top line number (0-indexed)
     this.termLeft = 0; // Left column offset (0-indexed)
-    this.termWidth = 40; // Terminal width in columns
-    this.termHeight = 10; // Terminal height in rows
+    this.termWidth = 80; // Terminal width in columns
+    this.termHeight = 24; // Terminal height in rows
 
     console.log('[TTY] Plugin initialized');
+
+    // Connect to JSON Serial Server
+    this.setupWebsocket();
 
     // Create xterm.js terminal for debug display
     this.setupXterm();
@@ -54,9 +57,68 @@ class TTYMirrorView {
     this.clearScreen();
   }
 
+  setupWebsocket() {
+    this.wsBuffer = [];
+    this.sendId = 1;
+
+    const wsUrl = 'ws://localhost:8989/ws';
+    console.log('[TTY] Connecting to JSON Serial Server:', wsUrl);
+
+    this.ws = new WebSocket(wsUrl);
+
+    this.ws.onopen = () => {
+      console.log('[TTY] WebSocket connected');
+      this.ws.send('open COM16 57600');
+    };
+
+    this.ws.onclose = (event) => {
+      console.log('[TTY] WebSocket closed:', event.code, event.reason);
+    };
+
+    this.ws.onerror = (error) => {
+      console.error('[TTY] WebSocket error:', error);
+    };
+
+    this.ws.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        this.handleRemoteMessage(message);
+      } catch (_err) {
+        // Ignore non-JSON messages (echoed from client usually)
+      }
+    };
+  }
+
+  handleRemoteMessage(message) {
+    if (message.Cmd === 'Write' || message.Cmd === 'CompleteFake') {
+      return;
+    }
+
+    console.log('[TTY] Handling remote message:', message);
+    // TODO: Handle messages from remote terminal
+  }
+
+  sendToRemote(data) {
+    this.wsBuffer.push(data);
+  }
+
+  flushRemote() {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      const data = this.wsBuffer.join('');
+      this.wsBuffer = [];
+
+      const payload = {
+        P: 'COM16',
+        Data: [{ D: data, Id: `send-${this.sendId++}` }],
+      };
+      this.ws.send('sendjson ' + JSON.stringify(payload));
+    }
+  }
+
   // ANSI escape code helpers
   write(str) {
     this.terminal.write(str);
+    this.sendToRemote(str);
   }
 
   writeCursorPos(row, col) {
@@ -170,10 +232,14 @@ class TTYMirrorView {
       this.writeCursorPos(visTop, visLeft);
       this.showCursor();
     }
+
+    this.flushRemote();
   }
 
   destroy() {
     console.log('[TTY] Plugin destroyed');
+
+    this.ws.close();
 
     this.terminal.dispose();
     this.xtermContainer.parentNode.removeChild(this.xtermContainer);
