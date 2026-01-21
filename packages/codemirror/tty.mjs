@@ -11,8 +11,8 @@ class TTYMirrorView {
     // Virtual text mode buffer params
     this.termTop = 0; // Top line number (0-indexed)
     this.termLeft = 0; // Left column offset (0-indexed)
-    this.termWidth = 80; // Terminal width in columns
-    this.termHeight = 24; // Terminal height in rows
+    this.termWidth = 40; // Terminal width in columns
+    this.termHeight = 10; // Terminal height in rows
 
     console.log('[TTY] Plugin initialized');
 
@@ -22,16 +22,26 @@ class TTYMirrorView {
 
   constrainTerminalViewport(view) {
     const { state } = view;
-    const { from, to } = view.viewport;
-    const viewportStart = state.doc.lineAt(from).number - 1;
-    const viewportEnd = state.doc.lineAt(to).number; // exclusive
 
-    if (this.termTop + this.termHeight > viewportEnd) {
-      this.termTop = Math.max(0, viewportEnd - this.termHeight);
+    const cursor = state.selection.main.head;
+    const cursorLine = state.doc.lineAt(cursor);
+    const cursorLineIdx = cursorLine.number - 1; // Convert to 0-indexed
+    const cursorCol = cursor - cursorLine.from;
+
+    if (this.termTop + this.termHeight <= cursorLineIdx) {
+      this.termTop = cursorLineIdx - this.termHeight + 1;
     }
 
-    if (this.termTop < viewportStart) {
-      this.termTop = viewportStart;
+    if (this.termTop > cursorLineIdx) {
+      this.termTop = cursorLineIdx;
+    }
+
+    if (this.termLeft + this.termWidth <= cursorCol) {
+      this.termLeft = cursorCol - this.termWidth + 1;
+    }
+
+    if (this.termLeft > cursorCol) {
+      this.termLeft = cursorCol;
     }
   }
 
@@ -39,12 +49,7 @@ class TTYMirrorView {
     if (update.docChanged) {
       console.log('[TTY] Document changed');
       console.log('[TTY] New doc length:', update.state.doc.length);
-      this.constrainTerminalViewport(update.view);
-      this.render(update.view);
-    }
 
-    if (update.viewportChanged) {
-      console.log('[TTY] Render viewport changed', update.view.viewport);
       this.constrainTerminalViewport(update.view);
       this.render(update.view);
     }
@@ -53,6 +58,9 @@ class TTYMirrorView {
       const cursor = update.state.selection.main.head;
       const cursorLine = update.state.doc.lineAt(cursor);
       console.log('[TTY] Cursor at char:', cursor, 'line:', cursorLine.number, 'col:', cursor - cursorLine.from);
+
+      this.constrainTerminalViewport(update.view);
+      this.render(update.view);
     }
   }
 
