@@ -1,5 +1,6 @@
 import { ViewPlugin } from '@codemirror/view';
 import { Terminal } from '@xterm/xterm';
+
 import '@xterm/xterm/css/xterm.css';
 
 /**
@@ -48,7 +49,44 @@ class TTYMirrorView {
     });
 
     this.terminal.open(this.xtermContainer);
-    this.terminal.writeln('TTY Mirror initialized');
+
+    // Clear screen and initialize
+    this.clearScreen();
+  }
+
+  // ANSI escape code helpers
+  write(str) {
+    this.terminal.write(str);
+  }
+
+  writeCursorPos(row, col) {
+    // ANSI cursor positioning is 1-indexed
+    this.write(`\x1b[${row + 1};${col + 1}H`);
+  }
+
+  clearScreen() {
+    this.write('\x1b[2J');
+    this.write('\x1b[H'); // Move cursor to home
+  }
+
+  clearLine() {
+    this.write('\x1b[2K');
+  }
+
+  hideCursor() {
+    this.write('\x1b[?25l');
+  }
+
+  showCursor() {
+    this.write('\x1b[?25h');
+  }
+
+  saveCursor() {
+    this.write('\x1b[s');
+  }
+
+  restoreCursor() {
+    this.write('\x1b[u');
   }
 
   constrainTerminalViewport(view) {
@@ -106,11 +144,32 @@ class TTYMirrorView {
       lines.push(clipped);
     }
 
-    // Update xterm display
-    this.terminal.clear();
-    lines.forEach((line) => {
-      this.terminal.writeln(line);
-    });
+    // Update xterm display using ANSI escape codes
+    this.hideCursor();
+
+    // Render each line at its position
+    for (let i = 0; i < this.termHeight; i++) {
+      this.writeCursorPos(i, 0);
+
+      if (i < lines.length) {
+        const line = lines[i];
+        this.write(line.padEnd(this.termWidth, ' '));
+      }
+    }
+
+    // Show cursor at CodeMirror cursor position (if visible in viewport)
+    const cursor = state.selection.main.head;
+    const cursorLine = state.doc.lineAt(cursor);
+    const cursorLineIdx = cursorLine.number - 1;
+    const cursorCol = cursor - cursorLine.from;
+
+    const visTop = cursorLineIdx - this.termTop;
+    const visLeft = cursorCol - this.termLeft;
+
+    if (visTop >= 0 && visTop < this.termHeight && visLeft >= 0 && visLeft < this.termWidth) {
+      this.writeCursorPos(visTop, visLeft);
+      this.showCursor();
+    }
   }
 
   destroy() {
