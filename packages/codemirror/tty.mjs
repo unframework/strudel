@@ -1,4 +1,6 @@
 import { ViewPlugin } from '@codemirror/view';
+import { Terminal } from '@xterm/xterm';
+import '@xterm/xterm/css/xterm.css';
 
 /**
  * TTY Mirror Plugin
@@ -16,8 +18,37 @@ class TTYMirrorView {
 
     console.log('[TTY] Plugin initialized');
 
+    // Create xterm.js terminal for debug display
+    this.setupXterm();
+
     this.constrainTerminalViewport(view);
     this.render(view);
+  }
+
+  setupXterm() {
+    // Create container div
+    this.xtermContainer = document.createElement('div');
+    this.xtermContainer.style.position = 'fixed';
+    this.xtermContainer.style.bottom = '10px';
+    this.xtermContainer.style.right = '10px';
+    this.xtermContainer.style.zIndex = '10000';
+    this.xtermContainer.style.border = '2px solid #555';
+    this.xtermContainer.style.borderRadius = '4px';
+    this.xtermContainer.style.backgroundColor = '#000';
+    document.body.appendChild(this.xtermContainer);
+
+    // Create terminal instance
+    this.terminal = new Terminal({
+      rows: this.termHeight,
+      cols: this.termWidth,
+      theme: {
+        background: '#000000',
+        foreground: '#ffffff',
+      },
+    });
+
+    this.terminal.open(this.xtermContainer);
+    this.terminal.writeln('TTY Mirror initialized');
   }
 
   constrainTerminalViewport(view) {
@@ -75,12 +106,18 @@ class TTYMirrorView {
       lines.push(clipped);
     }
 
-    console.log('[TTY] Terminal buffer content:');
-    console.log(lines.join('\n'));
+    // Update xterm display
+    this.terminal.clear();
+    lines.forEach((line) => {
+      this.terminal.writeln(line);
+    });
   }
 
   destroy() {
     console.log('[TTY] Plugin destroyed');
+
+    this.terminal.dispose();
+    this.xtermContainer.parentNode.removeChild(this.xtermContainer);
   }
 }
 
