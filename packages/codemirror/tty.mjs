@@ -3,6 +3,8 @@ import { Terminal } from '@xterm/xterm';
 
 import '@xterm/xterm/css/xterm.css';
 
+const SERIAL_PORT = 'COM17';
+
 /**
  * TTY Mirror Plugin
  * Captures CodeMirror state for remote terminal display
@@ -75,7 +77,7 @@ class TTYMirrorView {
 
     this.ws.onopen = () => {
       console.log('[TTY] WebSocket connected');
-      this.ws.send('open COM16 57600');
+      this.ws.send(`open ${SERIAL_PORT} 57600`);
     };
 
     this.ws.onclose = (event) => {
@@ -117,7 +119,7 @@ class TTYMirrorView {
 
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       const payload = {
-        P: 'COM16',
+        P: SERIAL_PORT,
         Data: [{ D: data, Id: `send-${this.sendId++}` }],
       };
       this.ws.send('sendjson ' + JSON.stringify(payload));
@@ -138,6 +140,8 @@ class TTYMirrorView {
   clearScreen() {
     this.write('\x1b[2J');
     this.write('\x1b[H'); // Move cursor to home
+    this.writeScrollRegion(0, this.termHeight - 1);
+    this.flushRemote();
   }
 
   clearLine() {
@@ -154,6 +158,10 @@ class TTYMirrorView {
 
   saveCursor() {
     this.write('\x1b[s');
+  }
+
+  writeScrollRegion(top, bottom) {
+    this.write(`\x1b[${top + 1};${bottom + 1}r`);
   }
 
   writeScroll(delta) {
@@ -224,7 +232,7 @@ class TTYMirrorView {
     }
 
     // Update xterm display using ANSI escape codes
-    this.hideCursor();
+    // this.hideCursor();
 
     // Vertical scroll optimization: if horizontal offset unchanged, use ANSI scroll
     if (this.lastTermLeft === this.termLeft && this.lastTermTop !== null) {
