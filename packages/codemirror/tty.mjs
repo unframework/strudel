@@ -110,10 +110,12 @@ class TTYMirrorView {
   }
 
   flushRemote() {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      const data = this.wsBuffer.join('');
-      this.wsBuffer = [];
+    const data = this.wsBuffer.join('');
+    this.wsBuffer = [];
 
+    console.log('[TTY] Flushing', data.length, 'bytes');
+
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       const payload = {
         P: 'COM16',
         Data: [{ D: data, Id: `send-${this.sendId++}` }],
@@ -152,6 +154,14 @@ class TTYMirrorView {
 
   saveCursor() {
     this.write('\x1b[s');
+  }
+
+  writeScroll(delta) {
+    if (delta > 0) {
+      this.write(`\x1b[${delta}S`); // Scroll up
+    } else if (delta < 0) {
+      this.write(`\x1b[${-delta}T`); // Scroll down
+    }
   }
 
   restoreCursor() {
@@ -216,22 +226,44 @@ class TTYMirrorView {
     // Update xterm display using ANSI escape codes
     this.hideCursor();
 
-    this.lastTermTop = this.termTop;
-    this.lastTermLeft = this.termLeft;
-    this.lastFullLines.length = 0;
+    // Vertical scroll optimization: if horizontal offset unchanged, use ANSI scroll
+    if (this.lastTermLeft === this.termLeft && this.lastTermTop !== null) {
+      const delta = this.termTop - this.lastTermTop;
 
-    // Render each line at its position
-    for (let i = 0; i < this.termHeight; i++) {
-      this.writeCursorPos(i, 0);
-
-      if (i < lines.length) {
-        const line = lines[i];
-        const fullLine = line.padEnd(this.termWidth, ' ');
-        this.write(fullLine);
-        this.lastFullLines.push(fullLine);
+      if (delta > 0 && delta < this.termHeight) {
+        // Scrolled down in document - content moves up
+        this.writeScroll(delta);
+        // Shift lastFullLines up, fill bottom with blanks
+        this.lastFullLines.splice(0, delta);
+        for (let i = 0; i < delta; i++) {
+          this.lastFullLines.push('');
+        }
+      } else if (delta < 0 && -delta < this.termHeight) {
+        // Scrolled up in document - content moves down
+        this.writeScroll(delta);
+        // Shift lastFullLines down, fill top with blanks
+        this.lastFullLines.splice(this.termHeight + delta);
+        for (let i = 0; i < -delta; i++) {
+          this.lastFullLines.unshift('');
+        }
       }
     }
 
+    // Render each line at its position (skip unchanged lines)
+    for (let i = 0; i < this.termHeight; i++) {
+      const line = i < lines.length ? lines[i] : '';
+      const fullLine = line.padEnd(this.termWidth, ' ');
+
+      if (fullLine !== this.lastFullLines[i]) {
+        this.writeCursorPos(i, 0);
+        this.write(fullLine);
+      }
+
+      this.lastFullLines[i] = fullLine;
+    }
+
+    this.lastTermTop = this.termTop;
+    this.lastTermLeft = this.termLeft;
     // Show cursor at CodeMirror cursor position (if visible in viewport)
     const cursor = state.selection.main.head;
     const cursorLine = state.doc.lineAt(cursor);
