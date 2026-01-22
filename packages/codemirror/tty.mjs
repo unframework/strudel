@@ -17,6 +17,13 @@ class TTYMirrorView {
     this.termWidth = 80; // Terminal width in columns
     this.termHeight = 24; // Terminal height in rows
 
+    // Last rendered state (for diff-based rendering)
+    this.lastTermTop = null;
+    this.lastTermLeft = null;
+    this.lastFullLines = []; // Array of strings, one per terminal row
+    this.lastCursorRow = null; // Terminal row (0-indexed)
+    this.lastCursorCol = null; // Terminal column (0-indexed)
+
     console.log('[TTY] Plugin initialized');
 
     // Connect to JSON Serial Server
@@ -209,13 +216,19 @@ class TTYMirrorView {
     // Update xterm display using ANSI escape codes
     this.hideCursor();
 
+    this.lastTermTop = this.termTop;
+    this.lastTermLeft = this.termLeft;
+    this.lastFullLines.length = 0;
+
     // Render each line at its position
     for (let i = 0; i < this.termHeight; i++) {
       this.writeCursorPos(i, 0);
 
       if (i < lines.length) {
         const line = lines[i];
-        this.write(line.padEnd(this.termWidth, ' '));
+        const fullLine = line.padEnd(this.termWidth, ' ');
+        this.write(fullLine);
+        this.lastFullLines.push(fullLine);
       }
     }
 
@@ -228,9 +241,15 @@ class TTYMirrorView {
     const visTop = cursorLineIdx - this.termTop;
     const visLeft = cursorCol - this.termLeft;
 
+    this.lastCursorRow = null;
+    this.lastCursorCol = null;
+
     if (visTop >= 0 && visTop < this.termHeight && visLeft >= 0 && visLeft < this.termWidth) {
       this.writeCursorPos(visTop, visLeft);
       this.showCursor();
+
+      this.lastCursorRow = visTop;
+      this.lastCursorCol = visLeft;
     }
 
     this.flushRemote();
