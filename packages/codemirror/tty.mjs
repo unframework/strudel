@@ -20,7 +20,7 @@ class TTYMirrorView {
     // Last rendered state (for diff-based rendering)
     this.lastTermTop = null;
     this.lastTermLeft = null;
-    this.lastFullLines = []; // Array of strings, one per terminal row
+    this.lastLines = []; // Array of strings, one per terminal row
     this.lastCursorRow = null; // Terminal row (0-indexed)
     this.lastCursorCol = null; // Terminal column (0-indexed)
 
@@ -234,32 +234,34 @@ class TTYMirrorView {
         // Scrolled down in document - content moves up
         this.writeScroll(delta);
         // Shift lastFullLines up, fill bottom with blanks
-        this.lastFullLines.splice(0, delta);
+        this.lastLines.splice(0, delta);
         for (let i = 0; i < delta; i++) {
-          this.lastFullLines.push('');
+          this.lastLines.push('');
         }
       } else if (delta < 0 && -delta < this.termHeight) {
         // Scrolled up in document - content moves down
         this.writeScroll(delta);
         // Shift lastFullLines down, fill top with blanks
-        this.lastFullLines.splice(this.termHeight + delta);
+        this.lastLines.splice(this.termHeight + delta);
         for (let i = 0; i < -delta; i++) {
-          this.lastFullLines.unshift('');
+          this.lastLines.unshift('');
         }
       }
     }
 
     // Render each line at its position (skip unchanged lines)
     for (let i = 0; i < this.termHeight; i++) {
-      const line = i < lines.length ? lines[i] : '';
-      const fullLine = line.padEnd(this.termWidth, ' ');
+      const line = lines[i] || '';
+      const lastLine = this.lastLines[i] || '';
 
-      if (fullLine !== this.lastFullLines[i]) {
+      if (line !== lastLine) {
         this.writeCursorPos(i, 0);
-        this.write(fullLine);
+        // Pad only enough to erase old content if new line is shorter
+        const padLength = Math.max(line.length, lastLine.length);
+        this.write(line.padEnd(padLength, ' '));
       }
 
-      this.lastFullLines[i] = fullLine;
+      this.lastLines[i] = line;
     }
 
     this.lastTermTop = this.termTop;
