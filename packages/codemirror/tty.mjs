@@ -252,8 +252,9 @@ class TTYMirrorView {
           console.log('[TTY] setMiniLocations effect:', effect.value);
         }
         if (effect.is(showMiniLocations)) {
-          this.miniLocations = effect.value;
-          this.flush();
+          this.miniLocations = effect.value.haps.flatMap((hap) => hap.context?.locations || []);
+          // console.log('[TTY] showMiniLocations effect:', effect.value.atTime, this.miniLocations);
+          // this.flush();
         }
       }
     }
@@ -354,33 +355,38 @@ class TTYMirrorView {
 
         // prefix has faded colour for numbers
         this.write('\x1b[7m' + padded.slice(0, LINE_PREFIX_WIDTH) + '\x1b[0m');
+        this.write(padded.slice(LINE_PREFIX_WIDTH));
 
-        // scan through miniLocations that overlap with the line range
-        const [lineFrom, lineTo] = this.lineRanges[i] || [0, 0];
+        // // scan through miniLocations that overlap with the line range
+        // const [lineFrom, lineTo] = this.lineRanges[i] || [0, 0];
 
-        let lastPos = 0;
-        for (const [start, end] of this.miniLocations) {
-          if (end <= lineFrom || start >= lineTo) {
-            continue; // No overlap
-          }
-          const locStart = Math.max(start - lineFrom, 0);
-          const locEnd = Math.min(end - lineFrom, this.termWidth - LINE_PREFIX_WIDTH);
+        // let lastPos = 0;
+        // for (const [start, end] of this.miniLocations) {
+        //   if (end <= lineFrom || start >= lineTo) {
+        //     // console.log('[TTY] Highlight location on line', i, ':', start, '-', end);
+        //     continue; // No overlap
+        //   }
 
-          // Write text before location
-          if (locStart > lastPos) {
-            this.write(padded.slice(LINE_PREFIX_WIDTH + lastPos, LINE_PREFIX_WIDTH + locStart));
-          }
+        //   const locStart = Math.max(start - lineFrom, 0);
+        //   const locEnd = Math.min(end - lineFrom, this.termWidth - LINE_PREFIX_WIDTH);
 
-          // Write highlighted location
-          this.write('\x1b[7m'); // Yellow background
-          this.write(padded.slice(LINE_PREFIX_WIDTH + locStart, LINE_PREFIX_WIDTH + locEnd));
-          this.write('\x1b[0m'); // Reset
-        }
+        //   // Write text before location
+        //   if (locStart > lastPos) {
+        //     this.write(padded.slice(LINE_PREFIX_WIDTH + lastPos, LINE_PREFIX_WIDTH + locStart));
+        //   }
 
-        // Write remaining text after last location
-        if (lastPos < line.length) {
-          this.write(padded.slice(LINE_PREFIX_WIDTH + lastPos));
-        }
+        //   // Write highlighted location
+        //   this.write('\x1b[7m'); // Yellow background
+        //   this.write(padded.slice(LINE_PREFIX_WIDTH + locStart, LINE_PREFIX_WIDTH + locEnd));
+        //   this.write('\x1b[0m'); // Reset
+
+        //   lastPos = locEnd;
+        // }
+
+        // // Write remaining text after last location
+        // if (lastPos < line.length) {
+        //   this.write(padded.slice(LINE_PREFIX_WIDTH + lastPos));
+        // }
       }
 
       this.lastLines[i] = line;
