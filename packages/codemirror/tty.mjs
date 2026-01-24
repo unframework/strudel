@@ -327,10 +327,7 @@ class TTYMirrorView {
     this.visTop = cursorLineIdx - this.termTop;
     this.visLeft = cursorCol - this.termLeft;
 
-    if (this.visTop >= 0 && this.visTop < this.termHeight && this.visLeft >= 0 && this.visLeft < this.termWidth) {
-      this.lines[this.visTop] = this.lines[this.visTop].padEnd(this.visLeft + LINE_PREFIX_WIDTH + 1, ' '); // Ensure there is a space at the end
-      this.lineAttrs[this.visTop][this.visLeft + LINE_PREFIX_WIDTH] = 7; // Mark cursor position
-    }
+    this.renderCursor();
   }
 
   updateMiniLocations(haps) {
@@ -373,6 +370,15 @@ class TTYMirrorView {
       }
     }
     // console.log('[TTY] Updated mini locations:', this.lineAttrs);
+
+    this.renderCursor();
+  }
+
+  renderCursor() {
+    if (this.visTop >= 0 && this.visTop < this.termHeight && this.visLeft >= 0 && this.visLeft < this.termWidth) {
+      this.lines[this.visTop] = this.lines[this.visTop].padEnd(this.visLeft + LINE_PREFIX_WIDTH + 1, ' '); // Ensure there is a space at the end
+      this.lineAttrs[this.visTop][this.visLeft + LINE_PREFIX_WIDTH] = 7; // Mark cursor position
+    }
   }
 
   flush() {
