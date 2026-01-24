@@ -58,6 +58,13 @@ class TTYMirrorView {
 
     this.constrainTerminalViewport(view);
     this.render(view);
+
+    this.cursorFlash = true;
+    this.cursorFlashInterval = setInterval(() => {
+      this.cursorFlash = !this.cursorFlash;
+      this.renderCursor();
+      this.flush();
+    }, 600);
   }
 
   setupXterm() {
@@ -375,9 +382,10 @@ class TTYMirrorView {
   }
 
   renderCursor() {
+    this.dirtyBuffer = true;
     if (this.visTop >= 0 && this.visTop < this.termHeight && this.visLeft >= 0 && this.visLeft < this.termWidth) {
       this.lines[this.visTop] = this.lines[this.visTop].padEnd(this.visLeft + LINE_PREFIX_WIDTH + 1, ' '); // Ensure there is a space at the end
-      this.lineAttrs[this.visTop][this.visLeft + LINE_PREFIX_WIDTH] = 7; // Mark cursor position
+      this.lineAttrs[this.visTop][this.visLeft + LINE_PREFIX_WIDTH] = this.cursorFlash ? 7 : 0; // Mark cursor position
     }
   }
 
@@ -498,6 +506,8 @@ class TTYMirrorView {
 
   destroy() {
     console.log('[TTY] Plugin destroyed');
+
+    clearInterval(this.cursorFlashInterval);
 
     this.ws.close();
 
