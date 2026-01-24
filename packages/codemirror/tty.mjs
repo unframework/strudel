@@ -6,6 +6,8 @@ import '@xterm/xterm/css/xterm.css';
 const SERIAL_PORT = 'COM17';
 const SERIAL_SPEED = '57600';
 
+const LINE_PREFIX_WIDTH = 3; // Width of line number prefix
+
 /**
  * TTY Mirror Plugin
  * Captures CodeMirror state for remote terminal display
@@ -241,7 +243,8 @@ class TTYMirrorView {
     const lines = [];
     for (let lineIdx = this.termTop; lineIdx < terminalBottom; lineIdx++) {
       const fullLine = state.doc.line(lineIdx + 1);
-      const clipped = fullLine.text.slice(this.termLeft, this.termLeft + this.termWidth);
+      const prefix = String(lineIdx + 1).padStart(LINE_PREFIX_WIDTH, ' ');
+      const clipped = (prefix + fullLine.text).slice(this.termLeft, this.termLeft + this.termWidth);
       lines.push(clipped);
     }
 
@@ -282,7 +285,10 @@ class TTYMirrorView {
         this.writeCursorPos(i, 0);
         // Pad only enough to erase old content if new line is shorter
         const padLength = Math.max(line.length, lastLine.length);
-        this.write(line.padEnd(padLength, ' '));
+        const padded = line.padEnd(padLength, ' ');
+
+        // prefix has faded colour for numbers
+        this.write('\x1b[7m' + padded.slice(0, LINE_PREFIX_WIDTH) + '\x1b[0m' + padded.slice(LINE_PREFIX_WIDTH));
       }
 
       this.lastLines[i] = line;
@@ -303,7 +309,7 @@ class TTYMirrorView {
     this.lastCursorCol = null;
 
     if (visTop >= 0 && visTop < this.termHeight && visLeft >= 0 && visLeft < this.termWidth) {
-      this.writeCursorPos(visTop, visLeft);
+      this.writeCursorPos(visTop, visLeft + LINE_PREFIX_WIDTH);
       this.showCursor();
 
       this.lastCursorRow = visTop;
