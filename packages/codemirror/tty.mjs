@@ -16,11 +16,18 @@ class TTYMirrorView {
   constructor(view) {
     this.view = view;
 
+    this.dirtyBuffer = false; // Whether the buffer needs to be flushed
+    this.flushPaused = false; // Whether flushing is paused (XOFF)
+
     // Virtual text mode buffer params
     this.termTop = 0; // Top line number (0-indexed)
     this.termLeft = 0; // Left column offset (0-indexed)
     this.termWidth = 80; // Terminal width in columns
     this.termHeight = 24; // Terminal height in rows
+
+    this.lines = [];
+    this.visTop = null; // Visible cursor row in terminal viewport
+    this.visLeft = null; // Visible cursor column in terminal viewport
 
     // Last rendered state (for diff-based rendering)
     this.lastTermTop = null;
@@ -102,7 +109,23 @@ class TTYMirrorView {
   }
 
   handleRemoteMessage(message) {
-    if (message.Cmd === 'Write' || message.Cmd === 'CompleteFake') {
+    if (message.P !== SERIAL_PORT) {
+      return;
+    }
+
+    if (message.Cmd === 'Write' || message.Cmd === 'Queued' || message.Cmd === 'CompleteFake') {
+      return;
+    }
+
+    if (message.Cmd === undefined) {
+      if (message.D === '\x11') {
+        // XON
+        this.flushPaused = false;
+        this.flush();
+      } else if (message.D === '\x13') {
+        // XOFF
+        this.flushPaused = true;
+      }
       return;
     }
 
@@ -118,7 +141,7 @@ class TTYMirrorView {
     const data = this.wsBuffer.join('');
     this.wsBuffer = [];
 
-    console.log('[TTY] Flushing', data.length, 'bytes');
+    // console.log('[TTY] Flushing', data.length, 'bytes');
 
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       const payload = {
@@ -224,6 +247,7 @@ class TTYMirrorView {
 
       this.constrainTerminalViewport(update.view);
       this.render(update.view);
+      this.flush();
     }
 
     if (update.selectionSet) {
@@ -233,19 +257,41 @@ class TTYMirrorView {
 
       this.constrainTerminalViewport(update.view);
       this.render(update.view);
+      this.flush();
     }
   }
 
   render(view) {
+    this.dirtyBuffer = true;
+
     const { state } = view;
 
     const terminalBottom = Math.min(this.termTop + this.termHeight, state.doc.lines);
-    const lines = [];
+    this.lines = [];
     for (let lineIdx = this.termTop; lineIdx < terminalBottom; lineIdx++) {
       const fullLine = state.doc.line(lineIdx + 1);
       const prefix = String(lineIdx + 1).padStart(LINE_PREFIX_WIDTH, ' ');
       const clipped = (prefix + fullLine.text).slice(this.termLeft, this.termLeft + this.termWidth);
-      lines.push(clipped);
+      this.lines.push(clipped);
+    }
+
+    // Show cursor at CodeMirror cursor position (if visible in viewport)
+    const cursor = state.selection.main.head;
+    const cursorLine = state.doc.lineAt(cursor);
+    const cursorLineIdx = cursorLine.number - 1;
+    const cursorCol = cursor - cursorLine.from;
+
+    this.visTop = cursorLineIdx - this.termTop;
+    this.visLeft = cursorCol - this.termLeft;
+  }
+
+  flush() {
+    if (!this.dirtyBuffer) {
+      return;
+    }
+
+    if (this.flushPaused) {
+      return;
     }
 
     // Update xterm display using ANSI escape codes
@@ -278,7 +324,7 @@ class TTYMirrorView {
 
     // Render each line at its position (skip unchanged lines)
     for (let i = 0; i < this.termHeight; i++) {
-      const line = lines[i] || '';
+      const line = this.lines[i] || '';
       const lastLine = this.lastLines[i] || '';
 
       if (line !== lastLine) {
@@ -296,26 +342,19 @@ class TTYMirrorView {
 
     this.lastTermTop = this.termTop;
     this.lastTermLeft = this.termLeft;
-    // Show cursor at CodeMirror cursor position (if visible in viewport)
-    const cursor = state.selection.main.head;
-    const cursorLine = state.doc.lineAt(cursor);
-    const cursorLineIdx = cursorLine.number - 1;
-    const cursorCol = cursor - cursorLine.from;
-
-    const visTop = cursorLineIdx - this.termTop;
-    const visLeft = cursorCol - this.termLeft;
 
     this.lastCursorRow = null;
     this.lastCursorCol = null;
 
-    if (visTop >= 0 && visTop < this.termHeight && visLeft >= 0 && visLeft < this.termWidth) {
-      this.writeCursorPos(visTop, visLeft + LINE_PREFIX_WIDTH);
+    if (this.visTop >= 0 && this.visTop < this.termHeight && this.visLeft >= 0 && this.visLeft < this.termWidth) {
+      this.writeCursorPos(this.visTop, this.visLeft + LINE_PREFIX_WIDTH);
       this.showCursor();
 
-      this.lastCursorRow = visTop;
-      this.lastCursorCol = visLeft;
+      this.lastCursorRow = this.visTop;
+      this.lastCursorCol = this.visLeft;
     }
 
+    this.dirtyBuffer = false;
     this.flushRemote();
   }
 
