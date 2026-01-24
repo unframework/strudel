@@ -254,9 +254,10 @@ class TTYMirrorView {
           console.log('[TTY] setMiniLocations effect:', effect.value);
         }
         if (effect.is(showMiniLocations)) {
-          this.miniLocations = effect.value.haps.flatMap((hap) => hap.context?.locations || []);
+          this.updateMiniLocations(effect.value.haps);
+          // this.miniLocations = effect.value.haps.flatMap((hap) => hap.context?.locations || []);
           // console.log('[TTY] showMiniLocations effect:', effect.value.atTime, this.miniLocations);
-          // this.flush();
+          this.flush();
         }
       }
     }
@@ -310,6 +311,48 @@ class TTYMirrorView {
     this.visLeft = cursorCol - this.termLeft;
   }
 
+  updateMiniLocations(haps) {
+    this.dirtyBuffer = true;
+
+    for (let i = 0; i < this.termHeight; i++) {
+      if (!this.lineAttrs[i]) {
+        this.lineAttrs[i] = [7, 7, 7];
+        continue;
+      }
+      this.lineAttrs[i].length = LINE_PREFIX_WIDTH; // Clear content attrs
+    }
+
+    for (const hap of haps) {
+      const locations = hap.context?.locations;
+      if (!locations) {
+        continue;
+      }
+
+      if (!Array.isArray(locations)) {
+        console.warn('[TTY] mini location is not an array:', locations);
+      }
+
+      for (const { start, end } of locations) {
+        for (let lineIdx = 0; lineIdx < this.termHeight; lineIdx++) {
+          const [lineFrom, lineTo] = this.lineRanges[lineIdx] || [0, 0];
+          if (start >= lineTo || end <= lineFrom) {
+            continue; // No overlap
+          }
+
+          const attrs = this.lineAttrs[lineIdx];
+
+          const attrStart = LINE_PREFIX_WIDTH + Math.max(0, start - lineFrom);
+          const attrEnd = LINE_PREFIX_WIDTH + Math.min(lineTo - lineFrom, end - lineFrom);
+
+          for (let col = attrStart; col < attrEnd; col++) {
+            attrs[col] = 7; // Underline attribute
+          }
+        }
+      }
+    }
+    // console.log('[TTY] Updated mini locations:', this.lineAttrs);
+  }
+
   flush() {
     if (!this.dirtyBuffer) {
       return;
@@ -318,6 +361,7 @@ class TTYMirrorView {
     if (this.flushPaused) {
       return;
     }
+    // console.log('[TTY] Flushing terminal display');
 
     // Update xterm display using ANSI escape codes
     this.hideCursor();
@@ -370,7 +414,7 @@ class TTYMirrorView {
         }
 
         // collect a span that extends while new attr is same, but until chars+attrs match again
-        // TODO: lookahead to avoid breaking on single eg spaces
+        // (and lookahead to avoid breaking on eg single spaces)
         const start = j;
         let sameCount = 0;
         do {
@@ -396,7 +440,7 @@ class TTYMirrorView {
         const end = j - sameCount;
 
         // write the span
-        // console.log('line', i, 'col', start, 'to', end, 'attr', attr, 'text:', line.slice(start, j));
+        console.log('line', i, 'col', start, 'to', end, 'attr', attr, 'text:', line.slice(start, j));
         this.writeCursorPos(i, start);
 
         // Set attributes (only handling inverted for now)
