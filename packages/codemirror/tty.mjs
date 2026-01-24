@@ -4,6 +4,7 @@ import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 
 const SERIAL_PORT = 'COM17';
+const SERIAL_SPEED = '57600';
 
 /**
  * TTY Mirror Plugin
@@ -77,7 +78,7 @@ class TTYMirrorView {
 
     this.ws.onopen = () => {
       console.log('[TTY] WebSocket connected');
-      this.ws.send(`open ${SERIAL_PORT} 57600`);
+      this.ws.send(`open ${SERIAL_PORT} ${SERIAL_SPEED}`);
     };
 
     this.ws.onclose = (event) => {
