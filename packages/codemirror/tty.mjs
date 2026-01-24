@@ -178,6 +178,7 @@ class TTYMirrorView {
   }
 
   clearScreen() {
+    this.hideCursor();
     this.write('\x1b[2J');
     this.writeCursorHome();
     this.writeScrollRegion(0, this.termHeight - 1);
@@ -226,6 +227,15 @@ class TTYMirrorView {
 
   restoreCursor() {
     this.write('\x1b[u');
+  }
+
+  writeAttrs(attr) {
+    // Set attributes (only handling inverted for now)
+    if (attr === 7) {
+      this.write('\x1b[7m'); // Inverted
+    } else {
+      this.write('\x1b[0m'); // Normal
+    }
   }
 
   constrainTerminalViewport(view) {
@@ -316,6 +326,11 @@ class TTYMirrorView {
 
     this.visTop = cursorLineIdx - this.termTop;
     this.visLeft = cursorCol - this.termLeft;
+
+    if (this.visTop >= 0 && this.visTop < this.termHeight && this.visLeft >= 0 && this.visLeft < this.termWidth) {
+      this.lines[this.visTop] = this.lines[this.visTop].padEnd(this.visLeft + LINE_PREFIX_WIDTH + 1, ' '); // Ensure there is a space at the end
+      this.lineAttrs[this.visTop][this.visLeft + LINE_PREFIX_WIDTH] = 7; // Mark cursor position
+    }
   }
 
   updateMiniLocations(haps) {
@@ -369,9 +384,6 @@ class TTYMirrorView {
       return;
     }
     // console.log('[TTY] Flushing terminal display');
-
-    // Update xterm display using ANSI escape codes
-    this.hideCursor();
 
     // Vertical scroll optimization: if horizontal offset unchanged, use ANSI scroll
     if (this.lastTermLeft === this.termLeft && this.lastTermTop !== null) {
@@ -449,14 +461,7 @@ class TTYMirrorView {
         // write the span
         // console.log('line', i, 'col', start, 'to', end, 'attr', attr, 'text:', line.slice(start, j));
         this.writeCursorPos(i, start);
-
-        // Set attributes (only handling inverted for now)
-        if (attr === 7) {
-          this.write('\x1b[7m'); // Inverted
-        } else {
-          this.write('\x1b[0m'); // Normal
-        }
-
+        this.writeAttrs(attr);
         this.write(line.slice(start, end));
         for (let k = start; k < end; k++) {
           lastAttrs[k] = attr;
@@ -480,14 +485,6 @@ class TTYMirrorView {
 
     this.lastCursorRow = null;
     this.lastCursorCol = null;
-
-    if (this.visTop >= 0 && this.visTop < this.termHeight && this.visLeft >= 0 && this.visLeft < this.termWidth) {
-      this.writeCursorPos(this.visTop, this.visLeft + LINE_PREFIX_WIDTH);
-      this.showCursor();
-
-      this.lastCursorRow = this.visTop;
-      this.lastCursorCol = this.visLeft;
-    }
 
     this.dirtyBuffer = false;
     this.flushRemote();
