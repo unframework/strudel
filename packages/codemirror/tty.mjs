@@ -140,7 +140,8 @@ class TTYMirrorView {
 
   clearScreen() {
     this.write('\x1b[2J');
-    this.write('\x1b[H'); // Move cursor to home
+    this.flushRemote();
+    this.writeCursorHome();
     this.writeScrollRegion(0, this.termHeight - 1);
     this.flushRemote();
   }
@@ -161,8 +162,20 @@ class TTYMirrorView {
     this.write('\x1b[s');
   }
 
+  writeCursorHome() {
+    this.write('\x1b[H');
+  }
+
   writeScrollRegion(top, bottom) {
     this.write(`\x1b[${top + 1};${bottom + 1}r`);
+  }
+
+  writeInsertLine(delta) {
+    if (delta > 0) {
+      this.write(`\x1b[${delta}L`); // Insert lines
+    } else if (delta < 0) {
+      this.write(`\x1b[${-delta}M`); // Delete lines
+    }
   }
 
   writeScroll(delta) {
@@ -233,23 +246,25 @@ class TTYMirrorView {
     }
 
     // Update xterm display using ANSI escape codes
-    // this.hideCursor();
+    this.hideCursor();
 
     // Vertical scroll optimization: if horizontal offset unchanged, use ANSI scroll
     if (this.lastTermLeft === this.termLeft && this.lastTermTop !== null) {
       const delta = this.termTop - this.lastTermTop;
 
       if (delta > 0 && delta < this.termHeight) {
-        // Scrolled down in document - content moves up
-        this.writeScroll(delta);
+        // Scrolled down in document - delete lines from top
+        this.writeCursorHome();
+        this.writeInsertLine(-delta);
         // Shift lastFullLines up, fill bottom with blanks
         this.lastLines.splice(0, delta);
         for (let i = 0; i < delta; i++) {
           this.lastLines.push('');
         }
       } else if (delta < 0 && -delta < this.termHeight) {
-        // Scrolled up in document - content moves down
-        this.writeScroll(delta);
+        // Scrolled up in document - insert lines at top
+        this.writeCursorHome();
+        this.writeInsertLine(-delta);
         // Shift lastFullLines down, fill top with blanks
         this.lastLines.splice(this.termHeight + delta);
         for (let i = 0; i < -delta; i++) {
