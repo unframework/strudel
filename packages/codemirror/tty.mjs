@@ -150,17 +150,19 @@ class TTYMirrorView {
   }
 
   flushRemote() {
-    const data = this.wsBuffer.join('');
-    this.wsBuffer = [];
+    if (this.ws.readyState === WebSocket.OPEN) {
+      const data = this.wsBuffer.join('');
+      this.wsBuffer.length = 0;
 
-    // console.log('[TTY] Flushing', data.length, 'bytes');
+      // console.log('[TTY] Flushing', data.length, 'bytes');
 
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       const payload = {
         P: SERIAL_PORT,
         Data: [{ D: data, Id: `send-${this.sendId++}` }],
       };
       this.ws.send('sendjson ' + JSON.stringify(payload));
+    } else if (this.ws.readyState === WebSocket.CLOSED) {
+      this.wsBuffer.length = 0;
     }
   }
 
@@ -177,7 +179,6 @@ class TTYMirrorView {
 
   clearScreen() {
     this.write('\x1b[2J');
-    this.flushRemote();
     this.writeCursorHome();
     this.writeScrollRegion(0, this.termHeight - 1);
     this.flushRemote();
