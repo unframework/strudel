@@ -39,6 +39,12 @@ class TTYMirrorView {
     this.lastTermLeft = null;
     this.lastLines = []; // Array of strings, one per terminal row
     this.lastLineAttrs = []; // Array of attribute arrays, one per terminal row
+
+    for (let i = 0; i < this.termHeight; i++) {
+      this.lastLines.push('');
+      this.lastLineAttrs.push(new Array(this.termWidth).fill(0));
+    }
+
     this.lastCursorRow = null; // Terminal row (0-indexed)
     this.lastCursorCol = null; // Terminal column (0-indexed)
 
@@ -399,8 +405,8 @@ class TTYMirrorView {
     for (let i = 0; i < this.termHeight; i++) {
       const line = this.lines[i] || '';
       const attrs = this.lineAttrs[i] || [];
-      const lastLine = this.lastLines[i] || '';
-      const lastAttrs = this.lastLineAttrs[i] || [];
+      const lastLine = this.lastLines[i];
+      const lastAttrs = this.lastLineAttrs[i];
 
       const scanLength = line.length;
 
@@ -440,7 +446,7 @@ class TTYMirrorView {
         const end = j - sameCount;
 
         // write the span
-        console.log('line', i, 'col', start, 'to', end, 'attr', attr, 'text:', line.slice(start, j));
+        // console.log('line', i, 'col', start, 'to', end, 'attr', attr, 'text:', line.slice(start, j));
         this.writeCursorPos(i, start);
 
         // Set attributes (only handling inverted for now)
@@ -451,6 +457,9 @@ class TTYMirrorView {
         }
 
         this.write(line.slice(start, end));
+        for (let k = start; k < end; k++) {
+          lastAttrs[k] = attr;
+        }
       }
 
       // erase tail if new line is shorter than last line
@@ -459,10 +468,10 @@ class TTYMirrorView {
         // console.log('line', i, 'erase', eraseChars);
         this.writeCursorPos(i, line.length);
         this.writeEraseChars(eraseChars);
+        lastAttrs.length = line.length;
       }
 
       this.lastLines[i] = line;
-      this.lastLineAttrs[i] = attrs;
     }
 
     this.lastTermTop = this.termTop;
