@@ -1,5 +1,6 @@
 import { ViewPlugin } from '@codemirror/view';
 import { Terminal } from '@xterm/xterm';
+import { setMiniLocations, showMiniLocations } from './highlight.mjs';
 
 import '@xterm/xterm/css/xterm.css';
 
@@ -26,8 +27,11 @@ class TTYMirrorView {
     this.termHeight = 24; // Terminal height in rows
 
     this.lines = [];
+    this.lineRanges = [];
     this.visTop = null; // Visible cursor row in terminal viewport
     this.visLeft = null; // Visible cursor column in terminal viewport
+
+    this.miniLocations = []; // Current mini locations from highlight plugin
 
     // Last rendered state (for diff-based rendering)
     this.lastTermTop = null;
@@ -241,6 +245,19 @@ class TTYMirrorView {
   }
 
   update(update) {
+    // Check for highlight effects
+    for (const tr of update.transactions) {
+      for (const effect of tr.effects) {
+        if (effect.is(setMiniLocations)) {
+          console.log('[TTY] setMiniLocations effect:', effect.value);
+        }
+        if (effect.is(showMiniLocations)) {
+          this.miniLocations = effect.value;
+          this.flush();
+        }
+      }
+    }
+
     if (update.docChanged) {
       console.log('[TTY] Document changed');
       console.log('[TTY] New doc length:', update.state.doc.length);
@@ -268,11 +285,13 @@ class TTYMirrorView {
 
     const terminalBottom = Math.min(this.termTop + this.termHeight, state.doc.lines);
     this.lines = [];
+    this.lineRanges = [];
     for (let lineIdx = this.termTop; lineIdx < terminalBottom; lineIdx++) {
       const fullLine = state.doc.line(lineIdx + 1);
       const prefix = String(lineIdx + 1).padStart(LINE_PREFIX_WIDTH, ' ');
       const clipped = (prefix + fullLine.text).slice(this.termLeft, this.termLeft + this.termWidth);
       this.lines.push(clipped);
+      this.lineRanges.push([fullLine.from, fullLine.to]);
     }
 
     // Show cursor at CodeMirror cursor position (if visible in viewport)
@@ -334,7 +353,34 @@ class TTYMirrorView {
         const padded = line.padEnd(padLength, ' ');
 
         // prefix has faded colour for numbers
-        this.write('\x1b[7m' + padded.slice(0, LINE_PREFIX_WIDTH) + '\x1b[0m' + padded.slice(LINE_PREFIX_WIDTH));
+        this.write('\x1b[7m' + padded.slice(0, LINE_PREFIX_WIDTH) + '\x1b[0m');
+
+        // scan through miniLocations that overlap with the line range
+        const [lineFrom, lineTo] = this.lineRanges[i] || [0, 0];
+
+        let lastPos = 0;
+        for (const [start, end] of this.miniLocations) {
+          if (end <= lineFrom || start >= lineTo) {
+            continue; // No overlap
+          }
+          const locStart = Math.max(start - lineFrom, 0);
+          const locEnd = Math.min(end - lineFrom, this.termWidth - LINE_PREFIX_WIDTH);
+
+          // Write text before location
+          if (locStart > lastPos) {
+            this.write(padded.slice(LINE_PREFIX_WIDTH + lastPos, LINE_PREFIX_WIDTH + locStart));
+          }
+
+          // Write highlighted location
+          this.write('\x1b[7m'); // Yellow background
+          this.write(padded.slice(LINE_PREFIX_WIDTH + locStart, LINE_PREFIX_WIDTH + locEnd));
+          this.write('\x1b[0m'); // Reset
+        }
+
+        // Write remaining text after last location
+        if (lastPos < line.length) {
+          this.write(padded.slice(LINE_PREFIX_WIDTH + lastPos));
+        }
       }
 
       this.lastLines[i] = line;
