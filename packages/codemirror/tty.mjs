@@ -27,6 +27,7 @@ class TTYMirrorView {
     this.termHeight = 24; // Terminal height in rows
 
     this.lines = [];
+    this.lineAttrs = [];
     this.lineRanges = [];
     this.visTop = null; // Visible cursor row in terminal viewport
     this.visLeft = null; // Visible cursor column in terminal viewport
@@ -37,6 +38,7 @@ class TTYMirrorView {
     this.lastTermTop = null;
     this.lastTermLeft = null;
     this.lastLines = []; // Array of strings, one per terminal row
+    this.lastLineAttrs = []; // Array of attribute arrays, one per terminal row
     this.lastCursorRow = null; // Terminal row (0-indexed)
     this.lastCursorCol = null; // Terminal column (0-indexed)
 
@@ -175,8 +177,8 @@ class TTYMirrorView {
     this.flushRemote();
   }
 
-  clearLine() {
-    this.write('\x1b[2K');
+  writeEraseChars(n) {
+    this.write(`\x1b[${n}X`);
   }
 
   hideCursor() {
@@ -286,12 +288,15 @@ class TTYMirrorView {
 
     const terminalBottom = Math.min(this.termTop + this.termHeight, state.doc.lines);
     this.lines = [];
+    this.lineAttrs = [];
     this.lineRanges = [];
     for (let lineIdx = this.termTop; lineIdx < terminalBottom; lineIdx++) {
       const fullLine = state.doc.line(lineIdx + 1);
       const prefix = String(lineIdx + 1).padStart(LINE_PREFIX_WIDTH, ' ');
       const clipped = (prefix + fullLine.text).slice(this.termLeft, this.termLeft + this.termWidth);
+      const attrs = [7, 7, 7]; // Inverted for line number prefix
       this.lines.push(clipped);
+      this.lineAttrs.push(attrs);
       this.lineRanges.push([fullLine.from, fullLine.to]);
     }
 
@@ -327,8 +332,10 @@ class TTYMirrorView {
         this.writeInsertLine(-delta);
         // Shift lastFullLines up, fill bottom with blanks
         this.lastLines.splice(0, delta);
+        this.lastLineAttrs.splice(0, delta);
         for (let i = 0; i < delta; i++) {
           this.lastLines.push('');
+          this.lastLineAttrs.push([]);
         }
       } else if (delta < 0 && -delta < this.termHeight) {
         // Scrolled up in document - insert lines at top
@@ -336,8 +343,10 @@ class TTYMirrorView {
         this.writeInsertLine(-delta);
         // Shift lastFullLines down, fill top with blanks
         this.lastLines.splice(this.termHeight + delta);
+        this.lastLineAttrs.splice(this.termHeight + delta);
         for (let i = 0; i < -delta; i++) {
           this.lastLines.unshift('');
+          this.lastLineAttrs.unshift([]);
         }
       }
     }
@@ -345,51 +354,71 @@ class TTYMirrorView {
     // Render each line at its position (skip unchanged lines)
     for (let i = 0; i < this.termHeight; i++) {
       const line = this.lines[i] || '';
+      const attrs = this.lineAttrs[i] || [];
       const lastLine = this.lastLines[i] || '';
+      const lastAttrs = this.lastLineAttrs[i] || [];
 
-      if (line !== lastLine) {
-        this.writeCursorPos(i, 0);
-        // Pad only enough to erase old content if new line is shorter
-        const padLength = Math.max(line.length, lastLine.length);
-        const padded = line.padEnd(padLength, ' ');
+      const scanLength = line.length;
 
-        // prefix has faded colour for numbers
-        this.write('\x1b[7m' + padded.slice(0, LINE_PREFIX_WIDTH) + '\x1b[0m');
-        this.write(padded.slice(LINE_PREFIX_WIDTH));
+      // scan through for deltas
+      for (let j = 0; j < scanLength; ) {
+        const attr = attrs[j] || 0;
 
-        // // scan through miniLocations that overlap with the line range
-        // const [lineFrom, lineTo] = this.lineRanges[i] || [0, 0];
+        if (line[j] === lastLine[j] && attr === (lastAttrs[j] || 0)) {
+          j++;
+          continue;
+        }
 
-        // let lastPos = 0;
-        // for (const [start, end] of this.miniLocations) {
-        //   if (end <= lineFrom || start >= lineTo) {
-        //     // console.log('[TTY] Highlight location on line', i, ':', start, '-', end);
-        //     continue; // No overlap
-        //   }
+        // collect a span that extends while new attr is same, but until chars+attrs match again
+        // TODO: lookahead to avoid breaking on single eg spaces
+        const start = j;
+        let sameCount = 0;
+        do {
+          j++;
+          if (j >= scanLength) {
+            break;
+          }
 
-        //   const locStart = Math.max(start - lineFrom, 0);
-        //   const locEnd = Math.min(end - lineFrom, this.termWidth - LINE_PREFIX_WIDTH);
+          if ((attrs[j] || 0) !== attr) {
+            break;
+          }
+          if (line[j] === lastLine[j] && attr === (lastAttrs[j] || 0)) {
+            if (sameCount > 2) {
+              // enough matches to break on
+              break;
+            }
+            sameCount++;
+          } else {
+            sameCount = 0;
+          }
+        } while (true);
 
-        //   // Write text before location
-        //   if (locStart > lastPos) {
-        //     this.write(padded.slice(LINE_PREFIX_WIDTH + lastPos, LINE_PREFIX_WIDTH + locStart));
-        //   }
+        const end = j - sameCount;
 
-        //   // Write highlighted location
-        //   this.write('\x1b[7m'); // Yellow background
-        //   this.write(padded.slice(LINE_PREFIX_WIDTH + locStart, LINE_PREFIX_WIDTH + locEnd));
-        //   this.write('\x1b[0m'); // Reset
+        // write the span
+        // console.log('line', i, 'col', start, 'to', end, 'attr', attr, 'text:', line.slice(start, j));
+        this.writeCursorPos(i, start);
 
-        //   lastPos = locEnd;
-        // }
+        // Set attributes (only handling inverted for now)
+        if (attr === 7) {
+          this.write('\x1b[7m'); // Inverted
+        } else {
+          this.write('\x1b[0m'); // Normal
+        }
 
-        // // Write remaining text after last location
-        // if (lastPos < line.length) {
-        //   this.write(padded.slice(LINE_PREFIX_WIDTH + lastPos));
-        // }
+        this.write(line.slice(start, end));
+      }
+
+      // erase tail if new line is shorter than last line
+      const eraseChars = lastLine.length - line.length;
+      if (eraseChars > 0) {
+        // console.log('line', i, 'erase', eraseChars);
+        this.writeCursorPos(i, line.length);
+        this.writeEraseChars(eraseChars);
       }
 
       this.lastLines[i] = line;
+      this.lastLineAttrs[i] = attrs;
     }
 
     this.lastTermTop = this.termTop;
