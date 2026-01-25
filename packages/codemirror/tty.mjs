@@ -74,7 +74,7 @@ class TTYMirrorView {
     for (const tr of update.transactions) {
       for (const effect of tr.effects) {
         if (effect.is(setMiniLocations)) {
-          console.log('[TTY] setMiniLocations effect:', effect.value);
+          this.updateMiniLocations([]); // Just reset
         }
         if (effect.is(showMiniLocations)) {
           this.updateMiniLocations(effect.value.haps);
