@@ -6,6 +6,16 @@ const SERIAL_PORT = 'COM17';
 const SERIAL_SPEED = '57600';
 
 /**
+ * Attr values are bitfields:
+ *  bit 0: inverted
+ *  bit 1: bold
+ *  bit 2: underline
+ */
+export const ATTR_INVERTED = 1 << 0;
+export const ATTR_BOLD = 1 << 1;
+export const ATTR_UNDERLINE = 1 << 2;
+
+/**
  * Low-level terminal rendering layer
  * Handles connections, ANSI escape codes, and diff-based rendering
  */
@@ -219,11 +229,17 @@ export class Terminal {
 
   writeAttrs(attr) {
     // Set attributes (only handling inverted for now)
-    if (attr === 7) {
-      this.write('\x1b[7m'); // Inverted
-    } else {
-      this.write('\x1b[0m'); // Normal
+    this.write('\x1b[0');
+    if (attr & ATTR_INVERTED) {
+      this.write(';7');
     }
+    if (attr & ATTR_BOLD) {
+      this.write(';1');
+    }
+    if (attr & ATTR_UNDERLINE) {
+      this.write(';4');
+    }
+    this.write('m');
   }
 
   // === Buffer Mutation API ===
@@ -263,9 +279,9 @@ export class Terminal {
   }
 
   /**
-   * Fill attribute values starting at position for a length
+   * Update attribute value bits over a range. Sets or clears based on attrBits mask.
    */
-  fillAttr(x, y, attr, len) {
+  fillAttrBits(x, y, attrBits, isOn, len) {
     if (y < 0 || y >= this.termHeight) return;
     if (x < 0) {
       len += x;
@@ -276,8 +292,15 @@ export class Terminal {
 
     const attrs = this.lineAttrs[y];
     const end = Math.min(x + len, this.termWidth);
-    for (let i = x; i < end; i++) {
-      attrs[i] = attr;
+    if (isOn) {
+      for (let i = x; i < end; i++) {
+        attrs[i] |= attrBits;
+      }
+    } else {
+      const mask = ~attrBits;
+      for (let i = x; i < end; i++) {
+        attrs[i] &= mask;
+      }
     }
 
     this.dirtyBuffer = true;

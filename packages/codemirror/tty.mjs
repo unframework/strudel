@@ -1,6 +1,6 @@
 import { ViewPlugin } from '@codemirror/view';
 import { setMiniLocations, showMiniLocations } from './highlight.mjs';
-import { Terminal } from './terminal.mjs';
+import { ATTR_INVERTED, ATTR_UNDERLINE, Terminal } from './terminal.mjs';
 
 const LINE_PREFIX_WIDTH = 3; // Width of line number prefix
 
@@ -118,7 +118,7 @@ class TTYMirrorView {
       const prefix = String(lineIdx + 1).padStart(LINE_PREFIX_WIDTH, ' ');
       const lineText = fullLine.text.slice(this.termLeft).padEnd(this.terminal.termWidth - LINE_PREFIX_WIDTH, ' ');
 
-      this.terminal.fillString(0, row, prefix, 7); // Inverted line number
+      this.terminal.fillString(0, row, prefix, ATTR_INVERTED); // Inverted line number
       this.terminal.fillString(LINE_PREFIX_WIDTH, row, lineText, 0);
       this.lineRanges.push([fullLine.from, fullLine.to]);
     }
@@ -129,7 +129,13 @@ class TTYMirrorView {
   updateMiniLocations(haps) {
     // Clear content attrs (keep line number prefix attrs)
     for (let row = 0; row < this.terminal.termHeight; row++) {
-      this.terminal.fillAttr(LINE_PREFIX_WIDTH, row, 0, this.terminal.termWidth - LINE_PREFIX_WIDTH);
+      this.terminal.fillAttrBits(
+        LINE_PREFIX_WIDTH,
+        row,
+        ATTR_INVERTED,
+        false,
+        this.terminal.termWidth - LINE_PREFIX_WIDTH,
+      );
     }
 
     for (const hap of haps) {
@@ -152,7 +158,7 @@ class TTYMirrorView {
           const attrStart = LINE_PREFIX_WIDTH + Math.max(0, start - lineFrom);
           const attrEnd = LINE_PREFIX_WIDTH + Math.min(lineTo - lineFrom, end - lineFrom);
 
-          this.terminal.fillAttr(attrStart, row, 7, attrEnd - attrStart);
+          this.terminal.fillAttrBits(attrStart, row, ATTR_INVERTED, true, attrEnd - attrStart);
         }
       }
     }
@@ -184,7 +190,7 @@ class TTYMirrorView {
   }
 
   renderCursor() {
-    this.terminal.fillAttr(this.cursorLeft, this.cursorTop, this.cursorFlashActive ? 7 : 0, 1);
+    this.terminal.fillAttrBits(this.cursorLeft, this.cursorTop, ATTR_UNDERLINE, this.cursorFlashActive, 1);
   }
 
   destroy() {
