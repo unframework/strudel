@@ -20,26 +20,23 @@ class TTYMirrorView {
     this.termLeft = 0; // Left column offset (0-indexed)
 
     this.lineRanges = [];
-    this.visTop = null; // Visible cursor row in terminal viewport
-    this.visLeft = null; // Visible cursor column in terminal viewport
+
+    this.cursorTop = null; // Visible cursor row in raw terminal coords
+    this.cursorLeft = null; // Visible cursor column in raw terminal coords
+    this.cursorFlashInterval = null;
+    this.cursorFlashActive = true;
 
     this.miniLocations = []; // Current mini locations from highlight plugin
 
     console.log('[TTY] Plugin initialized');
 
-    this.constrainTerminalViewport(view);
+    this.updateCursor(view);
     this.render(view);
-
-    this.cursorFlash = true;
-    this.cursorFlashInterval = setInterval(() => {
-      this.cursorFlash = !this.cursorFlash;
-      this.renderCursor();
-      this.terminal.flush();
-    }, 600);
   }
 
-  constrainTerminalViewport(view) {
+  updateCursor(view) {
     const { state } = view;
+    const visLineWidth = this.terminal.termWidth - LINE_PREFIX_WIDTH;
 
     const cursor = state.selection.main.head;
     const cursorLine = state.doc.lineAt(cursor);
@@ -54,12 +51,21 @@ class TTYMirrorView {
       this.termTop = cursorLineIdx;
     }
 
-    if (this.termLeft + this.terminal.termWidth <= cursorCol) {
-      this.termLeft = cursorCol - this.terminal.termWidth + 1;
+    if (this.termLeft + visLineWidth <= cursorCol) {
+      this.termLeft = cursorCol - visLineWidth + 1;
     }
 
     if (this.termLeft > cursorCol) {
       this.termLeft = cursorCol;
+    }
+
+    const newCursorLeft = cursorCol - this.termLeft + LINE_PREFIX_WIDTH;
+    const newCursorTop = cursorLineIdx - this.termTop;
+
+    if (this.cursorLeft !== newCursorLeft || this.cursorTop !== newCursorTop) {
+      this.cursorLeft = newCursorLeft;
+      this.cursorTop = newCursorTop;
+      this.resetCursorBlink();
     }
   }
 
@@ -81,7 +87,7 @@ class TTYMirrorView {
       console.log('[TTY] Document changed');
       console.log('[TTY] New doc length:', update.state.doc.length);
 
-      this.constrainTerminalViewport(update.view);
+      this.updateCursor(update.view);
       this.render(update.view);
       this.terminal.flush();
     }
@@ -91,7 +97,7 @@ class TTYMirrorView {
       const cursorLine = update.state.doc.lineAt(cursor);
       console.log('[TTY] Cursor at char:', cursor, 'line:', cursorLine.number, 'col:', cursor - cursorLine.from);
 
-      this.constrainTerminalViewport(update.view);
+      this.updateCursor(update.view);
       this.render(update.view);
       this.terminal.flush();
     }
@@ -116,15 +122,6 @@ class TTYMirrorView {
       this.terminal.fillString(LINE_PREFIX_WIDTH, row, lineText, 0);
       this.lineRanges.push([fullLine.from, fullLine.to]);
     }
-
-    // Show cursor at CodeMirror cursor position (if visible in viewport)
-    const cursor = state.selection.main.head;
-    const cursorLine = state.doc.lineAt(cursor);
-    const cursorLineIdx = cursorLine.number - 1;
-    const cursorCol = cursor - cursorLine.from;
-
-    this.visTop = cursorLineIdx - this.termTop;
-    this.visLeft = cursorCol - this.termLeft;
 
     this.renderCursor();
   }
@@ -163,16 +160,37 @@ class TTYMirrorView {
     this.renderCursor();
   }
 
+  clearCursorBlink() {
+    // Clear old interval
+    if (this.cursorFlashInterval) {
+      clearInterval(this.cursorFlashInterval);
+      this.cursorFlashInterval = null;
+    }
+  }
+
+  resetCursorBlink() {
+    // Clear old interval
+    this.clearCursorBlink();
+
+    // Set new cursor interval
+    if (this.cursorLeft != null && this.cursorTop != null) {
+      this.cursorFlashActive = true;
+      this.cursorFlashInterval = setInterval(() => {
+        this.cursorFlashActive = !this.cursorFlashActive;
+        this.renderCursor();
+        this.terminal.flush();
+      }, 600);
+    }
+  }
+
   renderCursor() {
-    const cursorX = this.visLeft + LINE_PREFIX_WIDTH;
-    const cursorY = this.visTop;
-    this.terminal.fillAttr(cursorX, cursorY, this.cursorFlash ? 7 : 0, 1);
+    this.terminal.fillAttr(this.cursorLeft, this.cursorTop, this.cursorFlashActive ? 7 : 0, 1);
   }
 
   destroy() {
     console.log('[TTY] Plugin destroyed');
 
-    clearInterval(this.cursorFlashInterval);
+    this.clearCursorBlink();
 
     this.terminal.destroy();
   }
