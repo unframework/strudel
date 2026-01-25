@@ -20,9 +20,13 @@ export class Terminal {
     this.termWidth = 80; // Terminal width in columns
     this.termHeight = 24; // Terminal height in rows
 
-    // Virtual text buffer (mutated directly by TTYMirrorView)
+    // Virtual text buffer (fixed-size 2D matrix)
     this.lines = [];
     this.lineAttrs = [];
+    for (let i = 0; i < this.termHeight; i++) {
+      this.lines.push(' '.repeat(this.termWidth));
+      this.lineAttrs.push(new Array(this.termWidth).fill(0));
+    }
 
     // Last rendered state (for diff-based rendering)
     this.lastTermTop = null;
@@ -220,6 +224,63 @@ export class Terminal {
     } else {
       this.write('\x1b[0m'); // Normal
     }
+  }
+
+  // === Buffer Mutation API ===
+
+  /**
+   * Set viewport position (for scroll optimization)
+   */
+  setXY(x, y) {
+    this.termLeft = x;
+    this.termTop = y;
+  }
+
+  /**
+   * Write a string at position with a uniform attribute
+   */
+  fillString(x, y, str, attr) {
+    if (y < 0 || y >= this.termHeight) return;
+    if (x < 0) {
+      str = str.slice(-x);
+      x = 0;
+    }
+    if (x >= this.termWidth) return;
+
+    str = str.slice(0, this.termWidth - x);
+
+    // Splice string into line
+    const line = this.lines[y];
+    this.lines[y] = line.slice(0, x) + str + line.slice(x + str.length);
+
+    // Fill attrs
+    const attrs = this.lineAttrs[y];
+    for (let i = 0; i < str.length; i++) {
+      attrs[x + i] = attr;
+    }
+
+    this.dirtyBuffer = true;
+  }
+
+  /**
+   * Fill attribute values starting at position for a length
+   */
+  fillAttr(x, y, attr, len) {
+    if (y < 0 || y >= this.termHeight) return;
+    if (x < 0) {
+      len += x;
+      x = 0;
+    }
+    if (x >= this.termWidth) return;
+    if (len <= 0) return;
+
+    const attrs = this.lineAttrs[y];
+    const end = Math.min(x + len, this.termWidth);
+    for (let i = x; i < end; i++) {
+      attrs[i] = attr;
+    }
+
+    this.dirtyBuffer = true;
   }
 
   flush() {

@@ -98,25 +98,22 @@ class TTYMirrorView {
   }
 
   render(view) {
-    this.terminal.dirtyBuffer = true;
-
     // Sync viewport position to terminal
-    this.terminal.termTop = this.termTop;
-    this.terminal.termLeft = this.termLeft;
+    this.terminal.setXY(this.termLeft, this.termTop);
 
     const { state } = view;
 
-    const terminalBottom = Math.min(this.termTop + this.terminal.termHeight, state.doc.lines);
-    this.terminal.lines = [];
-    this.terminal.lineAttrs = [];
     this.lineRanges = [];
+
+    const terminalBottom = Math.min(this.termTop + this.terminal.termHeight, state.doc.lines);
     for (let lineIdx = this.termTop; lineIdx < terminalBottom; lineIdx++) {
+      const row = lineIdx - this.termTop;
       const fullLine = state.doc.line(lineIdx + 1);
       const prefix = String(lineIdx + 1).padStart(LINE_PREFIX_WIDTH, ' ');
-      const clipped = (prefix + fullLine.text).slice(this.termLeft, this.termLeft + this.terminal.termWidth);
-      const attrs = [7, 7, 7]; // Inverted for line number prefix
-      this.terminal.lines.push(clipped);
-      this.terminal.lineAttrs.push(attrs);
+      const lineText = fullLine.text.slice(this.termLeft, this.termLeft + this.terminal.termWidth - LINE_PREFIX_WIDTH);
+
+      this.terminal.fillString(0, row, prefix, 7); // Inverted line number
+      this.terminal.fillString(LINE_PREFIX_WIDTH, row, lineText, 0);
       this.lineRanges.push([fullLine.from, fullLine.to]);
     }
 
@@ -133,14 +130,9 @@ class TTYMirrorView {
   }
 
   updateMiniLocations(haps) {
-    this.terminal.dirtyBuffer = true;
-
-    for (let i = 0; i < this.terminal.termHeight; i++) {
-      if (!this.terminal.lineAttrs[i]) {
-        this.terminal.lineAttrs[i] = [7, 7, 7];
-        continue;
-      }
-      this.terminal.lineAttrs[i].length = LINE_PREFIX_WIDTH; // Clear content attrs
+    // Clear content attrs (keep line number prefix attrs)
+    for (let row = 0; row < this.terminal.termHeight; row++) {
+      this.terminal.fillAttr(LINE_PREFIX_WIDTH, row, 0, this.terminal.termWidth - LINE_PREFIX_WIDTH);
     }
 
     for (const hap of haps) {
@@ -154,20 +146,16 @@ class TTYMirrorView {
       }
 
       for (const { start, end } of locations) {
-        for (let lineIdx = 0; lineIdx < this.terminal.termHeight; lineIdx++) {
-          const [lineFrom, lineTo] = this.lineRanges[lineIdx] || [0, 0];
+        for (let row = 0; row < this.terminal.termHeight; row++) {
+          const [lineFrom, lineTo] = this.lineRanges[row] || [0, 0];
           if (start >= lineTo || end <= lineFrom) {
             continue; // No overlap
           }
 
-          const attrs = this.terminal.lineAttrs[lineIdx];
-
           const attrStart = LINE_PREFIX_WIDTH + Math.max(0, start - lineFrom);
           const attrEnd = LINE_PREFIX_WIDTH + Math.min(lineTo - lineFrom, end - lineFrom);
 
-          for (let col = attrStart; col < attrEnd; col++) {
-            attrs[col] = 7; // Underline attribute
-          }
+          this.terminal.fillAttr(attrStart, row, 7, attrEnd - attrStart);
         }
       }
     }
@@ -176,19 +164,9 @@ class TTYMirrorView {
   }
 
   renderCursor() {
-    this.terminal.dirtyBuffer = true;
-    if (
-      this.visTop >= 0 &&
-      this.visTop < this.terminal.termHeight &&
-      this.visLeft >= 0 &&
-      this.visLeft < this.terminal.termWidth
-    ) {
-      this.terminal.lines[this.visTop] = this.terminal.lines[this.visTop].padEnd(
-        this.visLeft + LINE_PREFIX_WIDTH + 1,
-        ' ',
-      ); // Ensure there is a space at the end
-      this.terminal.lineAttrs[this.visTop][this.visLeft + LINE_PREFIX_WIDTH] = this.cursorFlash ? 7 : 0; // Mark cursor position
-    }
+    const cursorX = this.visLeft + LINE_PREFIX_WIDTH;
+    const cursorY = this.visTop;
+    this.terminal.fillAttr(cursorX, cursorY, this.cursorFlash ? 7 : 0, 1);
   }
 
   destroy() {
