@@ -301,11 +301,9 @@ export class Terminal {
         this.writeCursorHome();
         this.writeInsertLine(-delta);
         // Shift lastFullLines up, fill bottom with blanks
-        this.lastLines.splice(0, delta);
-        this.lastLineAttrs.splice(0, delta);
         for (let i = 0; i < delta; i++) {
-          this.lastLines.push('');
-          this.lastLineAttrs.push([]);
+          this.lastLines.push(' '.repeat(this.termWidth));
+          this.lastLineAttrs.push(new Array(this.termWidth).fill(0));
         }
       } else if (delta < 0 && -delta < this.termHeight) {
         // Scrolled up in document - insert lines at top
@@ -315,16 +313,16 @@ export class Terminal {
         this.lastLines.splice(this.termHeight + delta);
         this.lastLineAttrs.splice(this.termHeight + delta);
         for (let i = 0; i < -delta; i++) {
-          this.lastLines.unshift('');
-          this.lastLineAttrs.unshift([]);
+          this.lastLines.unshift(' '.repeat(this.termWidth));
+          this.lastLineAttrs.unshift(new Array(this.termWidth).fill(0));
         }
       }
     }
 
     // Render each line at its position (skip unchanged lines)
     for (let i = 0; i < this.termHeight; i++) {
-      const line = this.lines[i] || '';
-      const attrs = this.lineAttrs[i] || [];
+      const line = this.lines[i];
+      const attrs = this.lineAttrs[i];
       const lastLine = this.lastLines[i];
       const lastAttrs = this.lastLineAttrs[i];
 
