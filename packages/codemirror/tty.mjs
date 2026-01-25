@@ -110,7 +110,7 @@ class TTYMirrorView {
       const row = lineIdx - this.termTop;
       const fullLine = state.doc.line(lineIdx + 1);
       const prefix = String(lineIdx + 1).padStart(LINE_PREFIX_WIDTH, ' ');
-      const lineText = fullLine.text.slice(this.termLeft, this.termLeft + this.terminal.termWidth - LINE_PREFIX_WIDTH);
+      const lineText = fullLine.text.slice(this.termLeft).padEnd(this.terminal.termWidth - LINE_PREFIX_WIDTH, ' ');
 
       this.terminal.fillString(0, row, prefix, 7); // Inverted line number
       this.terminal.fillString(LINE_PREFIX_WIDTH, row, lineText, 0);
