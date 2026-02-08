@@ -6,6 +6,7 @@ This program is free software: you can redistribute it and/or modify it under th
 
 import './feedbackdelay.mjs';
 import './reverb.mjs';
+import './daverb.mjs';
 import './vowel.mjs';
 import { clamp, nanFallback, _mod, cycleToSeconds, pickAndRename } from './util.mjs';
 import workletsUrl from './worklets.mjs?audioworklet';

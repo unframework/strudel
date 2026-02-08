@@ -1570,3 +1570,176 @@ class GenericProcessor extends AudioWorkletProcessor {
   }
 }
 registerProcessor('generic-processor', GenericProcessor);
+
+// DattorroReverb - Jon Dattorro's plate reverb algorithm
+// Based on https://github.com/khoin/DattorroReverbNode (public domain)
+class DattorroReverb extends AudioWorkletProcessor {
+  static get parameterDescriptors() {
+    return [
+      ['preDelay', 0, 0, sampleRate - 1, 'k-rate'],
+      ['bandwidth', 0.9999, 0, 1, 'k-rate'],
+      ['inputDiffusion1', 0.75, 0, 1, 'k-rate'],
+      ['inputDiffusion2', 0.625, 0, 1, 'k-rate'],
+      ['decay', 0.5, 0, 1, 'k-rate'],
+      ['decayDiffusion1', 0.7, 0, 0.999999, 'k-rate'],
+      ['decayDiffusion2', 0.5, 0, 0.999999, 'k-rate'],
+      ['damping', 0.005, 0, 1, 'k-rate'],
+      ['excursionRate', 0.5, 0, 2, 'k-rate'],
+      ['excursionDepth', 0.7, 0, 2, 'k-rate'],
+      ['wet', 0.3, 0, 1, 'k-rate'],
+      ['dry', 0.6, 0, 1, 'k-rate'],
+    ].map((x) => ({
+      name: x[0],
+      defaultValue: x[1],
+      minValue: x[2],
+      maxValue: x[3],
+      automationRate: x[4],
+    }));
+  }
+
+  constructor(options) {
+    super(options);
+    this._Delays = [];
+    this._pDLength = sampleRate + (128 - (sampleRate % 128));
+    this._preDelay = new Float32Array(this._pDLength);
+    this._pDWrite = 0;
+    this._lp1 = 0.0;
+    this._lp2 = 0.0;
+    this._lp3 = 0.0;
+    this._excPhase = 0.0;
+
+    [
+      0.004771345, 0.003595309, 0.012734787, 0.009307483, 0.022579886, 0.149625349, 0.060481839, 0.1249958,
+      0.030509727, 0.141695508, 0.089244313, 0.106280031,
+    ].forEach((x) => this._makeDelay(x));
+
+    this._taps = Int16Array.from(
+      [
+        0.008937872, 0.099929438, 0.064278754, 0.067067639, 0.066866033, 0.006283391, 0.035818689, 0.011861161,
+        0.121870905, 0.041262054, 0.08981553, 0.070931756, 0.011256342, 0.004065724,
+      ],
+      (x) => Math.round(x * sampleRate),
+    );
+  }
+
+  _makeDelay(length) {
+    const len = Math.round(length * sampleRate);
+    const nextPow2 = 2 ** Math.ceil(Math.log2(len));
+    this._Delays.push([new Float32Array(nextPow2), len - 1, 0 | 0, nextPow2 - 1]);
+  }
+
+  _writeDelay(index, data) {
+    return (this._Delays[index][0][this._Delays[index][1]] = data);
+  }
+
+  _readDelay(index) {
+    return this._Delays[index][0][this._Delays[index][2]];
+  }
+
+  _readDelayAt(index, i) {
+    const d = this._Delays[index];
+    return d[0][(d[2] + i) & d[3]];
+  }
+
+  _readDelayCAt(index, i) {
+    const d = this._Delays[index];
+    const frc = i - ~~i;
+    let int = ~~i + d[2] - 1;
+    const mask = d[3];
+    const x0 = d[0][int++ & mask];
+    const x1 = d[0][int++ & mask];
+    const x2 = d[0][int++ & mask];
+    const x3 = d[0][int & mask];
+    const a = (3 * (x1 - x2) - x0 + x3) / 2;
+    const b = 2 * x2 + x0 - (5 * x1 + x3) / 2;
+    const c = (x2 - x0) / 2;
+    return ((a * frc + b) * frc + c) * frc + x1;
+  }
+
+  process(inputs, outputs, parameters) {
+    const pd = ~~parameters.preDelay[0];
+    const bw = parameters.bandwidth[0];
+    const fi = parameters.inputDiffusion1[0];
+    const si = parameters.inputDiffusion2[0];
+    const dc = parameters.decay[0];
+    const ft = parameters.decayDiffusion1[0];
+    const st = parameters.decayDiffusion2[0];
+    const dp = 1 - parameters.damping[0];
+    const ex = parameters.excursionRate[0] / sampleRate;
+    const ed = (parameters.excursionDepth[0] * sampleRate) / 1000;
+    const we = parameters.wet[0] * 0.6;
+    const dr = parameters.dry[0];
+
+    if (inputs[0].length == 2) {
+      for (let i = 127; i >= 0; i--) {
+        this._preDelay[this._pDWrite + i] = (inputs[0][0][i] + inputs[0][1][i]) * 0.5;
+        outputs[0][0][i] = inputs[0][0][i] * dr;
+        outputs[0][1][i] = inputs[0][1][i] * dr;
+      }
+    } else if (inputs[0].length > 0) {
+      this._preDelay.set(inputs[0][0], this._pDWrite);
+      for (let i = 127; i >= 0; i--) outputs[0][0][i] = outputs[0][1][i] = inputs[0][0][i] * dr;
+    } else {
+      this._preDelay.set(new Float32Array(128), this._pDWrite);
+    }
+
+    let i = 0 | 0;
+    while (i < 128) {
+      this._lp1 += bw * (this._preDelay[(this._pDLength + this._pDWrite - pd + i) % this._pDLength] - this._lp1);
+
+      let pre = this._writeDelay(0, this._lp1 - fi * this._readDelay(0));
+      pre = this._writeDelay(1, fi * (pre - this._readDelay(1)) + this._readDelay(0));
+      pre = this._writeDelay(2, fi * pre + this._readDelay(1) - si * this._readDelay(2));
+      pre = this._writeDelay(3, si * (pre - this._readDelay(3)) + this._readDelay(2));
+
+      const split = si * pre + this._readDelay(3);
+
+      const exc = ed * (1 + Math.cos(this._excPhase * 6.28));
+      const exc2 = ed * (1 + Math.sin(this._excPhase * 6.2847));
+
+      let temp = this._writeDelay(4, split + dc * this._readDelay(11) + ft * this._readDelayCAt(4, exc));
+      this._writeDelay(5, this._readDelayCAt(4, exc) - ft * temp);
+      this._lp2 += dp * (this._readDelay(5) - this._lp2);
+      temp = this._writeDelay(6, dc * this._lp2 - st * this._readDelay(6));
+      this._writeDelay(7, this._readDelay(6) + st * temp);
+      temp = this._writeDelay(8, split + dc * this._readDelay(7) + ft * this._readDelayCAt(8, exc2));
+      this._writeDelay(9, this._readDelayCAt(8, exc2) - ft * temp);
+      this._lp3 += dp * (this._readDelay(9) - this._lp3);
+      temp = this._writeDelay(10, dc * this._lp3 - st * this._readDelay(10));
+      this._writeDelay(11, this._readDelay(10) + st * temp);
+
+      const lo =
+        this._readDelayAt(9, this._taps[0]) +
+        this._readDelayAt(9, this._taps[1]) -
+        this._readDelayAt(10, this._taps[2]) +
+        this._readDelayAt(11, this._taps[3]) -
+        this._readDelayAt(5, this._taps[4]) -
+        this._readDelayAt(6, this._taps[5]) -
+        this._readDelayAt(7, this._taps[6]);
+
+      const ro =
+        this._readDelayAt(5, this._taps[7]) +
+        this._readDelayAt(5, this._taps[8]) -
+        this._readDelayAt(6, this._taps[9]) +
+        this._readDelayAt(7, this._taps[10]) -
+        this._readDelayAt(9, this._taps[11]) -
+        this._readDelayAt(10, this._taps[12]) -
+        this._readDelayAt(11, this._taps[13]);
+
+      outputs[0][0][i] += lo * we;
+      outputs[0][1][i] += ro * we;
+
+      this._excPhase += ex;
+      i++;
+
+      for (let j = 0, d = this._Delays[0]; j < this._Delays.length; d = this._Delays[++j]) {
+        d[1] = (d[1] + 1) & d[3];
+        d[2] = (d[2] + 1) & d[3];
+      }
+    }
+
+    this._pDWrite = (this._pDWrite + 128) % this._pDLength;
+    return true;
+  }
+}
+registerProcessor('dattorro-reverb', DattorroReverb);

@@ -3310,3 +3310,13 @@ export const bmod = (config) => pure({}).bmod(config);
 export const { transient } = registerControl(['transient', 'transsustain']);
 
 export const { FXrelease, FXrel, FXr, fxr } = registerControl('FXrelease', 'FXrel', 'FXr', 'fxr');
+
+/**
+ * Dattorro plate reverb send amount.
+ *
+ * @name daverb
+ * @param {number | Pattern} amount between 0 and 1
+ * @example
+ * s("bd sd [~ bd] sd").daverb(0.5)
+ */
+export const { daverb } = registerControl('daverb');
