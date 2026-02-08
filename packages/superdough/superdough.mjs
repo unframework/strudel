@@ -515,6 +515,7 @@ export const superdough = async (value, t, hapDuration, cps = 0.5, cycle = 0.5) 
     ir,
     irspeed,
     irbegin,
+    daverb,
     i = getDefaultValue('i'),
     analyze, // analyser wet
     fft = getDefaultValue('fft'), // fftSize 0 - 10
@@ -973,6 +974,14 @@ export const superdough = async (value, t, hapDuration, cps = 0.5, cycle = 0.5) 
     const reverbSend = orbitBus.sendReverb(post, room);
     nodes.main['room_mix'] = [reverbSend];
     chain.audioNodes.push(reverbSend);
+  }
+  // daverb
+  if (daverb > 0) {
+    const daVerbNode = orbitBus.getDaVerb(t);
+    nodes.main['daverb'] = [daVerbNode];
+    const daVerbSend = orbitBus.sendDaVerb(post, daverb);
+    nodes.main['daverb_mix'] = [daVerbSend];
+    chain.audioNodes.push(daVerbSend);
   }
   if (bus != null) {
     const busNode = audioController.getBus(bus);

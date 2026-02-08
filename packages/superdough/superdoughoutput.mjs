@@ -19,6 +19,7 @@ const getStereoNode = (ac) => new GainNode(ac, { gain: 1, channelCount: 2, chann
 export class Orbit {
   reverbNode;
   delayNode;
+  daVerbNode;
   output;
   summingNode;
   djfNode;
@@ -36,6 +37,7 @@ export class Orbit {
     this.summingNode.disconnect();
     this.delayNode?.disconnect();
     this.reverbNode?.disconnect();
+    this.daVerbNode?.disconnect();
   }
 
   getDjf(value, t = 0) {
@@ -93,6 +95,18 @@ export class Orbit {
   }
   sendReverb(node, amount) {
     return effectSend(node, this.reverbNode, amount);
+  }
+
+  getDaVerb(t) {
+    if (this.daVerbNode == null) {
+      this.daVerbNode = this.audioContext.createDaVerb();
+      this.daVerbNode.connect(this.summingNode);
+    }
+    return this.daVerbNode;
+  }
+
+  sendDaVerb(node, amount) {
+    return effectSend(node, this.daVerbNode, amount);
   }
 
   sendDelay(node, amount) {
