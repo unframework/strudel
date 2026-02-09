@@ -3320,3 +3320,33 @@ export const { FXrelease, FXrel, FXr, fxr } = registerControl('FXrelease', 'FXre
  * s("bd sd [~ bd] sd").daverb(0.5)
  */
 export const { daverb } = registerControl('daverb');
+
+/**
+ * Dattorro plate reverb decay rate (0-1).
+ *
+ * @name dvdecay
+ * @param {number | Pattern} amount between 0 and 1
+ * @example
+ * s("bd sd [~ bd] sd").daverb(0.5).dvdecay(0.8)
+ */
+export const { dvdecay } = registerControl('dvdecay');
+
+/**
+ * Dattorro plate reverb damping / high-frequency rolloff (0-1).
+ *
+ * @name dvdamp
+ * @param {number | Pattern} amount between 0 and 1
+ * @example
+ * s("bd sd [~ bd] sd").daverb(0.5).dvdamp(0.3)
+ */
+export const { dvdamp } = registerControl('dvdamp');
+
+/**
+ * Dattorro plate reverb modulation depth / shimmer (0-2).
+ *
+ * @name dvshimmer
+ * @param {number | Pattern} amount between 0 and 2
+ * @example
+ * s("bd sd [~ bd] sd").daverb(0.5).dvshimmer(1.2)
+ */
+export const { dvshimmer } = registerControl('dvshimmer');
