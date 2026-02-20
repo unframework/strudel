@@ -4,7 +4,7 @@ import { logger } from '@strudel/core';
 import { nanoid } from 'nanoid';
 import { settingsMap } from './settings.mjs';
 import { confirmDialog, parseJSON, supabase } from './repl/util.mjs';
-import { loadFilesyncExtData, saveFilesyncExtPattern } from './filesync.mjs';
+import { loadSupasyncData, saveSupasyncPattern } from './supasync.mjs';
 
 export let $publicPatterns = atom([]);
 export let $featuredPatterns = atom([]);
@@ -108,7 +108,7 @@ export function useActivePattern() {
 }
 
 export async function loadAllPatterns() {
-  const codeUpdates = [];
+  const codeUpdates = await loadSupasyncData();
 
   const userPatterns = userPattern.getAll();
   const updatedPatterns = {};
@@ -161,6 +161,9 @@ export const userPattern = {
     const userPatterns = this.getAll();
     data = { ...data, id, collection: this.collection };
     setUserPatterns({ ...userPatterns, [id]: data });
+
+    saveSupasyncPattern(id, data);
+
     return { id, data };
   },
   duplicate(data) {
@@ -189,6 +192,8 @@ export const userPattern = {
       setActivePattern(null);
     }
     setUserPatterns(userPatterns);
+    saveSupasyncPattern(id, null);
+
     const viewingPatternData = getViewingPatternData();
     const viewingID = viewingPatternData?.id;
     if (viewingID === id) {
