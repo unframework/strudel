@@ -58,7 +58,9 @@ export class Terminal {
     this.setupWebsocket();
 
     // Create xterm.js terminal for debug display
-    this.setupXterm();
+    if (false) {
+      this.setupXterm();
+    }
 
     this.clearScreen();
   }
@@ -166,7 +168,9 @@ export class Terminal {
 
   // ANSI escape code helpers
   write(str) {
-    this.xterm.write(str);
+    if (this.xterm) {
+      this.xterm.write(str);
+    }
     this.sendToRemote(str);
   }
 
@@ -421,7 +425,9 @@ export class Terminal {
 
     this.ws.close();
 
-    this.xterm.dispose();
-    this.xtermContainer.parentNode.removeChild(this.xtermContainer);
+    if (this.xterm) {
+      this.xterm.dispose();
+      this.xtermContainer.parentNode.removeChild(this.xtermContainer);
+    }
   }
 }
