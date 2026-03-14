@@ -103,7 +103,6 @@ def main():
         ], stderr=subprocess.DEVNULL)
 
         shutil.copy(os.path.join(workdir, "loop.wav"), f"{output}.wav")
-        shutil.copy(os.path.join(workdir, "raw.jsonl"), f"{output}.jsonl")
         print(f"=== Audio: {output}.wav ===")
 
         # ========== VIDEO ==========
