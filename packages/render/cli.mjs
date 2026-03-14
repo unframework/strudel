@@ -13,6 +13,7 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const { values: args } = parseArgs({
   options: {
     input: { type: 'string', short: 'i' },
+    begin: { type: 'string', default: '0' },
     cycles: { type: 'string', default: '4' },
     'sample-rate': { type: 'string', default: '44100' },
     output: { type: 'string', short: 'o', default: 'output.wav' },
@@ -25,7 +26,8 @@ if (args.help) {
 
 Options:
   -i, --input <path>        Path to file containing Strudel code
-  --cycles <n>              Number of cycles to render (default: 4)
+  --begin <n>               Start cycle (default: 0, can be negative)
+  --cycles <n>              End cycle (default: 4)
   --sample-rate <n>         Sample rate in Hz (default: 44100)
   -o, --output <path>       Output WAV file path (default: output.wav)
   -h, --help                Show this help
@@ -39,6 +41,7 @@ if (!args.input) {
 }
 const code = readFileSync(args.input, 'utf-8');
 
+const begin = parseFloat(args.begin);
 const cycles = parseFloat(args.cycles);
 const sampleRate = parseInt(args['sample-rate']);
 const outputPath = args.output;
@@ -91,7 +94,7 @@ async function render() {
     // Wait for the render module to be ready
     await page.waitForFunction('window.__strudelRenderReady === true', { timeout: 30000 });
 
-    console.log(`Rendering ${cycles} cycles (${sampleRate}Hz)...`);
+    console.log(`Rendering cycles ${begin}..${cycles} (${sampleRate}Hz)...`);
 
     const renderTimeout = 60000;
     let timeoutId;
@@ -101,10 +104,11 @@ async function render() {
 
     // Trigger the render (which triggers a download and returns the hap timeline)
     const renderPromise = page.evaluate(
-      async (code, cycles, sampleRate) => {
-        return window.renderOffline(code, cycles, sampleRate);
+      async (code, begin, cycles, sampleRate) => {
+        return window.renderOffline(code, begin, cycles, sampleRate);
       },
       code,
+      begin,
       cycles,
       sampleRate,
     );
