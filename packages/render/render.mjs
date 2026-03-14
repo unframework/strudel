@@ -1,4 +1,9 @@
-import { initStrudel, evaluate, renderPatternAudio } from '@strudel/web';
+import { initStrudel, evaluate, renderPatternAudio, Pattern } from '@strudel/web';
+
+// Register no-op stubs for UI-only methods that may appear in pattern code
+Pattern.prototype._scope = Pattern.prototype._scope || function () {
+  return this;
+};
 
 let initPromise;
 

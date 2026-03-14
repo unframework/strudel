@@ -97,9 +97,10 @@ async function render() {
     console.log(`Rendering ${cycles} cycles at ${cps} cps (${sampleRate}Hz)...`);
 
     const renderTimeout = 60000;
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`Render timed out after ${renderTimeout / 1000}s`)), renderTimeout),
-    );
+    let timeoutId;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error(`Render timed out after ${renderTimeout / 1000}s`)), renderTimeout);
+    });
 
     // Trigger the render (which triggers a download and returns the hap timeline)
     const renderPromise = page.evaluate(
@@ -113,6 +114,7 @@ async function render() {
     );
 
     const timeline = await Promise.race([renderPromise, timeoutPromise]);
+    clearTimeout(timeoutId);
 
     // Wait for the download to complete
     console.log('Waiting for WAV download...');
