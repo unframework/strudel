@@ -29,26 +29,47 @@ window.initEditor = function (code) {
 
   const state = EditorState.create({
     doc: code,
-    extensions: [
-      javascript(),
-      strudelTheme,
-      highlightField,
-      EditorView.editable.of(false),
-      EditorView.lineWrapping,
-    ],
+    extensions: [javascript(), strudelTheme, highlightField, EditorView.editable.of(false), EditorView.lineWrapping],
   });
 
   editor = new EditorView({ state, parent });
 };
 
+// Simple PRNG seeded by position — deterministic per location
+function seededRandom(seed) {
+  let x = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+function highlightStyle(intensity, start) {
+  const alpha = Math.max(0, Math.min(1, intensity));
+  const rnd = seededRandom(start);
+
+  const outlineWidth = 1 + (2 + rnd) * alpha;
+  const scale = 1 + (0.2 + 0.1 * rnd) * alpha;
+  const rotation = (rnd - 0.5) * 5 * alpha;
+  const hue = Math.floor(rnd * 40 - 20); // slight color shift
+  const offsetX = (rnd - 0.5) * 1.5 * alpha;
+
+  return [
+    `outline: solid ${outlineWidth.toFixed(1)}px rgba(${255 + hue},${255 + hue},${255},${alpha.toFixed(2)})`,
+    `outline-offset: ${(1 + alpha).toFixed(1)}px`,
+    `display: inline-block`,
+    `transform: scale(${scale.toFixed(3)}) rotate(${rotation.toFixed(2)}deg) translateX(${offsetX.toFixed(1)}px)`,
+    `transform-origin: center`,
+    `border-radius: 2px`,
+  ].join('; ');
+}
+
+// locations: array of { start, end, intensity }
 window.applyHighlights = function (locations) {
   if (!editor) return;
   const docLength = editor.state.doc.length;
 
   const marks = locations
     .filter(({ start, end }) => start < docLength && end <= docLength && start < end)
-    .map(({ start, end, color }) => {
-      const style = `outline: solid 2px ${color || '#fff'}`;
+    .map(({ start, end, intensity }) => {
+      const style = highlightStyle(intensity ?? 1, start);
       return Decoration.mark({ attributes: { style } }).range(start, end);
     });
 

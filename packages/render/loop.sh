@@ -130,7 +130,7 @@ node "$SCRIPT_DIR/render-video.mjs" \
 
 echo "=== Stitching video ==="
 ffmpeg -y \
-  -f concat -safe 0 -i "$FRAMES_DIR/concat.txt" \
+  -framerate "$FPS" -i "$FRAMES_DIR/frame_%05d.png" \
   -i "$WORKDIR/loop.wav" \
   -c:v libx264 -pix_fmt yuv420p \
   -c:a aac -shortest \

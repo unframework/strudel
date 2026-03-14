@@ -16,8 +16,8 @@ const { values: args } = parseArgs({
     begin: { type: 'string' },
     end: { type: 'string' },
     fps: { type: 'string', default: '25' },
-    width: { type: 'string', default: '1280' },
-    height: { type: 'string', default: '720' },
+    width: { type: 'string', default: '640' },
+    height: { type: 'string', default: '900' },
     output: { type: 'string', short: 'o', default: 'frames' },
     help: { type: 'boolean', short: 'h' },
   },
@@ -31,9 +31,9 @@ Options:
   --code <path>          Path to source code file
   --begin <cycle>        Start cycle for video (default: from JSONL _meta)
   --end <cycle>          End cycle for video (default: from JSONL _meta)
-  --fps <n>              Frame rate for quantization (default: 25)
-  --width <n>            Viewport width (default: 1280)
-  --height <n>           Viewport height (default: 720)
+  --fps <n>              Frame rate (default: 25)
+  --width <n>            Viewport width (default: 640)
+  --height <n>           Viewport height (default: 900)
   -o, --output <dir>     Output directory for frames (default: frames)
   -h, --help             Show this help
 `);
@@ -46,7 +46,10 @@ if (!args.jsonl || !args.code) {
 }
 
 // Parse JSONL
-const lines = readFileSync(args.jsonl, 'utf-8').trim().split('\n').map((l) => JSON.parse(l));
+const lines = readFileSync(args.jsonl, 'utf-8')
+  .trim()
+  .split('\n')
+  .map((l) => JSON.parse(l));
 const meta = lines.find((l) => l._meta);
 if (!meta) {
   console.error('Error: JSONL missing _meta line with _cps');
@@ -62,30 +65,21 @@ const height = parseInt(args.height);
 const outputDir = args.output;
 const code = readFileSync(args.code, 'utf-8');
 
-const duration = (end - begin) / cps; // seconds
+const duration = (end - begin) / cps;
+const totalFrames = Math.ceil(duration * fps);
 
-// Collect sparse transition times (in seconds from video start)
-const transitions = new Set([0]);
-for (const hap of haps) {
-  const hapStartSec = (hap.begin - begin) / cps;
-  const hapEndSec = (hap.begin + hap.duration - begin) / cps;
-  // Quantize to frame grid
-  transitions.add(Math.round(hapStartSec * fps) / fps);
-  transitions.add(Math.round(hapEndSec * fps) / fps);
-}
-const times = [...transitions].filter((t) => t >= 0 && t < duration).sort((a, b) => a - b);
+console.log(
+  `CPS: ${cps}, cycles ${begin}..${end}, duration: ${duration.toFixed(1)}s, ${totalFrames} frames at ${fps}fps`,
+);
 
-console.log(`CPS: ${cps}, cycles ${begin}..${end}, duration: ${duration.toFixed(1)}s`);
-console.log(`${times.length} keyframes (vs ${Math.ceil(duration * fps)} at ${fps}fps)`);
-
-async function renderKeyframes() {
+async function renderFrames() {
   mkdirSync(outputDir, { recursive: true });
 
   console.log('Starting vite dev server...');
   const server = await createServer({
     root: __dirname,
     server: { port: 0 },
-    logLevel: 'error',
+    logLevel: 'silent',
   });
   await server.listen();
   const port = server.httpServer.address().port;
@@ -102,9 +96,6 @@ async function renderKeyframes() {
     await page.setViewport({ width, height, deviceScaleFactor: 1 });
 
     page.on('pageerror', (err) => console.error('Page error:', err.message));
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') console.error('Console error:', msg.text());
-    });
 
     await page.goto(url, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction('window.__keyframesReady === true', { timeout: 10000 }).catch(async () => {
@@ -113,62 +104,47 @@ async function renderKeyframes() {
       throw new Error('keyframes page failed to load');
     });
 
-    // Initialize editor with code
     await page.evaluate((code) => window.initEditor(code), code);
 
-    // Render each keyframe
-    const concatLines = ['ffconcat version 1.0'];
+    const t0 = performance.now();
 
-    for (let i = 0; i < times.length; i++) {
-      const time = times[i];
+    for (let i = 0; i < totalFrames; i++) {
+      const time = i / fps;
       const cycleTime = begin + time * cps;
 
-      // Find active haps at this cycle time
+      // Collect active highlights with intensity
       const activeLocations = [];
       for (const hap of haps) {
-        if (hap.begin <= cycleTime && cycleTime < hap.begin + hap.duration) {
+        const hapEnd = hap.begin + hap.duration;
+        if (hap.begin <= cycleTime && cycleTime < hapEnd) {
+          const age = (cycleTime - hap.begin) / hap.duration;
+          const intensity = 1 - age;
           for (const loc of hap.locations) {
-            activeLocations.push({
-              start: loc.start,
-              end: loc.end,
-              color: hap.value?.color,
-            });
+            activeLocations.push({ start: loc.start, end: loc.end, intensity });
           }
         }
       }
 
-      // Apply highlights
       if (activeLocations.length > 0) {
         await page.evaluate((locs) => window.applyHighlights(locs), activeLocations);
       } else {
         await page.evaluate(() => window.clearHighlights());
       }
 
-      // Screenshot
       const frameName = `frame_${String(i + 1).padStart(5, '0')}.png`;
       await page.screenshot({ path: join(outputDir, frameName) });
 
-      // Duration until next keyframe (or end of video)
-      const nextTime = i + 1 < times.length ? times[i + 1] : duration;
-      const frameDuration = nextTime - time;
-
-      concatLines.push(`file ${frameName}`);
-      concatLines.push(`duration ${frameDuration.toFixed(6)}`);
-
-      if ((i + 1) % 50 === 0 || i === times.length - 1) {
-        console.log(`  ${i + 1}/${times.length} keyframes`);
+      if ((i + 1) % 50 === 0 || i === totalFrames - 1) {
+        const elapsed = (performance.now() - t0) / 1000;
+        const rate = (i + 1) / elapsed;
+        const eta = ((totalFrames - i - 1) / rate).toFixed(0);
+        console.log(`  ${i + 1}/${totalFrames} frames (${rate.toFixed(1)} fps, ETA ${eta}s)`);
       }
     }
 
-    // ffmpeg concat demuxer requires the last file repeated without duration
-    const lastFrame = `frame_${String(times.length).padStart(5, '0')}.png`;
-    concatLines.push(`file ${lastFrame}`);
-
-    const concatPath = join(outputDir, 'concat.txt');
-    writeFileSync(concatPath, concatLines.join('\n') + '\n');
-    console.log(`Concat file saved to: ${concatPath}`);
+    console.log(`Frames saved to: ${outputDir}/`);
     console.log(
-      `\nTo create video:\n  ffmpeg -f concat -safe 0 -i ${concatPath} -i <audio.wav> -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest output.mp4`,
+      `\nTo create video:\n  ffmpeg -framerate ${fps} -i ${outputDir}/frame_%05d.png -i <audio.wav> -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest output.mp4`,
     );
   } finally {
     await browser.close();
@@ -176,7 +152,7 @@ async function renderKeyframes() {
   }
 }
 
-renderKeyframes().catch((err) => {
+renderFrames().catch((err) => {
   console.error('Render failed:', err);
   process.exit(1);
 });
