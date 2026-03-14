@@ -112,18 +112,23 @@ async function renderFrames() {
       const time = i / fps;
       const cycleTime = begin + time * cps;
 
-      // Collect active highlights with intensity
-      const activeLocations = [];
+      // Collect active highlights with intensity, deduplicated by location
+      const locMap = new Map(); // "start:end" -> { start, end, intensity }
       for (const hap of haps) {
         const hapEnd = hap.begin + hap.duration;
         if (hap.begin <= cycleTime && cycleTime < hapEnd) {
           const age = (cycleTime - hap.begin) / hap.duration;
           const intensity = 1 - age;
           for (const loc of hap.locations) {
-            activeLocations.push({ start: loc.start, end: loc.end, intensity });
+            const key = `${loc.start}:${loc.end}`;
+            const existing = locMap.get(key);
+            if (!existing || intensity > existing.intensity) {
+              locMap.set(key, { start: loc.start, end: loc.end, intensity });
+            }
           }
         }
       }
+      const activeLocations = [...locMap.values()];
 
       if (activeLocations.length > 0) {
         await page.evaluate((locs) => window.applyHighlights(locs), activeLocations);
