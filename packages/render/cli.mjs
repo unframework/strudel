@@ -39,7 +39,7 @@ if (!args.input) {
   console.error('Error: provide --input <file>');
   process.exit(1);
 }
-const code = readFileSync(args.input, 'utf-8');
+const code = readFileSync(args.input, 'utf-8').replace(/\r\n/g, '\n');
 
 const begin = parseFloat(args.begin);
 const cycles = parseFloat(args.cycles);

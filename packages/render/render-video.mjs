@@ -63,7 +63,7 @@ const fps = parseInt(args.fps);
 const width = parseInt(args.width);
 const height = parseInt(args.height);
 const outputDir = args.output;
-const code = readFileSync(args.code, 'utf-8');
+const code = readFileSync(args.code, 'utf-8').replace(/\r\n/g, '\n');
 
 const duration = (end - begin) / cps;
 const totalFrames = Math.ceil(duration * fps);
