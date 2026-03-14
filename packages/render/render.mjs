@@ -1,15 +1,31 @@
-import { initStrudel, evaluate, renderPatternAudio, Pattern } from '@strudel/web';
+import { initStrudel, evaluate, renderPatternAudio, Pattern, samples, registerZZFXSounds, aliasBank } from '@strudel/web';
 
 // Register no-op stubs for UI-only methods that may appear in pattern code
 Pattern.prototype._scope = Pattern.prototype._scope || function () {
   return this;
 };
 
+async function prebake() {
+  const ds = 'https://raw.githubusercontent.com/felixroos/dough-samples/main';
+  const tc = 'https://raw.githubusercontent.com/tidalcycles/uzu-drumkit/main';
+  const ts = 'https://raw.githubusercontent.com/todepond/samples/main';
+  await Promise.all([
+    registerZZFXSounds(),
+    samples(`${ds}/tidal-drum-machines.json`),
+    samples(`${ds}/piano.json`),
+    samples(`${ds}/Dirt-Samples.json`),
+    samples(`${ds}/vcsl.json`),
+    samples(`${ds}/mridangam.json`),
+    samples(`${tc}/strudel.json`),
+  ]);
+  aliasBank(`${ts}/tidal-drum-machines-alias.json`);
+}
+
 let initPromise;
 
 async function init() {
   if (!initPromise) {
-    initPromise = initStrudel();
+    initPromise = initStrudel({ prebake });
   }
   return initPromise;
 }
