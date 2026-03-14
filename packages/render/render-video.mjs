@@ -108,6 +108,7 @@ async function renderFrames() {
 
     const t0 = performance.now();
     const timings = { evaluate: 0, screenshot: 0 };
+    const TAIL_SECONDS = 0.1; // fade-out tail after hap ends
     let idCounter = 0;
     let prevLocMap = new Map(); // persists across frames to track id continuity
 
@@ -119,15 +120,20 @@ async function renderFrames() {
       const locMap = new Map(); // "start:end" -> { start, end, intensity }
       for (const hap of haps) {
         const hapEnd = hap.begin + hap.duration;
+        const tailEnd = hapEnd + TAIL_SECONDS * cps;
+        let intensity;
         if (hap.begin <= cycleTime && cycleTime < hapEnd) {
-          const age = (cycleTime - hap.begin) / hap.duration;
-          const intensity = 1 - age;
-          for (const loc of hap.locations) {
-            const key = `${loc.start}:${loc.end}`;
-            const existing = locMap.get(key);
-            if (!existing || intensity > existing.intensity) {
-              locMap.set(key, { start: loc.start, end: loc.end, intensity });
-            }
+          intensity = 1;
+        } else if (cycleTime >= hapEnd && cycleTime < tailEnd) {
+          intensity = 1 - (cycleTime - hapEnd) / (TAIL_SECONDS * cps);
+        } else {
+          continue;
+        }
+        for (const loc of hap.locations) {
+          const key = `${loc.start}:${loc.end}`;
+          const existing = locMap.get(key);
+          if (!existing || intensity > existing.intensity) {
+            locMap.set(key, { start: loc.start, end: loc.end, intensity });
           }
         }
       }
