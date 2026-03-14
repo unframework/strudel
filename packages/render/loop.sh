@@ -46,7 +46,7 @@ if [[ -z "$INPUT" ]]; then
 fi
 
 if [[ -z "$OUTPUT" ]]; then
-  OUTPUT="${INPUT%.*}.mp3"
+  OUTPUT="${INPUT%.*}.wav"
 fi
 
 WORKDIR=$(mktemp -d)
@@ -75,17 +75,21 @@ BS=$(node -e "process.stdout.write(String($CYCLES / $CPS))")   # body seconds
 echo "=== Crossfading (fade=${FADE}s at end of ${BS}s body) ==="
 
 # raw.wav: [MARGIN | BODY]
-# 1. Extract body (from margin_sec onwards)
-# 2. Extract lead (first margin_sec), fade it in over FADE seconds
-# 3. Overlay faded lead at end of body (fading out body end at the same time)
+# 1. Extract body (from margin_sec onwards), fade out the last FADE seconds
+# 2. Extract lead (last FADE seconds of margin, just before body), fade it in
+# 3. Overlay faded lead at end of body
 OVERLAY_AT=$(node -e "process.stdout.write(String($BS - $FADE))")
+LEAD_START=$(node -e "process.stdout.write(String($MS - $FADE))")
+DELAY_MS=$(node -e "process.stdout.write(String(($BS - $FADE) * 1000))")
 
 ffmpeg -y -i "$WORKDIR/raw.wav" -filter_complex "
   [0]atrim=${MS},asetpts=PTS-STARTPTS,afade=t=out:st=${OVERLAY_AT}:d=${FADE}[body];
-  [0]atrim=0:${FADE},asetpts=PTS-STARTPTS,afade=t=in:d=${FADE}[lead];
-  [lead]adelay=$(node -e "process.stdout.write(String(($BS - $FADE) * 1000))")|$(node -e "process.stdout.write(String(($BS - $FADE) * 1000))")[lead_delayed];
+  [0]atrim=${LEAD_START}:${MS},asetpts=PTS-STARTPTS,afade=t=in:d=${FADE}[lead];
+  [lead]adelay=${DELAY_MS}|${DELAY_MS}[lead_delayed];
   [body][lead_delayed]amix=inputs=2:duration=first:normalize=0
-" -t "$BS" -c:a libmp3lame -q:a 2 "$OUTPUT" 2>/dev/null
+" -t "$BS" "$WORKDIR/loop.wav" 2>/dev/null
+
+cp "$WORKDIR/loop.wav" "$OUTPUT"
 
 echo "=== Done: $OUTPUT ==="
 cp "$WORKDIR/raw.jsonl" "${OUTPUT%.*}.jsonl"
