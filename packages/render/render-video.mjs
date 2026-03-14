@@ -108,6 +108,8 @@ async function renderFrames() {
 
     const t0 = performance.now();
     const timings = { evaluate: 0, screenshot: 0 };
+    let idCounter = 0;
+    let prevLocMap = new Map(); // persists across frames to track id continuity
 
     for (let i = 0; i < totalFrames; i++) {
       const time = i / fps;
@@ -129,6 +131,18 @@ async function renderFrames() {
           }
         }
       }
+
+      // Assign ids: new id only when a location appears for the first time or intensity
+      // increased (new distinct event firing); otherwise carry the previous frame's id forward.
+      for (const [key, entry] of locMap) {
+        const prev = prevLocMap.get(key);
+        if (!prev || entry.intensity > prev.intensity) {
+          entry.id = idCounter++;
+        } else {
+          entry.id = prev.id;
+        }
+      }
+      prevLocMap = locMap;
       const activeLocations = [...locMap.values()];
 
       let t = performance.now();

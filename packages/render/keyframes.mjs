@@ -41,9 +41,9 @@ function seededRandom(seed) {
   return x - Math.floor(x);
 }
 
-function highlightStyle(intensity, start) {
+function highlightStyle(intensity, seed) {
   const alpha = Math.max(0, Math.min(1, intensity));
-  const rnd = seededRandom(start);
+  const rnd = seededRandom(seed);
 
   const outlineWidth = 1 + (2 + rnd) * alpha;
   const scale = 1 + (0.2 + 0.1 * rnd) * alpha;
@@ -61,15 +61,15 @@ function highlightStyle(intensity, start) {
   ].join('; ');
 }
 
-// locations: array of { start, end, intensity }
+// locations: array of { start, end, intensity, id }
 window.applyHighlights = function (locations) {
   if (!editor) return;
   const docLength = editor.state.doc.length;
 
   const marks = locations
     .filter(({ start, end }) => start < docLength && end <= docLength && start < end)
-    .map(({ start, end, intensity }) => {
-      const style = highlightStyle(intensity ?? 1, start);
+    .map(({ start, end, intensity, id }) => {
+      const style = highlightStyle(intensity ?? 1, id);
       return Decoration.mark({ attributes: { style } }).range(start, end);
     });
 
