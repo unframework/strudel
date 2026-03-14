@@ -107,6 +107,7 @@ async function renderFrames() {
     await page.evaluate((code) => window.initEditor(code), code);
 
     const t0 = performance.now();
+    const timings = { evaluate: 0, screenshot: 0 };
 
     for (let i = 0; i < totalFrames; i++) {
       const time = i / fps;
@@ -130,20 +131,27 @@ async function renderFrames() {
       }
       const activeLocations = [...locMap.values()];
 
+      let t = performance.now();
       if (activeLocations.length > 0) {
         await page.evaluate((locs) => window.applyHighlights(locs), activeLocations);
       } else {
         await page.evaluate(() => window.clearHighlights());
       }
+      timings.evaluate += performance.now() - t;
 
+      t = performance.now();
       const frameName = `frame_${String(i + 1).padStart(5, '0')}.png`;
       await page.screenshot({ path: join(outputDir, frameName) });
+      timings.screenshot += performance.now() - t;
 
       if ((i + 1) % 50 === 0 || i === totalFrames - 1) {
         const elapsed = (performance.now() - t0) / 1000;
         const rate = (i + 1) / elapsed;
         const eta = ((totalFrames - i - 1) / rate).toFixed(0);
-        console.log(`  ${i + 1}/${totalFrames} frames (${rate.toFixed(1)} fps, ETA ${eta}s)`);
+        const n = i + 1;
+        console.log(
+          `  ${n}/${totalFrames} frames (${rate.toFixed(1)} fps, ETA ${eta}s) | evaluate: ${(timings.evaluate / n).toFixed(0)}ms  screenshot: ${(timings.screenshot / n).toFixed(0)}ms  avg/frame: ${((elapsed * 1000) / n).toFixed(0)}ms`,
+        );
       }
     }
 
