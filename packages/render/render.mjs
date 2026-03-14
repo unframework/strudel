@@ -30,11 +30,14 @@ async function init() {
   return initPromise;
 }
 
-window.renderOffline = async function (code, cycles, cps = 0.5, sampleRate = 44100) {
-  await init();
+window.renderOffline = async function (code, cycles, sampleRate = 44100) {
+  const repl = await init();
 
   // Evaluate the code to get the pattern (autoplay=false)
   const pattern = await evaluate(code, false);
+
+  // Use CPS from scheduler (set by setcpm/setcps in the code, or default)
+  const cps = repl.scheduler.cps;
 
   // Collect hap timeline
   const haps = pattern
