@@ -12,10 +12,21 @@
   .cm-gutters { display: none !important; }
   .cm-activeLine { background: transparent !important; }
   .cm-cursor { display: none !important; }
+  #watermark {
+    position: fixed;
+    bottom: 16px;
+    right: 20px;
+    font-family: monospace;
+    font-size: 60px;
+    color: rgba(255, 255, 255, 0.6);
+    pointer-events: none;
+    z-index: 999;
+  }
 </style>
 </head>
 <body>
 <div id="editor"></div>
+<div id="watermark">@line.ctrl</div>
 <script type="module" src="./keyframes.mjs"></script>
 </body>
 </html>
