@@ -41,18 +41,21 @@ function seededRandom(seed) {
   return x - Math.floor(x);
 }
 
-function highlightStyle(intensity, seed) {
-  const alpha = Math.max(0, Math.min(1, intensity));
+const POP_SECONDS = 0.2; // initial pop multiplies intensity
+
+function highlightStyle(intensity, seed, age) {
+  const pop = 1 + 1 * Math.max(0, 1 - age / POP_SECONDS);
+  const alpha = intensity * pop;
   const rnd = seededRandom(seed);
 
-  const outlineWidth = 1 + (2 + rnd) * alpha;
-  const scale = 1 + (0.2 + 0.1 * rnd) * alpha;
+  const outlineWidth = 1 + (1 + rnd) * alpha;
+  const scale = 1 + (0.1 + 0.1 * rnd) * alpha;
   const rotation = (rnd - 0.5) * 5 * alpha;
   const hue = Math.floor(rnd * 40 - 20); // slight color shift
   const offsetX = (rnd - 0.5) * 1.5 * alpha;
 
   return [
-    `outline: solid ${outlineWidth.toFixed(1)}px rgba(${255 + hue},${255 + hue},${255},${alpha.toFixed(2)})`,
+    `outline: solid ${outlineWidth.toFixed(1)}px rgba(${255 + hue},${255 + hue},${255},${Math.min(1, alpha).toFixed(2)})`,
     `outline-offset: ${(1 + alpha).toFixed(1)}px`,
     `display: inline-block`,
     `transform: scale(${scale.toFixed(3)}) rotate(${rotation.toFixed(2)}deg) translateX(${offsetX.toFixed(1)}px)`,
@@ -61,15 +64,15 @@ function highlightStyle(intensity, seed) {
   ].join('; ');
 }
 
-// locations: array of { start, end, intensity, id }
+// locations: array of { start, end, intensity, age, id }
 window.applyHighlights = function (locations) {
   if (!editor) return;
   const docLength = editor.state.doc.length;
 
   const marks = locations
     .filter(({ start, end }) => start < docLength && end <= docLength && start < end)
-    .map(({ start, end, intensity, id }) => {
-      const style = highlightStyle(intensity ?? 1, id);
+    .map(({ start, end, intensity, age, id }) => {
+      const style = highlightStyle(intensity ?? 1, id, age ?? 0);
       return Decoration.mark({ attributes: { style } }).range(start, end);
     });
 

@@ -122,6 +122,7 @@ async function renderFrames() {
       for (const hap of haps) {
         const hapEnd = hap.begin + hap.duration;
         const tailEnd = hapEnd + TAIL_SECONDS * cps;
+        const age = (cycleTime - hap.begin) / cps; // seconds since hap start
         let intensity;
         if (hap.begin <= cycleTime && cycleTime < hapEnd) {
           intensity = 1;
@@ -134,7 +135,7 @@ async function renderFrames() {
           const dedupeKey = `${loc.start}:${loc.end}:${hap.begin}`;
           const existing = eventMap.get(dedupeKey);
           if (!existing || intensity > existing.intensity) {
-            eventMap.set(dedupeKey, { start: loc.start, end: loc.end, intensity, hapBegin: hap.begin });
+            eventMap.set(dedupeKey, { start: loc.start, end: loc.end, intensity, age, hapBegin: hap.begin });
           }
         }
       }
