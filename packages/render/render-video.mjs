@@ -116,8 +116,9 @@ async function renderFrames() {
       const time = i / fps;
       const cycleTime = begin + time * cps;
 
-      // Collect active highlights with intensity, deduplicated by location
-      const locMap = new Map(); // "start:end" -> { start, end, intensity }
+      // Collect active highlights, deduplicated by location + hap begin time
+      // (end times may vary for the same event, so collate those into one)
+      const eventMap = new Map(); // "loc:hapBegin" -> entry
       for (const hap of haps) {
         const hapEnd = hap.begin + hap.duration;
         const tailEnd = hapEnd + TAIL_SECONDS * cps;
@@ -130,22 +131,32 @@ async function renderFrames() {
           continue;
         }
         for (const loc of hap.locations) {
-          const key = `${loc.start}:${loc.end}`;
-          const existing = locMap.get(key);
+          const dedupeKey = `${loc.start}:${loc.end}:${hap.begin}`;
+          const existing = eventMap.get(dedupeKey);
           if (!existing || intensity > existing.intensity) {
-            locMap.set(key, { start: loc.start, end: loc.end, intensity });
+            eventMap.set(dedupeKey, { start: loc.start, end: loc.end, intensity, hapBegin: hap.begin });
           }
         }
       }
 
-      // Assign ids: new id only when a location appears for the first time or intensity
-      // increased (new distinct event firing); otherwise carry the previous frame's id forward.
+      // Per location, pick the entry with the latest hap begin time
+      const locMap = new Map();
+      for (const entry of eventMap.values()) {
+        const locKey = `${entry.start}:${entry.end}`;
+        const existing = locMap.get(locKey);
+        if (!existing || entry.hapBegin > existing.hapBegin) {
+          locMap.set(locKey, entry);
+        }
+      }
+
+      // Assign ids: new id when hap begin time changes at a location (new event),
+      // otherwise carry the previous frame's id forward (respects breaks between events)
       for (const [key, entry] of locMap) {
         const prev = prevLocMap.get(key);
-        if (!prev || entry.intensity > prev.intensity) {
-          entry.id = idCounter++;
-        } else {
+        if (prev && prev.hapBegin === entry.hapBegin) {
           entry.id = prev.id;
+        } else {
+          entry.id = idCounter++;
         }
       }
       prevLocMap = locMap;
