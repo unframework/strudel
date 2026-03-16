@@ -2,9 +2,9 @@
 """Restack nm/* branches onto upstream/main.
 
 Usage:
-    python3 restack.py [prefix]
-
-If no prefix given, generates tmp/YYYYMMDD. Pass an existing prefix to resume.
+    python3 restack.py              # fresh restack (creates tmp/YYYYMMDD/)
+    python3 restack.py <prefix>     # resume after conflict
+    python3 restack.py <prefix> --apply  # reset real branches and force-push
 """
 
 import atexit
@@ -309,14 +309,56 @@ def do_merge(wt, merge_sha, head_sha, message):
 # Main
 # ---------------------------------------------------------------------------
 
+def apply_branches(prefix):
+    """Reset real branches to their restacked counterparts and force-push."""
+    branches = PUSH_BRANCHES
+    updated = []
+
+    for branch in branches:
+        ref_name = f"{prefix}/{branch}"
+        if not ref_exists(ref_name):
+            print(f"  SKIP {branch} (no restacked ref)")
+            continue
+        new_sha = resolve(ref_name)
+        old_sha = resolve(f"origin/{branch}")
+        if new_sha == old_sha:
+            print(f"  {branch}: unchanged")
+            continue
+        # Use update-ref to avoid "can't update checked-out branch" error
+        git("update-ref", f"refs/heads/{branch}", new_sha)
+        updated.append(branch)
+        print(f"  {branch}: {short_sha(old_sha)} -> {short_sha(new_sha)}")
+
+    if not updated:
+        print("\nNothing to push.")
+        return
+
+    print(f"\nForce-pushing {len(updated)} branches to origin...")
+    # Push all at once
+    refspecs = [f"{b}:{b}" for b in updated]
+    git("push", "--force", "origin", *refspecs, capture=False)
+    print("Done.")
+
+
 def main():
-    # Parse prefix
+    # Parse args
+    apply_mode = "--apply" in sys.argv
+    args = [a for a in sys.argv[1:] if a != "--apply"]
+
     resuming = False
-    if len(sys.argv) > 1:
-        prefix = sys.argv[1]
+    if args:
+        prefix = args[0]
         resuming = True
+        if apply_mode:
+            print(f"Applying restacked branches from {prefix}\n")
+            apply_branches(prefix)
+            return
         print(f"Resuming with prefix: {prefix}")
     else:
+        if apply_mode:
+            print("ERROR: --apply requires a prefix argument")
+            print("  python3 restack.py tmp/20260315 --apply")
+            sys.exit(1)
         prefix = f"tmp/{date.today().strftime('%Y%m%d')}"
         # Check for collision
         if ref_exists(f"{prefix}/main"):
@@ -374,23 +416,33 @@ def main():
                 print(f"  skip {branch} (next head {next_head_ref()} already exists)")
                 continue
 
-            # Auto-detect fork point by scanning branch history
-            parent_branch, fork_sha = find_fork_info(branch)
-            fork_desc = parent_branch or "merge"
-            print(f"\n>> {branch} (fork: {fork_desc} @ {short_sha(fork_sha)})")
+            ref_name = f"{prefix}/{branch}"
+            if not ref_exists(ref_name):
 
-            # Get unique commits beyond the fork point
-            commits = get_unique_commits(branch, fork_sha)
+                # Auto-detect fork point by scanning branch history
+                parent_branch, fork_sha = find_fork_info(branch)
+                fork_desc = parent_branch or "merge"
+                print(f"\n>> {branch} (fork: {fork_desc} @ {short_sha(fork_sha)})")
 
-            # Cherry-pick onto current base
-            result_sha = do_cherry_pick(wt, branch, commits, base_sha, prefix)
-            if result_sha is None:
-                fail_conflict(branch, fork_sha, base_ref())
+                # Get unique commits beyond the fork point
+                commits = get_unique_commits(branch, fork_sha)
+
+                # Cherry-pick onto current base
+                result_sha = do_cherry_pick(wt, branch, commits, base_sha, prefix)
+                if result_sha is None:
+                    fail_conflict(branch, fork_sha, base_ref())
+            else:
+                print(f"\n>> {branch} (skipping rebase, {ref_name} already mergeable)")
+                result_sha = resolve(ref_name)
 
             # Merge into running head
             head_sha = do_merge(wt, result_sha, head_sha, f"restack: merge {branch}")
             if head_sha is None:
                 fail_conflict(branch, fork_sha, base_ref())
+
+            # Save the rebased branch ref once we know it is mergeable
+            git("branch", "-f", ref_name, result_sha)
+
             print(f"  HEAD: {short_sha(head_sha)}")
             continue
 
@@ -410,6 +462,7 @@ def main():
         if line:
             print(f"  {line}")
     print(f"\nTo inspect: git log --oneline --graph {prefix}/head {prefix}/main")
+    print(f"To apply:   python3 restack.py {prefix} --apply")
 
 
 if __name__ == "__main__":
