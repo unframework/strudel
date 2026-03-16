@@ -41,8 +41,8 @@ def main():
     parser.add_argument("-o", "--output", default="", help="Output base name (default: input without ext)")
     parser.add_argument("--sample-rate", type=int, default=44100, help="Sample rate (default: 44100)")
     parser.add_argument("--fps", type=int, default=25, help="Video frame rate (default: 25)")
-    parser.add_argument("--width", type=int, default=640, help="Video width (default: 640)")
-    parser.add_argument("--height", type=int, default=900, help="Video height (default: 900)")
+    parser.add_argument("--width", type=int, default=720, help="Video width (default: 720)")
+    parser.add_argument("--height", type=int, default=1280, help="Max video height (default: 1280)")
     parser.add_argument("--no-video", action="store_true", help="Skip video rendering, audio only")
     args = parser.parse_args()
 

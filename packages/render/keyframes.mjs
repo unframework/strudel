@@ -85,4 +85,16 @@ window.clearHighlights = function () {
   editor.dispatch({ effects: setHighlights.of(Decoration.none) });
 };
 
+window.getContentHeight = function () {
+  if (!editor) return 0;
+  // Measure the actual text content height, not the 100vh container
+  const contentDOM = editor.contentDOM;
+  const lastLine = contentDOM.lastElementChild;
+  if (!lastLine) return 100;
+  const rect = lastLine.getBoundingClientRect();
+  const editorRect = document.getElementById('editor').getBoundingClientRect();
+  // Distance from top of editor to bottom of last line + padding
+  return Math.ceil(rect.bottom - editorRect.top + 24);
+};
+
 window.__keyframesReady = true;

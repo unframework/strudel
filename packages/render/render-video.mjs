@@ -16,8 +16,8 @@ const { values: args } = parseArgs({
     begin: { type: 'string' },
     end: { type: 'string' },
     fps: { type: 'string', default: '25' },
-    width: { type: 'string', default: '640' },
-    height: { type: 'string', default: '900' },
+    width: { type: 'string', default: '720' },
+    height: { type: 'string', default: '1280' },
     output: { type: 'string', short: 'o', default: 'frames' },
     help: { type: 'boolean', short: 'h' },
   },
@@ -32,8 +32,8 @@ Options:
   --begin <cycle>        Start cycle for video (default: from JSONL _meta)
   --end <cycle>          End cycle for video (default: from JSONL _meta)
   --fps <n>              Frame rate (default: 25)
-  --width <n>            Viewport width (default: 640)
-  --height <n>           Viewport height (default: 900)
+  --width <n>            Viewport width (default: 720)
+  --height <n>           Max viewport height (default: 1280)
   -o, --output <dir>     Output directory for frames (default: frames)
   -h, --help             Show this help
 `);
@@ -105,6 +105,16 @@ async function renderFrames() {
     });
 
     await page.evaluate((code) => window.initEditor(code), code);
+
+    // Auto-size viewport height to fit code content, capped at 9:16 ratio
+    // Temporarily expand viewport tall so content isn't clipped during measurement
+    const maxHeight = Math.ceil(width * 16 / 9);
+    await page.setViewport({ width, height: 4000, deviceScaleFactor: 1 });
+    const contentHeight = await page.evaluate(() => window.getContentHeight());
+    // Round up to even number (required by libx264)
+    const finalHeight = (Math.min(Math.max(contentHeight, 100), maxHeight) + 1) & ~1;
+    console.log(`Viewport: ${width}x${finalHeight} (content: ${contentHeight}px, max: ${maxHeight}px)`);
+    await page.setViewport({ width, height: finalHeight, deviceScaleFactor: 1 });
 
     const t0 = performance.now();
     const timings = { evaluate: 0, screenshot: 0 };
