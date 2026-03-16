@@ -88,12 +88,12 @@ def short_sha(sha):
 # ---------------------------------------------------------------------------
 
 def preflight(resuming=False):
-    # Clean working tree
+    # Clean working tree (exclude restack.py itself)
     r = subprocess.run(
-        ["git", "diff", "--quiet"], capture_output=True
+        ["git", "diff", "--quiet", "--", ":(exclude)restack.py"], capture_output=True
     )
     r2 = subprocess.run(
-        ["git", "diff", "--cached", "--quiet"], capture_output=True
+        ["git", "diff", "--cached", "--quiet", "--", ":(exclude)restack.py"], capture_output=True
     )
     if r.returncode != 0 or r2.returncode != 0:
         print("ERROR: Working tree is not clean. Commit or stash first.")
@@ -152,7 +152,6 @@ def preflight(resuming=False):
 # ---------------------------------------------------------------------------
 
 _worktree_dir = None
-_cleanup_enabled = True
 
 
 def setup_worktree(start_ref):
@@ -164,7 +163,7 @@ def setup_worktree(start_ref):
 
 
 def cleanup_worktree():
-    if not _cleanup_enabled or _worktree_dir is None:
+    if _worktree_dir is None:
         return
     subprocess.run(
         ["git", "worktree", "remove", "--force", _worktree_dir],
@@ -174,11 +173,6 @@ def cleanup_worktree():
 
 
 atexit.register(cleanup_worktree)
-
-
-def disable_cleanup():
-    global _cleanup_enabled
-    _cleanup_enabled = False
 
 
 # ---------------------------------------------------------------------------
@@ -264,17 +258,8 @@ def get_unique_commits(branch, fork_sha):
 
 def do_cherry_pick(wt, branch, commits, base_sha, prefix):
     """Cherry-pick commits onto base_sha, save as prefix/branch."""
-    ref_name = f"{prefix}/{branch}"
-
-    if ref_exists(ref_name):
-        result_sha = resolve(ref_name)
-        count = len(commits) if commits else "?"
-        print(f"  SKIP {branch} (already at {short_sha(result_sha)}, {count} commits)")
-        return result_sha
-
     if not commits:
         print(f"  SKIP {branch} (no unique commits)")
-        git("branch", "-f", ref_name, base_sha)
         return base_sha
 
     print(f"  Replaying {len(commits)} commits from {branch}...")
@@ -289,35 +274,22 @@ def do_cherry_pick(wt, branch, commits, base_sha, prefix):
         )
         if r.returncode != 0:
             print(f"\n  !!! CONFLICT at commit {i+1}/{len(commits)}: {short_sha(sha)} {subject}")
-            print(f"  Resolve in: {wt}")
-            print(f"  Then: git -C {wt} cherry-pick --continue")
-            print(f"  Then save:  git branch -f {ref_name} $(git -C {wt} rev-parse HEAD)")
-            print(f"  Then rerun: python3 restack.py {prefix}")
-            disable_cleanup()
-            sys.exit(1)
+            return None
 
         if (i + 1) % 10 == 0:
             print(f"    ...{i+1}/{len(commits)}")
 
     result_sha = git_wt(wt, "rev-parse", "HEAD")
-    git("branch", "-f", ref_name, result_sha)
-    print(f"  Saved {ref_name} -> {short_sha(result_sha)}")
+    print(f"  REBASED: {short_sha(result_sha)}")
     return result_sha
 
 
-def do_merge(wt, ref_name, head_sha, message):
-    """Merge ref_name into head_sha, return new head."""
-    merge_sha = resolve(ref_name)
-
-    # Fast-forward case
-    mb = git("merge-base", head_sha, merge_sha)
-    # if mb == head_sha:
-    #     # head is ancestor of merge target, just fast-forward
-    #     return merge_sha
-
-    if mb == merge_sha:
-        # Already contained, nothing to do
-        return head_sha
+def do_merge(wt, merge_sha, head_sha, message):
+    """Merge merge_sha into head_sha, return new head."""
+    if mb := git("merge-base", head_sha, merge_sha):
+        if mb == merge_sha:
+            # Already contained, nothing to do
+            return head_sha
 
     # Real merge
     git_wt(wt, "checkout", "--detach", head_sha)
@@ -327,11 +299,8 @@ def do_merge(wt, ref_name, head_sha, message):
         capture_output=True, text=True,
     )
     if r.returncode != 0:
-        print(f"\n  !!! MERGE CONFLICT merging {ref_name} into HEAD")
-        print(f"  Resolve in: {wt}")
-        print(f"  Then: git -C {wt} merge --continue")
-        disable_cleanup()
-        sys.exit(1)
+        print(f"\n  !!! MERGE CONFLICT merging {merge_sha} into HEAD")
+        return None
 
     return git_wt(wt, "rev-parse", "HEAD")
 
@@ -369,17 +338,41 @@ def main():
 
     base_sha = upstream_sha
     head_sha = upstream_sha
+    next_head_idx = 1
+
+    def next_head_ref():
+        return f"{prefix}/intermediate-{next_head_idx}"
+
+    def base_ref():
+        return f"{prefix}/main" if next_head_idx == 0 else f"{prefix}/intermediate-{next_head_idx - 1}"
+
+    def fail_conflict(branch, fork_sha, br):
+        """Print conflict resolution instructions and exit."""
+        print(f"\n  To resolve: rebase origin/{branch} onto {br}")
+        print(f"    git rebase --onto {br} {fork_sha} origin/{branch}")
+        print(f"  Then rerun: python3 restack.py {prefix}")
+        sys.exit(1)
 
     for step in REPLAY:
         cmd = step[0]
 
         if cmd == "forward":
+            next_ref = next_head_ref()
+            if ref_exists(next_ref):
+                head_sha = resolve(next_ref)
+            else:
+                git("branch", "-f", next_ref, head_sha)
             base_sha = head_sha
-            print(f"\n>> forward: base = {short_sha(base_sha)}")
+            print(f"\n>> forward: {next_ref} = {short_sha(base_sha)}")
+            next_head_idx += 1
             continue
 
         if cmd == "rebase":
             branch = step[1]
+
+            if ref_exists(next_head_ref()):
+                print(f"  skip {branch} (next head {next_head_ref()} already exists)")
+                continue
 
             # Auto-detect fork point by scanning branch history
             parent_branch, fork_sha = find_fork_info(branch)
@@ -389,20 +382,15 @@ def main():
             # Get unique commits beyond the fork point
             commits = get_unique_commits(branch, fork_sha)
 
-            # Determine cherry-pick target: if the parent branch was already
-            # rebased in this run, stack on top of it instead of current base.
-            pick_onto = base_sha
-            # if parent_branch and parent_branch != "main":
-            #     parent_ref = f"{prefix}/{parent_branch}"
-            #     if ref_exists(parent_ref):
-            #         pick_onto = resolve(parent_ref)
-
-            # Cherry-pick onto target
-            ref_name = f"{prefix}/{branch}"
-            result_sha = do_cherry_pick(wt, branch, commits, pick_onto, prefix)
+            # Cherry-pick onto current base
+            result_sha = do_cherry_pick(wt, branch, commits, base_sha, prefix)
+            if result_sha is None:
+                fail_conflict(branch, fork_sha, base_ref())
 
             # Merge into running head
-            head_sha = do_merge(wt, ref_name, head_sha, f"restack: merge {branch}")
+            head_sha = do_merge(wt, result_sha, head_sha, f"restack: merge {branch}")
+            if head_sha is None:
+                fail_conflict(branch, fork_sha, base_ref())
             print(f"  HEAD: {short_sha(head_sha)}")
             continue
 
