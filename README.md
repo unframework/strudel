@@ -35,6 +35,24 @@ After cloning the project, you can run the REPL locally:
    pnpm dev
    ```
 
+## Restacking onto upstream
+
+This fork maintains several `nm/*` feature branches that are periodically rebased onto `upstream/main`. The `restack.py` script automates this.
+
+```bash
+# ensure upstream remote is set
+git remote add upstream ssh://git@codeberg.org/uzu/strudel.git
+
+# Fresh restack (creates tmp/YYYYMMDD/ refs)
+python3 restack.py
+
+# Resume after resolving a conflict
+python3 restack.py tmp/20260315
+
+# Clear out old tmp refs
+for ref in $(git for-each-ref refs/heads/tmp/ --format='%(refname)'); do git update-ref -d "$ref"; done
+```
+
 ## Using Strudel In Your Project
 
 This project is organized into many [packages](./packages), which are also available on [npm](https://www.npmjs.com/search?q=%40strudel).
