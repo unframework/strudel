@@ -96,7 +96,7 @@ async function render() {
 
     console.log(`Rendering cycles ${begin}..${cycles} (${sampleRate}Hz)...`);
 
-    const renderTimeout = 60000;
+    const renderTimeout = 180000;
     let timeoutId;
     const timeoutPromise = new Promise((_, reject) => {
       timeoutId = setTimeout(() => reject(new Error(`Render timed out after ${renderTimeout / 1000}s`)), renderTimeout);
