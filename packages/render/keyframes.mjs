@@ -1,7 +1,7 @@
 import { EditorView, Decoration } from '@codemirror/view';
 import { EditorState, StateEffect, StateField } from '@codemirror/state';
 import { javascript } from '@codemirror/lang-javascript';
-import strudelTheme from '@strudel/codemirror/themes/strudel-theme.mjs';
+import theme from '@strudel/codemirror/themes/archBtw.mjs';
 
 // StateEffect to set highlight decorations
 const setHighlights = StateEffect.define();
@@ -29,7 +29,7 @@ window.initEditor = function (code) {
 
   const state = EditorState.create({
     doc: code,
-    extensions: [javascript(), strudelTheme, highlightField, EditorView.editable.of(false), EditorView.lineWrapping],
+    extensions: [javascript(), theme, highlightField, EditorView.editable.of(false), EditorView.lineWrapping],
   });
 
   editor = new EditorView({ state, parent });

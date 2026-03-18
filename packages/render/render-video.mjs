@@ -108,7 +108,7 @@ async function renderFrames() {
 
     // Auto-size viewport height to fit code content, capped at 9:16 ratio
     // Temporarily expand viewport tall so content isn't clipped during measurement
-    const maxHeight = Math.ceil(width * 16 / 9);
+    const maxHeight = Math.ceil((width * 16) / 9);
     await page.setViewport({ width, height: 4000, deviceScaleFactor: 1 });
     const contentHeight = await page.evaluate(() => window.getContentHeight());
     // Round up to even number (required by libx264)
