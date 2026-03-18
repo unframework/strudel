@@ -84,8 +84,8 @@ class TTYMirrorView {
     }
 
     if (update.docChanged) {
-      console.log('[TTY] Document changed');
-      console.log('[TTY] New doc length:', update.state.doc.length);
+      // console.log('[TTY] Document changed');
+      // console.log('[TTY] New doc length:', update.state.doc.length);
 
       this.updateCursor(update.view);
       this.render(update.view);
@@ -95,7 +95,7 @@ class TTYMirrorView {
     if (update.selectionSet) {
       const cursor = update.state.selection.main.head;
       const cursorLine = update.state.doc.lineAt(cursor);
-      console.log('[TTY] Cursor at char:', cursor, 'line:', cursorLine.number, 'col:', cursor - cursorLine.from);
+      // console.log('[TTY] Cursor at char:', cursor, 'line:', cursorLine.number, 'col:', cursor - cursorLine.from);
 
       this.updateCursor(update.view);
       this.render(update.view);
