@@ -96,6 +96,16 @@ async function renderFrames() {
     await page.setViewport({ width, height, deviceScaleFactor: 1 });
 
     page.on('pageerror', (err) => console.error('Page error:', err.message));
+    page.on('error', (err) => console.error('Page crash:', err.message));
+    page.on('console', (msg) => {
+      const type = msg.type();
+      if (type === 'error' || type === 'warning') {
+        console.error(`[browser ${type}]`, msg.text());
+      } else {
+        console.log(`[browser ${type}]`, msg.text());
+      }
+    });
+    page.on('requestfailed', (req) => console.error(`[request failed] ${req.failure()?.errorText} — ${req.url()}`));
 
     await page.goto(url, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction('window.__keyframesReady === true', { timeout: 10000 }).catch(async () => {

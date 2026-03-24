@@ -507,6 +507,9 @@ importers:
       '@strudel/codemirror':
         specifier: workspace:*
         version: link:../codemirror
+      '@strudel/soundfonts':
+        specifier: workspace:*
+        version: link:../soundfonts
       '@strudel/web':
         specifier: workspace:*
         version: link:../web

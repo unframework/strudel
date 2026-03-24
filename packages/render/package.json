@@ -15,6 +15,7 @@
     "@codemirror/state": "^6.5.1",
     "@codemirror/view": "^6.36.2",
     "@strudel/codemirror": "workspace:*",
+    "@strudel/soundfonts": "workspace:*",
     "@strudel/web": "workspace:*",
     "puppeteer": "^24.0.0"
   },

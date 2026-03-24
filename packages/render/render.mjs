@@ -1,9 +1,20 @@
-import { initStrudel, evaluate, renderPatternAudio, Pattern, samples, registerZZFXSounds, aliasBank } from '@strudel/web';
+import {
+  initStrudel,
+  evaluate,
+  renderPatternAudio,
+  Pattern,
+  samples,
+  registerZZFXSounds,
+  aliasBank,
+} from '@strudel/web';
+import { registerSoundfonts } from '@strudel/soundfonts';
 
 // Register no-op stubs for UI-only methods that may appear in pattern code
-Pattern.prototype._scope = Pattern.prototype._scope || function () {
-  return this;
-};
+Pattern.prototype._scope =
+  Pattern.prototype._scope ||
+  function () {
+    return this;
+  };
 
 async function prebake() {
   const ds = 'https://raw.githubusercontent.com/felixroos/dough-samples/main';
@@ -11,6 +22,7 @@ async function prebake() {
   const ts = 'https://raw.githubusercontent.com/todepond/samples/main';
   await Promise.all([
     registerZZFXSounds(),
+    registerSoundfonts(),
     samples(`${ds}/tidal-drum-machines.json`),
     samples(`${ds}/piano.json`),
     samples(`${ds}/Dirt-Samples.json`),
