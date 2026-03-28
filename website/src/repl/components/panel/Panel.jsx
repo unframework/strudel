@@ -12,6 +12,7 @@ import { Reference } from './Reference';
 import { SettingsTab } from './SettingsTab';
 import { SoundsTab } from './SoundsTab';
 import { WelcomeTab } from './WelcomeTab';
+import { LevelMeter } from '../LevelMeter';
 
 const TAURI = typeof window !== 'undefined' && window.__TAURI__;
 
@@ -100,6 +101,9 @@ export function MainPanel({ context, isEmbedded = false, className }) {
                 )}
               </div>
             )}
+            <div className="pl-4">
+              {!isEmbedded && <LevelMeter started={context.started} />}
+            </div>
           </h1>
         </div>
         {!isZen && (
