@@ -21,7 +21,6 @@ UPSTREAM_REMOTE = "upstream"  # use "origin" for testing
 UPSTREAM_BRANCH = "main"
 
 REPLAY = [
-    ("rebase", "nm/restack"),
     ("rebase", "nm/viewing-id-init"),
     ("rebase", "nm/midi-buttons"),
     ("rebase", "nm/claude"),
@@ -32,9 +31,11 @@ REPLAY = [
     ("rebase", "nm/cm-remote"),
     ("rebase", "nm/dattorro"),
     ("rebase", "nm/supasync"),
+    ("rebase", "nm/level"),
 
     ("forward",),
     ("rebase", "nm/record"),
+    ("rebase", "nm/restack"),
 ]
 
 PUSH_BRANCHES = [s[1] for s in REPLAY if s[0] == "rebase"]
