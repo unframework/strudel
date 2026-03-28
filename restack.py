@@ -132,19 +132,6 @@ def preflight(resuming=False):
                 print(f"ERROR: {branch} differs from origin/{branch}. Push first.")
                 sys.exit(1)
 
-        # Fetch upstream
-        print(f"Fetching {UPSTREAM_REMOTE}...")
-        git("fetch", UPSTREAM_REMOTE, capture=False)
-    else:
-        # On resume, try to fetch but don't fail
-        print(f"Fetching {UPSTREAM_REMOTE} (optional on resume)...")
-        r = subprocess.run(
-            ["git", "fetch", UPSTREAM_REMOTE],
-            capture_output=True, text=True,
-        )
-        if r.returncode != 0:
-            print(f"  Warning: fetch failed, using cached refs")
-
     print()
 
 
