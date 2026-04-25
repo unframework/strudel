@@ -13,6 +13,7 @@ import { SettingsTab } from './SettingsTab';
 import { SoundsTab } from './SoundsTab';
 import { WelcomeTab } from './WelcomeTab';
 import { LevelMeter } from '../LevelMeter';
+import { MeasureDisplay } from '../MeasureDisplay';
 
 const TAURI = typeof window !== 'undefined' && window.__TAURI__;
 
@@ -101,8 +102,9 @@ export function MainPanel({ context, isEmbedded = false, className }) {
                 )}
               </div>
             )}
-            <div className="pl-4">
+            <div className="pl-4 flex items-center gap-3">
               {!isEmbedded && <LevelMeter started={context.started} />}
+              {!isEmbedded && <MeasureDisplay started={context.started} />}
             </div>
           </h1>
         </div>
