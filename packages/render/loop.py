@@ -87,20 +87,22 @@ def main():
         lead_start = ms - fade
         delay_ms = (bs - fade) * 1000
 
+        # dB to fraction = 10 ^ (-1/20) = 0.8913
         filter_complex = (
             f"[0]atrim={ms},asetpts=PTS-STARTPTS,afade=t=out:st={overlay_at}:d={fade}[body];"
             f"[0]atrim={lead_start}:{ms},asetpts=PTS-STARTPTS,afade=t=in:d={fade}[lead];"
             f"[lead]adelay={delay_ms}|{delay_ms}[lead_delayed];"
-            f"[body][lead_delayed]amix=inputs=2:duration=first:normalize=0"
+            f"[body][lead_delayed]amix=inputs=2:duration=first:normalize=0,"
+            f"acompressor=threshold=0.8913:ratio=8:attack=200:release=1000"
         )
 
         run([
-            "ffmpeg", "-y",
+            "ffmpeg", "-y", "-hide_banner", "-loglevel", "warning",
             "-i", os.path.join(workdir, "raw.wav"),
             "-filter_complex", filter_complex,
             "-t", str(bs),
             os.path.join(workdir, "loop.wav"),
-        ], stderr=subprocess.DEVNULL)
+        ])
 
         shutil.copy(os.path.join(workdir, "loop.wav"), f"{output}.wav")
         print(f"=== Audio: {output}.wav ===")
@@ -129,7 +131,7 @@ def main():
 
         print("=== Stitching video ===")
         run([
-            "ffmpeg", "-y",
+            "ffmpeg", "-y", "-hide_banner", "-loglevel", "warning",
             "-framerate", str(fps),
             "-i", os.path.join(frames_dir, "frame_%05d.png"),
             "-i", os.path.join(workdir, "loop.wav"),
@@ -139,7 +141,7 @@ def main():
             "-b:a", "192k",
             "-shortest",
             f"{output}.mp4",
-        ], stderr=subprocess.DEVNULL)
+        ])
 
         print(f"=== Done: {output}.wav {output}.mp4 ===")
 
