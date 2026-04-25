@@ -48,19 +48,22 @@ function highlightStyle(intensity, seed, age) {
   const alpha = intensity * pop;
   const rnd = seededRandom(seed);
 
-  const outlineWidth = 1 + (1 + rnd) * alpha;
   const scale = 1 + (0.1 + 0.1 * rnd) * alpha;
-  const rotation = (rnd - 0.5) * 5 * alpha;
-  const hue = Math.floor(rnd * 40 - 20); // slight color shift
   const offsetX = (rnd - 0.5) * 1.5 * alpha;
 
+  // As the hap fades out (intensity 1 → 0), stretch vertically.
+  const fadeOut = Math.max(0, 1 - intensity);
+  const scaleY = scale * (1 + fadeOut * fadeOut * 4);
+
+  const a = Math.min(1, alpha).toFixed(2);
+
   return [
-    `outline: solid ${outlineWidth.toFixed(1)}px rgba(${255 + hue},${255 + hue},${255},${Math.min(1, alpha).toFixed(2)})`,
-    `outline-offset: ${(1 + alpha).toFixed(1)}px`,
+    `background-color: rgba(0,43,54,${a})`,
+    `color: rgba(253,246,227,${a})`,
     `display: inline-block`,
-    `transform: scale(${scale.toFixed(3)}) rotate(${rotation.toFixed(2)}deg) translateX(${offsetX.toFixed(1)}px)`,
+    `transform: scale(${scale.toFixed(3)},${scaleY.toFixed(3)}) translateX(${offsetX.toFixed(1)}px)`,
     `transform-origin: center`,
-    `border-radius: 2px`,
+    `border-radius: 0.5px`,
   ].join('; ');
 }
 
