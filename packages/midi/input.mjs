@@ -5,7 +5,9 @@ This program is free software: you can redistribute it and/or modify it under th
 */
 
 import { WebMidi } from 'webmidi';
-import { logger, ref } from '@strudel/core';
+import { Fraction, Hap, Pattern, TimeSpan, getCps, getTime, logger, ref, reify } from '@strudel/core';
+import { getAudioContext } from '@strudel/webaudio';
+import { scheduleAtTime } from '../superdough/helpers.mjs';
 import { getDevice } from './util.mjs';
 
 /**
@@ -21,12 +23,14 @@ export class MidiInput {
   constructor(input) {
     this.input = input;
     this.stateKey = typeof input === 'string' ? input : undefined; // Saved state is not tracked for numeric index inputs
+    this._currentDevice = null;
 
     this._refs = {};
     this._refsByChan = {};
     this._toggles = {};
     this._togglesByChan = {};
     this._widgetListeners = [];
+    this._pendingMutations = {};
 
     this._loadAllStates();
 
@@ -36,17 +40,21 @@ export class MidiInput {
 
   /**
    * Implementation for the cc() factory function tied to this specific input.
+   * The returned pattern carries a `.cue(pat)` method for pattern-driven overrides
+   * (see `_makeCuePattern`).
    * @param {number} cc MIDI CC number
    * @param {number | undefined} chan MIDI channel (1-16) or undefined for all channels
    */
   createCC(cc, chan) {
-    const lookupMap = chan === undefined ? this._refs : this._refsByChan[chan];
+    const lookupMap = chan === undefined ? this._refs : (this._refsByChan[chan] ??= {});
     if (!(cc in lookupMap)) {
       const initialState = this._loadState(chan, ''); // TODO is this needed?
       lookupMap[cc] = initialState[cc] || 0;
     }
 
-    return ref(() => lookupMap[cc]);
+    const ccPat = ref(() => lookupMap[cc]);
+    ccPat.cue = (overridePat) => this._makeCuePattern(cc, chan, overridePat);
+    return ccPat;
   }
 
   createNoteToggle(noteNum, chan) {
@@ -56,6 +64,119 @@ export class MidiInput {
     }
 
     return ref(() => lookupMap[noteNum]); // TODO align to cycles?
+  }
+
+  /**
+   * Build a Pattern that overlays `overridePat` on top of the live CC value for
+   * the given (cc, chan). Two-stage drop:
+   *   1. Query-time anticipation: for any pat hap whose onset cycle is audibly
+   *      upcoming (P > getTime()), the returned pattern reports the pat hap value
+   *      over its part. This is what gives the audio scheduler the "soon-to-be"
+   *      value ahead of time so the drop lands crisply.
+   *   2. Audio-time fire: at the audio time of each upcoming pat hap onset,
+   *      mutate `_refs`/`_refsByChan` to the pat value, persist via `_saveState`,
+   *      and echo the CC to the device (motorized fader follows).
+   * Gaps in `overridePat` (and pat haps whose onset is already audibly past) read
+   * the live `lookupMap` so live MIDI input continues to take effect everywhere
+   * the override doesn't.
+   */
+  _makeCuePattern(cc, chan, overridePat) {
+    const lookupMap = chan === undefined ? this._refs : (this._refsByChan[chan] ??= {});
+    const pat = reify(overridePat).discreteOnly();
+
+    return new Pattern((state) => {
+      const overrideHaps = pat.query(state);
+      const cyclePosNow = Fraction(getTime() ?? 0);
+
+      const haps = [];
+      const overrideParts = [];
+      for (const oh of overrideHaps) {
+        if (!oh.whole) continue;
+        const P = oh.whole.begin;
+        const audiblyUpcoming = P.gte(cyclePosNow);
+        if (audiblyUpcoming && oh.hasOnset()) {
+          this._registerCueMutation(cc, chan, P, oh.value);
+        }
+        const value = audiblyUpcoming ? oh.value : lookupMap[cc];
+        haps.push(new Hap(oh.whole, oh.part, value, oh.context));
+        overrideParts.push(oh.part);
+      }
+
+      // Fill state.span gaps (subspans not covered by any override part) with the
+      // live lookupMap value, structured one-hap-per-cycle like pure() would.
+      const gaps = subtractSpans(state.span, overrideParts);
+      for (const gap of gaps) {
+        for (const sub of gap.spanCycles) {
+          haps.push(new Hap(sub.begin.wholeCycle(), sub, lookupMap[cc], {}));
+        }
+      }
+      return haps;
+    });
+  }
+
+  // Schedule the audio-time mutation for an override at cycle `cycleFraction`. Deduped
+  // by boundary key so repeated query-time discoveries collapse to one scheduleAtTime.
+  _registerCueMutation(ccNum, chan, cycleFraction, value) {
+    const cps = getCps();
+    if (!cps) {
+      return;
+    }
+    const chanCcKey = `${chan ?? 'all'}:${ccNum}`;
+    const boundaryKey = cycleFraction.show();
+    const queue = (this._pendingMutations[chanCcKey] ??= {});
+    const existing = queue[boundaryKey];
+    if (existing && existing.value === value) {
+      return; // already scheduled with the same value
+    }
+    // Otherwise: re-eval with a different value at the same boundary supersedes — last write wins.
+
+    const cyclePos = getTime();
+    const cyclesUntil = Number(cycleFraction) - cyclePos;
+    if (cyclesUntil < 0) {
+      return; // already past
+    }
+    const audioCtx = getAudioContext();
+    const targetAudioTime = audioCtx.currentTime + cyclesUntil / cps;
+    queue[boundaryKey] = { cycle: cycleFraction, value };
+
+    scheduleAtTime(
+      () => {
+        const q = this._pendingMutations[chanCcKey];
+        const pending = q?.[boundaryKey];
+        if (!pending || pending.value !== value) {
+          return; // superseded by a re-eval with a different value, or already fired
+        }
+        delete q[boundaryKey];
+        if (Object.keys(q).length === 0) {
+          delete this._pendingMutations[chanCcKey];
+        }
+
+        const raw = Math.round(value * 127);
+        if (chan === undefined) {
+          this._refs[ccNum] = value;
+          this._saveState(undefined, '', ccNum, value);
+          for (const chanKey of Object.keys(this._refsByChan)) {
+            if (ccNum in this._refsByChan[chanKey]) {
+              const c = Number(chanKey);
+              this._refsByChan[chanKey][ccNum] = value;
+              this._saveState(c, '', ccNum, value);
+            }
+          }
+          for (let c = 1; c <= 16; c++) {
+            this._sendCC(ccNum, raw, c);
+          }
+        } else {
+          this._refs[ccNum] = value;
+          this._refsByChan[chan] ??= {};
+          this._refsByChan[chan][ccNum] = value;
+          this._saveState(undefined, '', ccNum, value);
+          this._saveState(chan, '', ccNum, value);
+          this._sendCC(ccNum, raw, chan);
+        }
+      },
+      targetAudioTime,
+      audioCtx,
+    );
   }
 
   _startDeviceListener() {
@@ -81,6 +202,7 @@ export class MidiInput {
         // Wait a bit for device to be ready to receive last state
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
+        this._currentDevice = device;
         try {
           // Still continue if sending did not work
           this._sendAllStates(device);
@@ -93,6 +215,7 @@ export class MidiInput {
 
         await this._waitForDeviceDisconnect(device);
 
+        this._currentDevice = null;
         device.removeListener('midimessage', midiListener);
         device = null; // Clear var to trigger wait for connection
 
@@ -243,6 +366,19 @@ export class MidiInput {
     );
   }
 
+  // Send a CC message to the matching output of the currently-connected input
+  _sendCC(ccNum, value, chan) {
+    const device = this._currentDevice;
+    if (!device) {
+      return;
+    }
+    const output = WebMidi.outputs.find((o) => o.name === device.name);
+    if (!output) {
+      return;
+    }
+    output.sendControlChange(ccNum, value, chan);
+  }
+
   // Send CC values back to device to restore encoders and motorized sliders
   _sendAllStates(device) {
     const output = WebMidi.outputs.find((o) => o.name === device.name);
@@ -255,7 +391,7 @@ export class MidiInput {
       for (const [cc, value] of Object.entries(refs)) {
         const ccn = Number(cc);
         const scaled = Math.round(value * 127);
-        output.sendControlChange(ccn, scaled, channel);
+        this._sendCC(ccn, scaled, channel);
       }
     }
 
@@ -291,4 +427,30 @@ export class MidiInput {
 
     callback();
   }
+}
+
+// Returns `span` minus the union of `subtractParts`, as a list of TimeSpans.
+function subtractSpans(span, subtractParts) {
+  const sorted = [...subtractParts].sort((a, b) => a.begin.compare(b.begin));
+  const result = [];
+  let cursor = span.begin;
+
+  for (const part of sorted) {
+    if (part.end.lte(cursor)) continue;
+    if (part.begin.gte(span.end)) break;
+    const partBegin = part.begin.gt(cursor) ? part.begin : cursor;
+    if (partBegin.gt(cursor)) {
+      result.push(new TimeSpan(cursor, partBegin));
+    }
+    if (part.end.gt(cursor)) {
+      cursor = part.end;
+    }
+    if (cursor.gte(span.end)) break;
+  }
+
+  if (cursor.lt(span.end)) {
+    result.push(new TimeSpan(cursor, span.end));
+  }
+
+  return result;
 }
