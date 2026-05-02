@@ -85,6 +85,17 @@ export const lstep = register('lstep', (from, to, pat) =>
  */
 export const mgain = register('mgain', (gv, pat) => pat.mul(gain(gv)));
 
+/**
+ * Adds a `t` tag to object haps for use with tr()/trl().
+ */
+export const t = register('t', (chars, pat) => {
+  if (isPattern(chars)) {
+    chars = chars.queryArc(0, 0)[0]?.value ?? '';
+  }
+
+  return pat.withValue((v) => ({ ...v, t: String(chars) }));
+});
+
 function trImpl(preserveOriginal, chars, fn, pat) {
   if (isPattern(chars)) {
     chars = chars.queryArc(0, 0)[0]?.value ?? '';
@@ -94,7 +105,7 @@ function trImpl(preserveOriginal, chars, fn, pat) {
   }
 
   const tagged = pat.withHap((hap) =>
-    typeof hap.value === 'object' ? hap : hap.withValue(() => ({ tr: String(hap.value) })),
+    typeof hap.value === 'object' ? hap : hap.withValue(() => ({ t: String(hap.value) })),
   );
 
   const tags = Array.isArray(chars)
@@ -125,7 +136,7 @@ function trImpl(preserveOriginal, chars, fn, pat) {
 
   // Each hap is assigned to at most one tag (first match wins) — strict partition.
   const partitionIndex = (v) => {
-    const s = v?.tr ?? '';
+    const s = v?.t ?? '';
     for (let i = 0; i < tags.length; i++) {
       if (tags[i].test(s)) return i;
     }
@@ -138,7 +149,7 @@ function trImpl(preserveOriginal, chars, fn, pat) {
     const frac = tags.length === 1 ? 1 : i / (tags.length - 1);
     const post = fns[i](tagged, frac);
     const matched = preserveOriginal
-      ? post.filterValues((v) => tags[i].test(v?.tr ?? ''))
+      ? post.filterValues((v) => tags[i].test(v?.t ?? ''))
       : post.filterValues((v) => partitionIndex(v) === i);
     branches.push(matched);
   }
@@ -148,7 +159,7 @@ function trImpl(preserveOriginal, chars, fn, pat) {
 
 /**
  * Conditionally translates string-valued haps based on which character(s) appear
- * in their value. Tags every hap with `{ tr: <originalString> }` so that layered
+ * in their value. Tags every hap with `{ t: <originalString> }` so that layered
  * `tr` calls can keep matching against the original token after the value has
  * been turned into an object.
  *
