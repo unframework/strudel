@@ -1,4 +1,4 @@
-import { gain, register } from '@strudel/core';
+import { gain, isPattern, register } from '@strudel/core';
 
 /**
  * Sets the global tempo in beats per minute, assuming 4 beats per cycle.
@@ -68,3 +68,55 @@ export const lstep = register('lstep', (from, to, pat) =>
  * s("hh*8").mgain(sine)
  */
 export const mgain = register('mgain', (gv, pat) => pat.mul(gain(gv)));
+
+/**
+ * Conditionally translates string-valued haps based on which character(s) appear
+ * in their value. Tags every hap with `{ tr: <originalString> }` so that layered
+ * `tr` calls can keep matching against the original token after the value has
+ * been turned into an object.
+ *
+ * - **Boolean match (single char):** `tr('#', x => x.trans(1))` applies the
+ *   callback to any hap whose string contains `#`.
+ * - **Range match (multi char):** `tr(' .oO', (x, v) => x.gain(v))` assigns
+ *   each non-space character an evenly spaced fraction in `[0, 1]` and passes
+ *   that fraction as the second arg. Spaces are treated as no-match placeholders.
+ *
+ * @name tr
+ * @memberof Pattern
+ * @tags structure
+ * @returns Pattern
+ * @example
+ * "a b a b".tr("a", x => x.gain(0.2))
+ * @example
+ * "o 1 2 3 4".tr("o1234", (x, frac) => x.gain(frac))
+ */
+export const tr = register(
+  'tr',
+  (chars, fn, pat) => {
+    if (isPattern(chars)) {
+      chars = chars.queryArc(0, 0)[0]?.value ?? '';
+    }
+    if (isPattern(fn)) {
+      fn = fn.queryArc(0, 0)[0]?.value ?? ((x) => x);
+    }
+
+    const tagged = pat.withHap((hap) =>
+      typeof hap.value === 'object' ? hap : hap.withValue(() => ({ tr: String(hap.value) })),
+    );
+
+    const tags = typeof chars === 'object' ? [] : String(chars).replace(/\s/g, '').split('');
+    if (tags.length === 0) {
+      console.warn('tr: no tags found in chars argument:', chars);
+    }
+
+    return tags.reduce((acc, c, i) => {
+      const condition = tagged.fmap((v) => ((v?.tr ?? '').includes(c) ? 1 : 0));
+
+      const frac = tags.length === 1 ? 1 : i / (tags.length - 1);
+      const fracFn = (x) => fn(x, frac);
+
+      return acc.when(condition, fracFn);
+    }, tagged);
+  },
+  false, // Prevent auto-lifting which causes this to re-run frequently
+);
