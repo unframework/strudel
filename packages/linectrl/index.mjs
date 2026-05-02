@@ -1,4 +1,4 @@
-import { gain, isPattern, register } from '@strudel/core';
+import { gain, isPattern, register, stack } from '@strudel/core';
 
 /**
  * Sets the global tempo in beats per minute, assuming 4 beats per cycle.
@@ -86,9 +86,11 @@ export const mgain = register('mgain', (gv, pat) => pat.mul(gain(gv)));
  * @tags structure
  * @returns Pattern
  * @example
- * "a b a b".tr("a", x => x.gain(0.2))
+ * "a b a b".tr("a", p => p.gain(0.2))
  * @example
- * "o 1 2 3 4".tr("o1234", (x, frac) => x.gain(frac))
+ * "xy x y".tr(/y/, p => p.gain(0.2))
+ * @example
+ * "o 1 2 3 4".tr("o1234", (p, frac) => p.gain(frac))
  */
 export const tr = register(
   'tr',
@@ -104,18 +106,26 @@ export const tr = register(
       typeof hap.value === 'object' ? hap : hap.withValue(() => ({ tr: String(hap.value) })),
     );
 
-    const tags = typeof chars === 'object' ? [] : String(chars).replace(/\s/g, '').split('');
+    const tags = Array.isArray(chars)
+      ? chars
+      : chars instanceof RegExp
+        ? [chars]
+        : String(chars)
+            .replace(/\s/g, '')
+            .split('')
+            .map((c) => new RegExp(c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     if (tags.length === 0) {
       console.warn('tr: no tags found in chars argument:', chars);
     }
 
-    return tags.reduce((acc, c, i) => {
-      const condition = tagged.fmap((v) => ((v?.tr ?? '').includes(c) ? 1 : 0));
-
+    return tags.reduce((acc, tag, i) => {
       const frac = tags.length === 1 ? 1 : i / (tags.length - 1);
-      const fracFn = (x) => fn(x, frac);
+      const matches = (v) => tag.test(v?.tr ?? '');
 
-      return acc.when(condition, fracFn);
+      return stack(
+        fn(acc, frac).filterValues(matches),
+        acc.filterValues((v) => !matches(v)),
+      );
     }, tagged);
   },
   false, // Prevent auto-lifting which causes this to re-run frequently
