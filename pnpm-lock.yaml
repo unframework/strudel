@@ -382,6 +382,12 @@ importers:
         specifier: ^6.0.11
         version: 6.0.11(@types/node@22.10.10)(jiti@2.4.2)(lightningcss@1.29.1)(terser@5.37.0)(yaml@2.7.0)
 
+  packages/linectrl:
+    dependencies:
+      '@strudel/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/midi:
     dependencies:
       '@strudel/core':
@@ -507,6 +513,9 @@ importers:
       '@strudel/codemirror':
         specifier: workspace:*
         version: link:../codemirror
+      '@strudel/linectrl':
+        specifier: workspace:*
+        version: link:../linectrl
       '@strudel/soundfonts':
         specifier: workspace:*
         version: link:../soundfonts
@@ -854,6 +863,9 @@ importers:
       '@strudel/hydra':
         specifier: workspace:*
         version: link:../packages/hydra
+      '@strudel/linectrl':
+        specifier: workspace:*
+        version: link:../packages/linectrl
       '@strudel/midi':
         specifier: workspace:*
         version: link:../packages/midi

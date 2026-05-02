@@ -36,6 +36,7 @@
     "@strudel/edo": "workspace:*",
     "@strudel/gamepad": "workspace:*",
     "@strudel/hydra": "workspace:*",
+    "@strudel/linectrl": "workspace:*",
     "@strudel/midi": "workspace:*",
     "@strudel/mini": "workspace:*",
     "@strudel/motion": "workspace:*",
