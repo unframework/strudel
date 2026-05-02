@@ -6,6 +6,7 @@ import {
   samples,
   registerZZFXSounds,
   aliasBank,
+  evalScope,
 } from '@strudel/web';
 import { registerSoundfonts } from '@strudel/soundfonts';
 
@@ -21,6 +22,7 @@ async function prebake() {
   const tc = 'https://raw.githubusercontent.com/tidalcycles/uzu-drumkit/main';
   const ts = 'https://raw.githubusercontent.com/todepond/samples/main';
   await Promise.all([
+    evalScope(import('@strudel/linectrl')),
     registerZZFXSounds(),
     registerSoundfonts(),
     samples(`${ds}/tidal-drum-machines.json`),
