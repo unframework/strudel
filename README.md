@@ -37,6 +37,13 @@ You will need to abide by the terms of the [GNU Affero Public Licence v3](LICENS
 
 Licensing info for the default sound banks can be found over on the [dough-samples](https://github.com/felixroos/dough-samples/blob/main/README.md) repository.
 
+## Deploy
+
+```
+pnpm build
+(AWS_PROFILE=nm cd cdk-infra && pnpm cdk deploy)
+```
+
 ## Contributing
 
 There are many ways to contribute to this project! See [contribution guide](./CONTRIBUTING.md). You can find the full list of contributors [here](https://codeberg.org/uzu/strudel/activity/contributors).
