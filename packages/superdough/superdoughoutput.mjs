@@ -97,7 +97,7 @@ export class Orbit {
     return effectSend(node, this.reverbNode, amount);
   }
 
-  getDaVerb(t, decay, damping, shimmer) {
+  getDaVerb(t, decay, damping, xd, lp, predelay, xr) {
     if (this.daVerbNode == null) {
       this.daVerbNode = this.audioContext.createDaVerb();
       this.daVerbNode.connect(this.summingNode);
@@ -108,8 +108,18 @@ export class Orbit {
     if (damping !== undefined) {
       this.daVerbNode.parameters.get('damping').setValueAtTime(damping, t);
     }
-    if (shimmer !== undefined) {
-      this.daVerbNode.parameters.get('excursionDepth').setValueAtTime(shimmer, t);
+    if (xd !== undefined) {
+      this.daVerbNode.parameters.get('excursionDepth').setValueAtTime(xd, t);
+    }
+    if (lp !== undefined) {
+      this.daVerbNode.parameters.get('bandwidth').setValueAtTime(lp, t);
+    }
+    if (predelay !== undefined) {
+      const samples = predelay * this.audioContext.sampleRate;
+      this.daVerbNode.parameters.get('preDelay').setValueAtTime(samples, t);
+    }
+    if (xr !== undefined) {
+      this.daVerbNode.parameters.get('excursionRate').setValueAtTime(xr, t);
     }
     return this.daVerbNode;
   }

@@ -517,9 +517,12 @@ export const superdough = async (value, t, hapDuration, cps = 0.5, cycle = 0.5) 
     irspeed,
     irbegin,
     daverb,
+    dvp,
+    dvlp,
     dvdecay,
     dvdamp,
-    dvshimmer,
+    dvxr,
+    dvxd,
     i = getDefaultValue('i'),
     analyze, // analyser wet
     fft = getDefaultValue('fft'), // fftSize 0 - 10
@@ -981,7 +984,7 @@ export const superdough = async (value, t, hapDuration, cps = 0.5, cycle = 0.5) 
   }
   // daverb
   if (daverb > 0) {
-    const daVerbNode = orbitBus.getDaVerb(t, dvdecay, dvdamp, dvshimmer);
+    const daVerbNode = orbitBus.getDaVerb(t, dvdecay, dvdamp, dvxd, dvlp, dvp, dvxr);
     nodes.main['daverb'] = [daVerbNode];
     const daVerbSend = orbitBus.sendDaVerb(post, daverb);
     nodes.main['daverb_mix'] = [daVerbSend];

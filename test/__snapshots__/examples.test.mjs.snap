@@ -2855,6 +2855,27 @@ exports[`runs examples > example "cyclesPer" example index 1 1`] = `
 ]
 `;
 
+exports[`runs examples > example "daverb" example index 0 1`] = `
+[
+  "[ 0/1 → 1/4 | s:bd daverb:0.5 ]",
+  "[ 1/4 → 1/2 | s:sd daverb:0.5 ]",
+  "[ 5/8 → 3/4 | s:bd daverb:0.5 ]",
+  "[ 3/4 → 1/1 | s:sd daverb:0.5 ]",
+  "[ 1/1 → 5/4 | s:bd daverb:0.5 ]",
+  "[ 5/4 → 3/2 | s:sd daverb:0.5 ]",
+  "[ 13/8 → 7/4 | s:bd daverb:0.5 ]",
+  "[ 7/4 → 2/1 | s:sd daverb:0.5 ]",
+  "[ 2/1 → 9/4 | s:bd daverb:0.5 ]",
+  "[ 9/4 → 5/2 | s:sd daverb:0.5 ]",
+  "[ 21/8 → 11/4 | s:bd daverb:0.5 ]",
+  "[ 11/4 → 3/1 | s:sd daverb:0.5 ]",
+  "[ 3/1 → 13/4 | s:bd daverb:0.5 ]",
+  "[ 13/4 → 7/2 | s:sd daverb:0.5 ]",
+  "[ 29/8 → 15/4 | s:bd daverb:0.5 ]",
+  "[ 15/4 → 4/1 | s:sd daverb:0.5 ]",
+]
+`;
+
 exports[`runs examples > example "decay" example index 0 1`] = `
 [
   "[ 0/1 → 1/4 | note:c3 decay:0.1 sustain:0 ]",
@@ -3921,6 +3942,132 @@ exports[`runs examples > example "duration" example index 0 1`] = `
   "[ 13/4 → 7/2 | note:a s:piano duration:0.5 ]",
   "[ 7/2 → 15/4 | note:f s:piano duration:0.5 ]",
   "[ 15/4 → 4/1 | note:e s:piano duration:0.5 ]",
+]
+`;
+
+exports[`runs examples > example "dvdamp" example index 0 1`] = `
+[
+  "[ 0/1 → 1/4 | s:bd daverb:0.5 dvdamp:0.3 ]",
+  "[ 1/4 → 1/2 | s:sd daverb:0.5 dvdamp:0.3 ]",
+  "[ 5/8 → 3/4 | s:bd daverb:0.5 dvdamp:0.3 ]",
+  "[ 3/4 → 1/1 | s:sd daverb:0.5 dvdamp:0.3 ]",
+  "[ 1/1 → 5/4 | s:bd daverb:0.5 dvdamp:0.3 ]",
+  "[ 5/4 → 3/2 | s:sd daverb:0.5 dvdamp:0.3 ]",
+  "[ 13/8 → 7/4 | s:bd daverb:0.5 dvdamp:0.3 ]",
+  "[ 7/4 → 2/1 | s:sd daverb:0.5 dvdamp:0.3 ]",
+  "[ 2/1 → 9/4 | s:bd daverb:0.5 dvdamp:0.3 ]",
+  "[ 9/4 → 5/2 | s:sd daverb:0.5 dvdamp:0.3 ]",
+  "[ 21/8 → 11/4 | s:bd daverb:0.5 dvdamp:0.3 ]",
+  "[ 11/4 → 3/1 | s:sd daverb:0.5 dvdamp:0.3 ]",
+  "[ 3/1 → 13/4 | s:bd daverb:0.5 dvdamp:0.3 ]",
+  "[ 13/4 → 7/2 | s:sd daverb:0.5 dvdamp:0.3 ]",
+  "[ 29/8 → 15/4 | s:bd daverb:0.5 dvdamp:0.3 ]",
+  "[ 15/4 → 4/1 | s:sd daverb:0.5 dvdamp:0.3 ]",
+]
+`;
+
+exports[`runs examples > example "dvdecay" example index 0 1`] = `
+[
+  "[ 0/1 → 1/4 | s:bd daverb:0.5 dvdecay:0.8 ]",
+  "[ 1/4 → 1/2 | s:sd daverb:0.5 dvdecay:0.8 ]",
+  "[ 5/8 → 3/4 | s:bd daverb:0.5 dvdecay:0.8 ]",
+  "[ 3/4 → 1/1 | s:sd daverb:0.5 dvdecay:0.8 ]",
+  "[ 1/1 → 5/4 | s:bd daverb:0.5 dvdecay:0.8 ]",
+  "[ 5/4 → 3/2 | s:sd daverb:0.5 dvdecay:0.8 ]",
+  "[ 13/8 → 7/4 | s:bd daverb:0.5 dvdecay:0.8 ]",
+  "[ 7/4 → 2/1 | s:sd daverb:0.5 dvdecay:0.8 ]",
+  "[ 2/1 → 9/4 | s:bd daverb:0.5 dvdecay:0.8 ]",
+  "[ 9/4 → 5/2 | s:sd daverb:0.5 dvdecay:0.8 ]",
+  "[ 21/8 → 11/4 | s:bd daverb:0.5 dvdecay:0.8 ]",
+  "[ 11/4 → 3/1 | s:sd daverb:0.5 dvdecay:0.8 ]",
+  "[ 3/1 → 13/4 | s:bd daverb:0.5 dvdecay:0.8 ]",
+  "[ 13/4 → 7/2 | s:sd daverb:0.5 dvdecay:0.8 ]",
+  "[ 29/8 → 15/4 | s:bd daverb:0.5 dvdecay:0.8 ]",
+  "[ 15/4 → 4/1 | s:sd daverb:0.5 dvdecay:0.8 ]",
+]
+`;
+
+exports[`runs examples > example "dvlp" example index 0 1`] = `
+[
+  "[ 0/1 → 1/4 | s:bd daverb:0.5 dvlp:0.5 ]",
+  "[ 1/4 → 1/2 | s:sd daverb:0.5 dvlp:0.5 ]",
+  "[ 5/8 → 3/4 | s:bd daverb:0.5 dvlp:0.5 ]",
+  "[ 3/4 → 1/1 | s:sd daverb:0.5 dvlp:0.5 ]",
+  "[ 1/1 → 5/4 | s:bd daverb:0.5 dvlp:0.5 ]",
+  "[ 5/4 → 3/2 | s:sd daverb:0.5 dvlp:0.5 ]",
+  "[ 13/8 → 7/4 | s:bd daverb:0.5 dvlp:0.5 ]",
+  "[ 7/4 → 2/1 | s:sd daverb:0.5 dvlp:0.5 ]",
+  "[ 2/1 → 9/4 | s:bd daverb:0.5 dvlp:0.5 ]",
+  "[ 9/4 → 5/2 | s:sd daverb:0.5 dvlp:0.5 ]",
+  "[ 21/8 → 11/4 | s:bd daverb:0.5 dvlp:0.5 ]",
+  "[ 11/4 → 3/1 | s:sd daverb:0.5 dvlp:0.5 ]",
+  "[ 3/1 → 13/4 | s:bd daverb:0.5 dvlp:0.5 ]",
+  "[ 13/4 → 7/2 | s:sd daverb:0.5 dvlp:0.5 ]",
+  "[ 29/8 → 15/4 | s:bd daverb:0.5 dvlp:0.5 ]",
+  "[ 15/4 → 4/1 | s:sd daverb:0.5 dvlp:0.5 ]",
+]
+`;
+
+exports[`runs examples > example "dvp" example index 0 1`] = `
+[
+  "[ 0/1 → 1/4 | s:bd daverb:0.5 dvp:0.05 ]",
+  "[ 1/4 → 1/2 | s:sd daverb:0.5 dvp:0.05 ]",
+  "[ 5/8 → 3/4 | s:bd daverb:0.5 dvp:0.05 ]",
+  "[ 3/4 → 1/1 | s:sd daverb:0.5 dvp:0.05 ]",
+  "[ 1/1 → 5/4 | s:bd daverb:0.5 dvp:0.05 ]",
+  "[ 5/4 → 3/2 | s:sd daverb:0.5 dvp:0.05 ]",
+  "[ 13/8 → 7/4 | s:bd daverb:0.5 dvp:0.05 ]",
+  "[ 7/4 → 2/1 | s:sd daverb:0.5 dvp:0.05 ]",
+  "[ 2/1 → 9/4 | s:bd daverb:0.5 dvp:0.05 ]",
+  "[ 9/4 → 5/2 | s:sd daverb:0.5 dvp:0.05 ]",
+  "[ 21/8 → 11/4 | s:bd daverb:0.5 dvp:0.05 ]",
+  "[ 11/4 → 3/1 | s:sd daverb:0.5 dvp:0.05 ]",
+  "[ 3/1 → 13/4 | s:bd daverb:0.5 dvp:0.05 ]",
+  "[ 13/4 → 7/2 | s:sd daverb:0.5 dvp:0.05 ]",
+  "[ 29/8 → 15/4 | s:bd daverb:0.5 dvp:0.05 ]",
+  "[ 15/4 → 4/1 | s:sd daverb:0.5 dvp:0.05 ]",
+]
+`;
+
+exports[`runs examples > example "dvxd" example index 0 1`] = `
+[
+  "[ 0/1 → 1/4 | s:bd daverb:0.5 dvxd:1.2 ]",
+  "[ 1/4 → 1/2 | s:sd daverb:0.5 dvxd:1.2 ]",
+  "[ 5/8 → 3/4 | s:bd daverb:0.5 dvxd:1.2 ]",
+  "[ 3/4 → 1/1 | s:sd daverb:0.5 dvxd:1.2 ]",
+  "[ 1/1 → 5/4 | s:bd daverb:0.5 dvxd:1.2 ]",
+  "[ 5/4 → 3/2 | s:sd daverb:0.5 dvxd:1.2 ]",
+  "[ 13/8 → 7/4 | s:bd daverb:0.5 dvxd:1.2 ]",
+  "[ 7/4 → 2/1 | s:sd daverb:0.5 dvxd:1.2 ]",
+  "[ 2/1 → 9/4 | s:bd daverb:0.5 dvxd:1.2 ]",
+  "[ 9/4 → 5/2 | s:sd daverb:0.5 dvxd:1.2 ]",
+  "[ 21/8 → 11/4 | s:bd daverb:0.5 dvxd:1.2 ]",
+  "[ 11/4 → 3/1 | s:sd daverb:0.5 dvxd:1.2 ]",
+  "[ 3/1 → 13/4 | s:bd daverb:0.5 dvxd:1.2 ]",
+  "[ 13/4 → 7/2 | s:sd daverb:0.5 dvxd:1.2 ]",
+  "[ 29/8 → 15/4 | s:bd daverb:0.5 dvxd:1.2 ]",
+  "[ 15/4 → 4/1 | s:sd daverb:0.5 dvxd:1.2 ]",
+]
+`;
+
+exports[`runs examples > example "dvxr" example index 0 1`] = `
+[
+  "[ 0/1 → 1/4 | s:bd daverb:0.5 dvxr:0.8 ]",
+  "[ 1/4 → 1/2 | s:sd daverb:0.5 dvxr:0.8 ]",
+  "[ 5/8 → 3/4 | s:bd daverb:0.5 dvxr:0.8 ]",
+  "[ 3/4 → 1/1 | s:sd daverb:0.5 dvxr:0.8 ]",
+  "[ 1/1 → 5/4 | s:bd daverb:0.5 dvxr:0.8 ]",
+  "[ 5/4 → 3/2 | s:sd daverb:0.5 dvxr:0.8 ]",
+  "[ 13/8 → 7/4 | s:bd daverb:0.5 dvxr:0.8 ]",
+  "[ 7/4 → 2/1 | s:sd daverb:0.5 dvxr:0.8 ]",
+  "[ 2/1 → 9/4 | s:bd daverb:0.5 dvxr:0.8 ]",
+  "[ 9/4 → 5/2 | s:sd daverb:0.5 dvxr:0.8 ]",
+  "[ 21/8 → 11/4 | s:bd daverb:0.5 dvxr:0.8 ]",
+  "[ 11/4 → 3/1 | s:sd daverb:0.5 dvxr:0.8 ]",
+  "[ 3/1 → 13/4 | s:bd daverb:0.5 dvxr:0.8 ]",
+  "[ 13/4 → 7/2 | s:sd daverb:0.5 dvxr:0.8 ]",
+  "[ 29/8 → 15/4 | s:bd daverb:0.5 dvxr:0.8 ]",
+  "[ 15/4 → 4/1 | s:sd daverb:0.5 dvxr:0.8 ]",
 ]
 `;
 
