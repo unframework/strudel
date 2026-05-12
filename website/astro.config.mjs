@@ -75,6 +75,29 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json,wav,mp3,ogg,ttf,woff2,TTF,otf}'],
         runtimeCaching: [
           {
+            // Sample-pack manifests change upstream; serve cached fast
+            // but always revalidate in the background.
+            urlPattern: ({ url }) =>
+              url.pathname.endsWith('.json') &&
+              [
+                /^https:\/\/raw\.githubusercontent\.com\/.*/i,
+                /^https:\/\/freesound\.org\/.*/i,
+                /^https:\/\/cdn\.freesound\.org\/.*/i,
+                /^https:\/\/shabda\.ndre\.gr\/.*/i,
+              ].some((regex) => regex.test(url.href)),
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'external-sample-manifests',
+              expiration: {
+                maxEntries: 500,
+                maxAgeSeconds: 60 * 60 * 24,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          {
             urlPattern: ({ url }) =>
               [
                 /^https:\/\/raw\.githubusercontent\.com\/.*/i,
@@ -88,7 +111,7 @@ export default defineConfig({
               cacheName: 'external-samples',
               expiration: {
                 maxEntries: 5000,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // <== 14 days
+                maxAgeSeconds: 60 * 60 * 24 * 30,
               },
               cacheableResponse: {
                 statuses: [0, 200],
