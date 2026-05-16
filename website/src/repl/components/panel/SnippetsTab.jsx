@@ -1,32 +1,5 @@
-import { useMemo, useCallback } from 'react';
-import { useSettings } from '../../../settings.mjs';
-import { getMetadata } from '../../../metadata_parser.js';
-
-/**
- * Extract snippets from pattern code.
- * A snippet starts with `// @snippet <label>` and ends at the next blank line.
- */
-function extractSnippets(code) {
-  const snippets = [];
-  const lines = code.split('\n');
-  let current = null;
-
-  for (const line of lines) {
-    if (line.trim().startsWith('// @snippet ')) {
-      if (current) snippets.push(current.trimEnd());
-      current = line + '\n';
-    } else if (current) {
-      if (line.trim() === '') {
-        snippets.push(current.trimEnd());
-        current = null;
-      } else {
-        current += line + '\n';
-      }
-    }
-  }
-  if (current) snippets.push(current.trimEnd());
-  return snippets;
-}
+import { useCallback } from 'react';
+import { useSnippets } from '../../snippets.mjs';
 
 /**
  * Get the label from a snippet (first line after "// @snippet ")
@@ -54,20 +27,11 @@ function SnippetCard({ snippet }) {
 }
 
 function PatternSnippets({ patternTitle, snippets }) {
-  // Sort snippets alphabetically by label (case-insensitive)
-  const sortedSnippets = useMemo(() => {
-    return [...snippets].sort((a, b) => {
-      const labelA = getSnippetLabel(a).toLowerCase();
-      const labelB = getSnippetLabel(b).toLowerCase();
-      return labelA.localeCompare(labelB);
-    });
-  }, [snippets]);
-
   return (
     <div className="mb-4">
       <h3 className="text-sm font-medium text-foreground mb-2 px-1">{patternTitle}</h3>
       <div className="space-y-2">
-        {sortedSnippets.map((snippet, idx) => (
+        {snippets.map((snippet, idx) => (
           <SnippetCard key={idx} snippet={snippet} />
         ))}
       </div>
@@ -76,45 +40,7 @@ function PatternSnippets({ patternTitle, snippets }) {
 }
 
 export function SnippetsTab() {
-  const { userPatterns } = useSettings();
-
-  // Extract snippets from all patterns, grouped by pattern
-  const patternSnippets = useMemo(() => {
-    const result = [];
-
-    for (const [id, pattern] of Object.entries(userPatterns)) {
-      const snippets = extractSnippets(pattern.code || '');
-      if (snippets.length === 0) continue;
-
-      const meta = getMetadata(pattern.code);
-      const metaTitle = meta.title?.trim() || null;
-      let title = metaTitle;
-      if (!title) {
-        const date = new Date(pattern.created_at);
-        if (!isNaN(date)) {
-          title = date.toLocaleDateString();
-        } else {
-          title = id || 'unnamed';
-        }
-      }
-
-      result.push({ title, snippets, id, hasTitle: !!metaTitle, createdAt: pattern.created_at });
-    }
-
-    // Sort patterns same way as PatternsTab: titled first (alphabetically), then untitled by date
-    result.sort((a, b) => {
-      const aHasTitle = a.hasTitle;
-      const bHasTitle = b.hasTitle;
-      if (aHasTitle && bHasTitle) {
-        return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
-      }
-      if (aHasTitle) return -1;
-      if (bHasTitle) return 1;
-      return (b.createdAt ?? 0) - (a.createdAt ?? 0);
-    });
-
-    return result;
-  }, [userPatterns]);
+  const patternSnippets = useSnippets();
 
   const totalSnippets = patternSnippets.reduce((sum, p) => sum + p.snippets.length, 0);
 
