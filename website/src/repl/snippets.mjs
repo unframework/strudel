@@ -1,6 +1,6 @@
 import { atom } from 'nanostores';
-import { $settings } from '../../settings.mjs';
-import { getMetadata } from '../../metadata_parser.js';
+import { $settings } from '../settings.mjs';
+import { getMetadata } from '../metadata_parser.js';
 import { useStore } from '@nanostores/react';
 import { useMemo } from 'react';
 
