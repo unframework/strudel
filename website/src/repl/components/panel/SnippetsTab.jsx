@@ -1,5 +1,7 @@
 import { useCallback } from 'react';
 import { useSnippets } from '../../snippets.mjs';
+import { useSettings } from '../../../settings.mjs';
+import { userPattern } from '../../../user_pattern_utils.mjs';
 
 /**
  * Get the label from a snippet (first line after "// @snippet ")
@@ -26,10 +28,15 @@ function SnippetCard({ snippet }) {
   );
 }
 
-function PatternSnippets({ patternTitle, snippets }) {
+function PatternSnippets({ patternTitle, snippets, onTitleClick }) {
   return (
     <div className="mb-4">
-      <h3 className="text-sm font-medium text-foreground mb-2 px-1">{patternTitle}</h3>
+      <h3
+        className="text-sm font-medium text-foreground mb-2 px-1 cursor-pointer hover:opacity-50"
+        onClick={onTitleClick}
+      >
+        {patternTitle}
+      </h3>
       <div className="space-y-2">
         {snippets.map((snippet, idx) => (
           <SnippetCard key={idx} snippet={snippet} />
@@ -39,10 +46,17 @@ function PatternSnippets({ patternTitle, snippets }) {
   );
 }
 
-export function SnippetsTab() {
+export function SnippetsTab({ context }) {
   const patternSnippets = useSnippets();
+  const { userPatterns, patternAutoStart } = useSettings();
 
   const totalSnippets = patternSnippets.reduce((sum, p) => sum + p.snippets.length, 0);
+
+  const selectPattern = (id) => {
+    const pattern = userPatterns[id];
+    if (!pattern || !context) return;
+    context.handleUpdate({ ...pattern, collection: userPattern.collection }, patternAutoStart);
+  };
 
   return (
     <div className="w-full h-full text-foreground flex flex-col overflow-hidden">
@@ -58,7 +72,12 @@ export function SnippetsTab() {
           </div>
         ) : (
           patternSnippets.map(({ title, snippets, id }) => (
-            <PatternSnippets key={id} patternTitle={title} snippets={snippets} />
+            <PatternSnippets
+              key={id}
+              patternTitle={title}
+              snippets={snippets}
+              onTitleClick={() => selectPattern(id)}
+            />
           ))
         )}
       </div>

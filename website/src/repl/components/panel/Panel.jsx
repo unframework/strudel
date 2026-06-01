@@ -237,7 +237,6 @@ export function RightPanel({ context }) {
 }
 
 const tabNames = {
-  welcome: 'intro',
   patterns: 'patterns',
   snippets: 'snippets',
   sounds: 'sounds',
@@ -274,7 +273,7 @@ function PanelContent({ context, tab }) {
     case tabNames.patterns:
       return <PatternsTab context={context} />;
     case tabNames.snippets:
-      return <SnippetsTab />;
+      return <SnippetsTab context={context} />;
     case tabNames.console:
       return <ConsoleTab />;
     case tabNames.sounds:
