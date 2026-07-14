@@ -169,11 +169,14 @@ export class MidiInput {
     delete this._pending[key];
   }
 
-  // Resolve the cycle-alignment boundary for a press on (chan, noteNum). If a boundary
-  // pattern was registered (chan-specific takes precedence over all-chan), use the end
-  // of whichever pat hap is active at `now`; otherwise fall back to the next integer
-  // cycle. A 1-cycle query window is enough — any hap whose whole contains `now` must
-  // extend into [now, now + 1).
+  // Resolve the cycle-alignment boundary for a press on (chan, noteNum):
+  //   - boundary pat registered (chan-specific first, then all-chan), and a hap is active
+  //     at `now`: end of that hap.
+  //   - boundary pat registered, but `now` falls in a gap: act immediately (return `now`),
+  //     since the user explicitly opted out of alignment for this region.
+  //   - no boundary pat: fall back to the next integer cycle (default alignment).
+  // A 1-cycle query window is enough — any hap whose whole contains `now` must extend
+  // into [now, now + 1).
   _resolveToggleBoundary(chan, noteNum) {
     const now = getTime();
     const nowFr = Fraction(now);
@@ -181,7 +184,7 @@ export class MidiInput {
     if (pat) {
       const haps = pat.queryArc(now, now + 1);
       const containing = haps.find((h) => h.whole && h.whole.begin.lte(nowFr) && h.whole.end.gt(nowFr));
-      if (containing) return containing.whole.end;
+      return containing ? containing.whole.end : nowFr;
     }
     return Fraction(Math.floor(now) + 1);
   }
@@ -236,8 +239,14 @@ export class MidiInput {
 
   // Schedule the audio-time mutation for an override at cycle `cycleFraction`. Same-value
   // re-discoveries at the same boundary are deduped by the scheduler; differing values
-  // supersede (last write wins).
+  // supersede (last write wins). If the live lookupMap is already at `value`, skip
+  // entirely — useful when the override pat carries a stable value across many haps
+  // (e.g. cueing from a noteToggle, which emits one hap per cycle with the same value).
   _registerCueMutation(ccNum, chan, cycleFraction, value) {
+    const lookupMap = chan === undefined ? this._refs : (this._refsByChan[chan] ??= {});
+    if (lookupMap[ccNum] === value) {
+      return; // already at the desired value — no mutation, no device echo
+    }
     const key = `cue:${chan ?? 'all'}:${ccNum}:${cycleFraction.show()}`;
     this._schedule(key, cycleFraction, value, (val) => {
       const raw = Math.round(val * 127);
