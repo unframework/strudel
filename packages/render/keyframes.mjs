@@ -1,7 +1,7 @@
 import { EditorView, Decoration } from '@codemirror/view';
 import { EditorState, StateEffect, StateField } from '@codemirror/state';
 import { javascript } from '@codemirror/lang-javascript';
-import theme from '@strudel/codemirror/themes/solarizedLight.mjs';
+import theme from '@strudel/codemirror/themes/blackscreen.mjs';
 
 // StateEffect to set highlight decorations
 const setHighlights = StateEffect.define();
@@ -58,8 +58,8 @@ function highlightStyle(intensity, seed, age) {
   const a = Math.min(1, alpha).toFixed(2);
 
   return [
-    `background-color: rgba(0,43,54,${a})`,
-    `color: rgba(253,246,227,${a})`,
+    `background-color: rgba(230,180,255,${a})`,
+    `color: rgba(0,0,0,${a})`,
     `display: inline-block`,
     `transform: scale(${scale.toFixed(3)},${scaleY.toFixed(3)}) translateX(${offsetX.toFixed(1)}px)`,
     `transform-origin: center`,
