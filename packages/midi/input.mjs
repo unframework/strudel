@@ -24,6 +24,8 @@ export class MidiInput {
 
     this._refs = {};
     this._refsByChan = {};
+    this._toggles = {};
+    this._togglesByChan = {};
 
     this._loadAllStates();
 
@@ -38,11 +40,20 @@ export class MidiInput {
   createCC(cc, chan) {
     const lookupMap = chan === undefined ? this._refs : this._refsByChan[chan];
     if (!(cc in lookupMap)) {
-      const initialState = this._loadState(chan);
+      const initialState = this._loadState(chan, ''); // TODO is this needed?
       lookupMap[cc] = initialState[cc] || 0;
     }
 
     return ref(() => lookupMap[cc]);
+  }
+
+  createNoteToggle(noteNum, chan) {
+    const lookupMap = chan === undefined ? this._toggles : this._togglesByChan[chan];
+    if (!(noteNum in lookupMap)) {
+      lookupMap[noteNum] = 0;
+    }
+
+    return ref(() => lookupMap[noteNum]); // TODO align to cycles?
   }
 
   _startDeviceListener() {
@@ -115,6 +126,45 @@ export class MidiInput {
   }
 
   _onMidiMessage(e) {
+    switch (e.message.type) {
+      case 'controlchange':
+        this._onControlChange(e);
+        break;
+
+      case 'noteon':
+      case 'noteoff':
+        this._onNote(e);
+        break;
+    }
+  }
+
+  _onNote(e) {
+    const noteNum = e.dataBytes[0];
+    const velocity = e.dataBytes[1];
+    const chan = e.message.channel;
+
+    this._togglesByChan[chan] ??= {};
+    const isNoteOn = e.message.type === 'noteon' && velocity > 0;
+
+    if (isNoteOn) {
+      const newState = !this._togglesByChan[chan][noteNum];
+      const newVal = newState ? 1 : 0;
+
+      this._toggles[noteNum] = newVal;
+      this._togglesByChan[chan][noteNum] = newVal;
+
+      this._saveState(undefined, '-tog', noteNum, newVal);
+      this._saveState(chan, '-tog', noteNum, newVal);
+
+      this._sendToggleState(e.port, chan, noteNum, newState);
+    } else {
+      // Note off - resend current state to keep the hardware button lit up
+      const curValue = this._togglesByChan[chan][noteNum];
+      this._sendToggleState(e.port, chan, noteNum, curValue ? true : false);
+    }
+  }
+
+  _onControlChange(e) {
     const ccNum = e.dataBytes[0];
     const v = e.dataBytes[1];
     const chan = e.message.channel;
@@ -124,26 +174,29 @@ export class MidiInput {
     this._refsByChan[chan] ??= {};
     this._refsByChan[chan][ccNum] = scaled;
 
-    this._saveState(undefined, ccNum, scaled);
-    this._saveState(chan, ccNum, scaled);
+    this._saveState(undefined, '', ccNum, scaled);
+    this._saveState(chan, '', ccNum, scaled);
   }
 
   _loadAllStates() {
-    Object.assign(this._refs, this._loadState(undefined));
+    Object.assign(this._refs, this._loadState(undefined, ''));
+    Object.assign(this._toggles, this._loadState(undefined, '-tog'));
 
     for (let chan = 1; chan <= 16; chan++) {
       this._refsByChan[chan] ??= {};
-      Object.assign(this._refsByChan[chan], this._loadState(chan));
+      this._togglesByChan[chan] ??= {};
+      Object.assign(this._refsByChan[chan], this._loadState(chan, ''));
+      Object.assign(this._togglesByChan[chan], this._loadState(chan, '-tog'));
     }
   }
 
-  _loadState(chan) {
+  _loadState(chan, suffix) {
     if (!this.stateKey) {
       return {};
     }
 
     const initialDataRaw = localStorage.getItem(
-      `strudel-midin-${this.stateKey}-chan${chan !== undefined ? chan : 'all'}`,
+      `strudel-midin-${this.stateKey}-chan${chan !== undefined ? chan : 'all'}${suffix}`,
     );
     if (!initialDataRaw) {
       return {};
@@ -161,15 +214,15 @@ export class MidiInput {
     }
   }
 
-  _saveState(chan, cc, value) {
+  _saveState(chan, suffix, cc, value) {
     if (!this.stateKey) {
       return;
     }
 
-    const state = this._loadState(chan);
+    const state = this._loadState(chan, suffix);
     state[cc] = value;
     localStorage.setItem(
-      `strudel-midin-${this.stateKey}-chan${chan !== undefined ? chan : 'all'}`,
+      `strudel-midin-${this.stateKey}-chan${chan !== undefined ? chan : 'all'}${suffix}`,
       JSON.stringify(state),
     );
   }
@@ -188,6 +241,31 @@ export class MidiInput {
         const scaled = Math.round(value * 127);
         output.sendControlChange(ccn, scaled, channel);
       }
+    }
+
+    for (const [chan, toggles] of Object.entries(this._togglesByChan)) {
+      const channel = Number(chan);
+      for (const [noteNumStr, isOn] of Object.entries(toggles)) {
+        const noteNum = Number(noteNumStr);
+        if (isOn) {
+          output.sendNoteOn(noteNum, { channels: channel, rawAttack: 127 });
+        } else {
+          output.sendNoteOff(noteNum, { channels: channel, rawAttack: 0 });
+        }
+      }
+    }
+  }
+
+  _sendToggleState(device, chan, noteNum, isOn) {
+    const output = WebMidi.outputs.find((o) => o.name === device.name);
+    if (!output) {
+      return;
+    }
+
+    if (isOn) {
+      output.sendNoteOn(noteNum, { channels: chan, rawAttack: 127 });
+    } else {
+      output.sendNoteOff(noteNum, { channels: chan, rawAttack: 0 });
     }
   }
 }

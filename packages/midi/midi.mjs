@@ -528,7 +528,10 @@ const midiInputs = {};
 export async function midin(input) {
   const instance = await _initializeInput(input);
 
-  return instance.createCC.bind(instance);
+  const cc = instance.createCC.bind(instance);
+  cc.noteToggle = instance.createNoteToggle.bind(instance);
+
+  return cc;
 }
 
 /**
