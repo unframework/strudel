@@ -3310,3 +3310,75 @@ export const bmod = (config) => pure({}).bmod(config);
 export const { transient } = registerControl(['transient', 'transsustain']);
 
 export const { FXrelease, FXrel, FXr, fxr } = registerControl('FXrelease', 'FXrel', 'FXr', 'fxr');
+
+/**
+ * Dattorro plate reverb send amount.
+ *
+ * @name daverb
+ * @param {number | Pattern} amount between 0 and 1
+ * @example
+ * s("bd sd [~ bd] sd").daverb(0.5)
+ */
+export const { daverb } = registerControl('daverb');
+
+/**
+ * Dattorro plate reverb decay rate (0-1).
+ *
+ * @name dvdecay
+ * @param {number | Pattern} amount between 0 and 1
+ * @example
+ * s("bd sd [~ bd] sd").daverb(0.5).dvdecay(0.8)
+ */
+export const { dvdecay } = registerControl('dvdecay');
+
+/**
+ * Dattorro plate reverb damping / high-frequency rolloff (0-1).
+ *
+ * @name dvdamp
+ * @param {number | Pattern} amount between 0 and 1
+ * @example
+ * s("bd sd [~ bd] sd").daverb(0.5).dvdamp(0.3)
+ */
+export const { dvdamp } = registerControl('dvdamp');
+
+/**
+ * Dattorro plate reverb modulation depth (0-2).
+ *
+ * @name dvxd
+ * @synonyms dvshimmer
+ * @param {number | Pattern} amount between 0 and 2
+ * @example
+ * s("bd sd [~ bd] sd").daverb(0.5).dvxd(1.2)
+ */
+export const { dvxd, dvshimmer } = registerControl('dvxd', 'dvshimmer');
+
+/**
+ * Dattorro plate reverb input lowpass / brightness (0-1).
+ * Higher values = brighter, lower = darker.
+ *
+ * @name dvlp
+ * @param {number | Pattern} amount between 0 and 1
+ * @example
+ * s("bd sd [~ bd] sd").daverb(0.5).dvlp(0.5)
+ */
+export const { dvlp } = registerControl('dvlp');
+
+/**
+ * Dattorro plate reverb pre-delay in seconds (0-1).
+ *
+ * @name dvp
+ * @param {number | Pattern} seconds between 0 and 1
+ * @example
+ * s("bd sd [~ bd] sd").daverb(0.5).dvp(0.05)
+ */
+export const { dvp } = registerControl('dvp');
+
+/**
+ * Dattorro plate reverb modulation rate (0-2).
+ *
+ * @name dvxr
+ * @param {number | Pattern} amount between 0 and 2
+ * @example
+ * s("bd sd [~ bd] sd").daverb(0.5).dvxr(0.8)
+ */
+export const { dvxr } = registerControl('dvxr');

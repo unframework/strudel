@@ -6,6 +6,7 @@ This program is free software: you can redistribute it and/or modify it under th
 
 import './feedbackdelay.mjs';
 import './reverb.mjs';
+import './daverb.mjs';
 import './vowel.mjs';
 import { clamp, nanFallback, _mod, cycleToSeconds, pickAndRename } from './util.mjs';
 import workletsUrl from './worklets.mjs?audioworklet';
@@ -515,6 +516,13 @@ export const superdough = async (value, t, hapDuration, cps = 0.5, cycle = 0.5) 
     ir,
     irspeed,
     irbegin,
+    daverb,
+    dvp,
+    dvlp,
+    dvdecay,
+    dvdamp,
+    dvxr,
+    dvxd,
     i = getDefaultValue('i'),
     analyze, // analyser wet
     fft = getDefaultValue('fft'), // fftSize 0 - 10
@@ -973,6 +981,14 @@ export const superdough = async (value, t, hapDuration, cps = 0.5, cycle = 0.5) 
     const reverbSend = orbitBus.sendReverb(post, room);
     nodes.main['room_mix'] = [reverbSend];
     chain.audioNodes.push(reverbSend);
+  }
+  // daverb
+  if (daverb > 0) {
+    const daVerbNode = orbitBus.getDaVerb(t, dvdecay, dvdamp, dvxd, dvlp, dvp, dvxr);
+    nodes.main['daverb'] = [daVerbNode];
+    const daVerbSend = orbitBus.sendDaVerb(post, daverb);
+    nodes.main['daverb_mix'] = [daVerbSend];
+    chain.audioNodes.push(daVerbSend);
   }
   if (bus != null) {
     const busNode = audioController.getBus(bus);

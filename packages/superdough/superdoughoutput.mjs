@@ -19,6 +19,7 @@ const getStereoNode = (ac) => new GainNode(ac, { gain: 1, channelCount: 2, chann
 export class Orbit {
   reverbNode;
   delayNode;
+  daVerbNode;
   output;
   summingNode;
   djfNode;
@@ -36,6 +37,7 @@ export class Orbit {
     this.summingNode.disconnect();
     this.delayNode?.disconnect();
     this.reverbNode?.disconnect();
+    this.daVerbNode?.disconnect();
   }
 
   getDjf(value, t = 0) {
@@ -93,6 +95,37 @@ export class Orbit {
   }
   sendReverb(node, amount) {
     return effectSend(node, this.reverbNode, amount);
+  }
+
+  getDaVerb(t, decay, damping, xd, lp, predelay, xr) {
+    if (this.daVerbNode == null) {
+      this.daVerbNode = this.audioContext.createDaVerb();
+      this.daVerbNode.connect(this.summingNode);
+    }
+    if (decay !== undefined) {
+      this.daVerbNode.parameters.get('decay').setValueAtTime(decay, t);
+    }
+    if (damping !== undefined) {
+      this.daVerbNode.parameters.get('damping').setValueAtTime(damping, t);
+    }
+    if (xd !== undefined) {
+      this.daVerbNode.parameters.get('excursionDepth').setValueAtTime(xd, t);
+    }
+    if (lp !== undefined) {
+      this.daVerbNode.parameters.get('bandwidth').setValueAtTime(lp, t);
+    }
+    if (predelay !== undefined) {
+      const samples = predelay * this.audioContext.sampleRate;
+      this.daVerbNode.parameters.get('preDelay').setValueAtTime(samples, t);
+    }
+    if (xr !== undefined) {
+      this.daVerbNode.parameters.get('excursionRate').setValueAtTime(xr, t);
+    }
+    return this.daVerbNode;
+  }
+
+  sendDaVerb(node, amount) {
+    return effectSend(node, this.daVerbNode, amount);
   }
 
   sendDelay(node, amount) {
