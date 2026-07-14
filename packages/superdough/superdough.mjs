@@ -410,10 +410,40 @@ export function getAnalyzerData(type = 'time', id = 1) {
   return analysersData[id];
 }
 
+let masterAnalyser = null;
+let masterAnalyserData = null;
+
+export function getMasterAnalyser(fftSize = 2048, smoothingTimeConstant = 0.8) {
+  const ac = getAudioContext();
+  const ctrl = getSuperdoughAudioController();
+  if (masterAnalyser === null || masterAnalyser.context !== ac) {
+    try {
+      masterAnalyser?.disconnect();
+    } catch (_) {}
+    masterAnalyser = ac.createAnalyser();
+    masterAnalyser.fftSize = fftSize;
+    masterAnalyser.smoothingTimeConstant = smoothingTimeConstant;
+    masterAnalyserData = new Float32Array(masterAnalyser.frequencyBinCount);
+    ctrl.output.destinationGain.connect(masterAnalyser);
+  }
+  return masterAnalyser;
+}
+
+export function getMasterAnalyserData() {
+  if (!masterAnalyser) return null;
+  masterAnalyser.getFloatTimeDomainData(masterAnalyserData);
+  return masterAnalyserData;
+}
+
 export function resetGlobalEffects() {
   controller?.reset();
   analysers = {};
   analysersData = {};
+  try {
+    masterAnalyser?.disconnect();
+  } catch (_) {}
+  masterAnalyser = null;
+  masterAnalyserData = null;
 }
 
 let activeSoundSources = new Map();
