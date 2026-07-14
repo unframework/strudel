@@ -29,12 +29,14 @@ import {
   userPattern,
   getViewingPatternData,
   setViewingPatternData,
+  savePatternCode,
+  initializeViewingPattern,
 } from '../user_pattern_utils.mjs';
 import { superdirtOutput } from '@strudel/osc/superdirtoutput';
 import { audioEngineTargets } from '../settings.mjs';
 import { useStore } from '@nanostores/react';
 import { prebake } from './prebake.mjs';
-import { getRandomTune, initCode, loadModules, shareCode } from './util.mjs';
+import { getRandomTune, getCodeFromURL, loadModules, shareCode } from './util.mjs';
 import './Repl.css';
 import { setInterval, clearInterval } from 'worker-timers';
 import { getMetadata } from '../metadata_parser';
@@ -117,36 +119,24 @@ export function useReplContext() {
           console.warn('[useReplContext] Failed to update hash:', e.message);
         }
         setDocumentTitle(fullBufferCode);
-        const viewingPatternData = getViewingPatternData();
         setVersionDefaultsFrom(fullBufferCode);
-        const data = { ...viewingPatternData, code: fullBufferCode };
-        let id = data.id;
-        const isExamplePattern = viewingPatternData.collection !== userPattern.collection;
 
-        if (isExamplePattern) {
-          const codeHasChanged = fullBufferCode !== viewingPatternData.code;
-          if (codeHasChanged) {
-            // fork example
-            const newPattern = userPattern.duplicate(data);
-            id = newPattern.id;
-            setViewingPatternData(newPattern.data);
-          }
-        } else {
-          id = userPattern.isValidID(id) ? id : createPatternID();
-          setViewingPatternData(userPattern.update(id, data).data);
-        }
-        setActivePattern(id);
+        const patternId = savePatternCode(fullBufferCode);
+        setActivePattern(patternId);
       },
       bgFill: false,
     });
     window.strudelMirror = editor;
     window.debugAudiograph = debugAudiograph;
 
+    editorRef.current = editor;
+
     // init settings
-    initCode().then(async (decoded) => {
+    (async () => {
+      const codeFromURL = await getCodeFromURL();
       let code, msg;
-      if (decoded) {
-        code = decoded;
+      if (codeFromURL) {
+        code = codeFromURL;
         msg = `I have loaded the code from the URL.`;
       } else if (latestCode) {
         code = latestCode;
@@ -159,10 +149,9 @@ export function useReplContext() {
       }
       editor.setCode(code);
       setDocumentTitle(code);
+      initializeViewingPattern(code);
       logger(`Welcome to Strudel! ${msg} Press play or hit ctrl+enter to run it!`, 'highlight');
-    });
-
-    editorRef.current = editor;
+    })();
   }, []);
 
   const [replState, setReplState] = useState({});

@@ -215,3 +215,59 @@ export async function exportPatterns() {
   downloadLink.click();
   document.body.removeChild(downloadLink);
 }
+
+/**
+ * Update viewing pattern state to match the loaded code if possible.
+ * @param {string} loadedCode
+ */
+export function initializeViewingPattern(loadedCode) {
+  const viewingPatternData = getViewingPatternData();
+
+  // If the loaded code matches the current viewing pattern (rehydrated from sessionStorage), do nothing
+  if (loadedCode === viewingPatternData.code) {
+    return;
+  }
+
+  // Try to find the latest user pattern that matches the loaded code
+  const userPatterns = userPattern.getAll();
+  for (const patternData of Object.values(userPatterns).reverse()) {
+    if (patternData.code === loadedCode) {
+      setViewingPatternData(patternData);
+      return;
+    }
+  }
+
+  // No matching pattern found, set up a brand new pattern with the loaded code (but don't save it yet)
+  const newPattern = userPattern.create().data;
+  setViewingPatternData({ ...newPattern, code: loadedCode });
+}
+
+/**
+ * Save updated code to user pattern or fork example pattern.
+ * @param {string} code
+ * @returns {string} id of updated active pattern
+ */
+export function savePatternCode(code) {
+  // Save updated code to user pattern
+  const viewingPatternData = getViewingPatternData();
+
+  const isExamplePattern = viewingPatternData.collection !== userPattern.collection;
+  if (isExamplePattern) {
+    const codeHasChanged = code !== viewingPatternData.code;
+    if (codeHasChanged) {
+      // fork example
+      const newPattern = userPattern.duplicate({ ...viewingPatternData, code });
+      setViewingPatternData(newPattern.data);
+      return newPattern.id;
+    }
+
+    return viewingPatternData.id;
+  }
+
+  const patternData = userPattern.isValidID(viewingPatternData.id) ? viewingPatternData : userPattern.create().data;
+
+  const { data: finalPatternData } = userPattern.update(patternData.id, { ...patternData, code });
+  setViewingPatternData(finalPatternData);
+
+  return finalPatternData.id;
+}
