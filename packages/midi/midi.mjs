@@ -25,6 +25,7 @@ import { getAudioContext } from '@strudel/webaudio';
 import { scheduleAtTime } from '../superdough/helpers.mjs';
 import { getMidiDeviceNamesString, getDevice } from './util.mjs';
 import { MidiInput } from './input.mjs';
+import { setWidget } from '../codemirror/widget.mjs';
 
 // if you use WebMidi from outside of this package, make sure to import that instance:
 export const { WebMidi } = _WebMidi;
@@ -530,6 +531,34 @@ export async function midin(input) {
 
   const cc = instance.createCC.bind(instance);
   cc.noteToggle = instance.createNoteToggle.bind(instance);
+  cc._midiInput = instance;
+
+  return cc;
+}
+
+/**
+ *
+ * @param {string} id
+ * @param {MidiInput} instance
+ */
+function createMidiInputWidget(id, instance) {
+  const rootNode = document.createElement('div');
+  rootNode.style.border = '1px solid #888';
+  rootNode.style.height = '2em';
+
+  instance.registerWidgetListener(() => {
+    rootNode.style.borderColor = instance.isConnected ? '#0f0' : '#f00';
+    rootNode.innerText = `MIDI Input: ${instance.input} | Connected?: ${JSON.stringify(instance.isConnected)}`;
+  });
+
+  setWidget(id, rootNode);
+}
+
+export async function midinWithID(id, input) {
+  const cc = await midin(input);
+  const instance = cc._midiInput;
+
+  createMidiInputWidget(id, instance);
 
   return cc;
 }
