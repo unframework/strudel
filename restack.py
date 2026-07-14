@@ -24,6 +24,8 @@ REPLAY = [
     ("rebase", "nm/viewing-id-init"),
     ("rebase", "nm/midi-buttons"),
     ("rebase", "nm/claude"),
+    ("rebase", "nm/pwa"),
+    ("rebase", "nm/bank-fix"),
 
     ("forward",),
     ("rebase", "nm/deploy"),
@@ -35,6 +37,12 @@ REPLAY = [
 
     ("forward",),
     ("rebase", "nm/record"),
+    ("rebase", "nm/snippets"),
+
+    # nm/linectrl builds on the midi branches and wires itself into packages/render.
+    # nm/restack (the restack.py tooling) sits at the very top of the stack.
+    ("forward",),
+    ("rebase", "nm/linectrl"),
     ("rebase", "nm/restack"),
 ]
 
@@ -374,7 +382,7 @@ def main():
         return f"{prefix}/intermediate-{next_head_idx}"
 
     def base_ref():
-        return f"{prefix}/main" if next_head_idx == 0 else f"{prefix}/intermediate-{next_head_idx - 1}"
+        return f"{prefix}/main" if next_head_idx == 1 else f"{prefix}/intermediate-{next_head_idx - 1}"
 
     def fail_conflict(branch, fork_sha, br):
         """Print conflict resolution instructions and exit."""
