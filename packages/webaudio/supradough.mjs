@@ -27,9 +27,6 @@ Pattern.prototype.supradough = function () {
     const s = (hap.value.bank ? hap.value.bank + '_' : '') + hap.value.s;
     const n = hap.value.n ?? 0;
     const soundKey = `${s}:${n}`;
-    if (soundMap.has(s)) {
-      hap.value.s = soundKey; // dough.mjs is unaware of bank and n (only maps keys to buffers)
-    }
     if (soundMap.has(s) && !loadedSounds.has(soundKey)) {
       const urls = soundMap.get(s);
       const url = urls[n % urls.length];
@@ -45,7 +42,8 @@ Pattern.prototype.supradough = function () {
       );
     }
 
-    doughWorklet.port.postMessage({ spawn: hap.value });
+    // pass soundKey as s so dough.mjs can look up the buffer, without mutating the shared hap.value
+    doughWorklet.port.postMessage({ spawn: { ...hap.value, s: soundKey } });
   }, 1);
 };
 

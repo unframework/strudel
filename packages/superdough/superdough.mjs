@@ -559,7 +559,6 @@ export const superdough = async (value, t, hapDuration, cps = 0.5, cycle = 0.5) 
   }
   if (bank && s) {
     s = `${bank}_${s}`;
-    value.s = s;
   }
 
   const chain = new Chain(); // connection manager which tracks audio nodes for releasing
