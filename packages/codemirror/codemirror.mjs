@@ -25,6 +25,7 @@ import { getSliderWidgets, sliderPlugin, updateSliderWidgets } from './slider.mj
 import { activateTheme, initTheme, theme } from './themes.mjs';
 import { isTooltipEnabled } from './tooltip.mjs';
 import { getActiveWidgets, updateWidgets, widgetPlugin } from './widget.mjs';
+import { ttyMirrorPlugin } from './tty.mjs';
 
 export { toggleBlockComment, toggleBlockCommentByLine, toggleComment, toggleLineComment } from '@codemirror/commands';
 
@@ -97,6 +98,7 @@ export function initEditor({ initialCode = '', onChange, onEvaluate, onStop, roo
       }),
       sliderPlugin,
       widgetPlugin,
+      ttyMirrorPlugin,
       // indentOnInput(), // works without. already brought with javascript
       // extension? bracketMatching(), // does not do anything
       syntaxHighlighting(defaultHighlightStyle),
