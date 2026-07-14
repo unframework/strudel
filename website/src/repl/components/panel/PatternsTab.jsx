@@ -55,22 +55,31 @@ function PatternButton({ showOutline, onClick, pattern, showHiglight }) {
 function PatternButtons({ patterns, activePattern, onClick, started }) {
   const viewingPatternData = useViewingPatternData();
   const viewingPatternID = viewingPatternData.id;
+  const sortedPatterns = useMemo(() => {
+    return Object.values(patterns)
+      .map((pattern) => ({ pattern, title: getMetadata(pattern.code).title?.trim() || null }))
+      .sort((a, b) => {
+        if (a.title && b.title) return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+        if (a.title) return -1;
+        if (b.title) return 1;
+        return (b.pattern.created_at ?? 0) - (a.pattern.created_at ?? 0);
+      })
+      .map((entry) => entry.pattern);
+  }, [patterns]);
   return (
     <div className="p-2">
-      {Object.values(patterns)
-        .reverse()
-        .map((pattern) => {
-          const id = pattern.id;
-          return (
-            <PatternButton
-              pattern={pattern}
-              key={id}
-              showHiglight={id === viewingPatternID}
-              showOutline={id === activePattern && started}
-              onClick={() => onClick(id)}
-            />
-          );
-        })}
+      {sortedPatterns.map((pattern) => {
+        const id = pattern.id;
+        return (
+          <PatternButton
+            pattern={pattern}
+            key={id}
+            showHiglight={id === viewingPatternID}
+            showOutline={id === activePattern && started}
+            onClick={() => onClick(id)}
+          />
+        );
+      })}
     </div>
   );
 }

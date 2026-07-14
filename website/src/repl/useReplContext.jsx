@@ -31,6 +31,7 @@ import {
   setViewingPatternData,
   savePatternCode,
   initializeViewingPattern,
+  loadAllPatterns,
 } from '../user_pattern_utils.mjs';
 import { superdirtOutput } from '@strudel/osc/superdirtoutput';
 import { audioEngineTargets } from '../settings.mjs';
@@ -133,6 +134,8 @@ export function useReplContext() {
 
     // init settings
     (async () => {
+      await loadAllPatterns();
+
       const codeFromURL = await getCodeFromURL();
       let code, msg;
       if (codeFromURL) {
