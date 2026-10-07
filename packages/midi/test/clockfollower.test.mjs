@@ -47,6 +47,17 @@ describe('MidiClockFollower', () => {
     expect(follower.cps).toBeCloseTo(0.5, 5);
   });
 
+  it('reports bpm, independent of beatsPerCycle', () => {
+    const follower = new MidiClockFollower();
+    expect(follower.bpm).toBe(0);
+    feed120(follower);
+    expect(follower.bpm).toBeCloseTo(120, 3);
+
+    const wide = new MidiClockFollower({ beatsPerCycle: 8 });
+    feed120(wide);
+    expect(wide.bpm).toBeCloseTo(120, 3);
+  });
+
   it('snaps to the downbeat on Start', () => {
     const follower = new MidiClockFollower();
     feed120(follower);

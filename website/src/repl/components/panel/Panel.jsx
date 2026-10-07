@@ -15,6 +15,7 @@ import { SoundsTab } from './SoundsTab';
 import { WelcomeTab } from './WelcomeTab';
 import { LevelMeter } from '../LevelMeter';
 import { MeasureDisplay } from '../MeasureDisplay';
+import { ClockFollowerStatus } from '../ClockFollowerStatus';
 
 const TAURI = typeof window !== 'undefined' && window.__TAURI__;
 
@@ -110,7 +111,8 @@ export function MainPanel({ context, isEmbedded = false, className }) {
           </h1>
         </div>
         {!isZen && (
-          <div className="flex grow justify-end">
+          <div className="flex grow justify-end items-center">
+            {!isEmbedded && <ClockFollowerStatus context={context} />}
             {!isButtonRowHidden && <MainMenu isEmbedded={isEmbedded} context={context} />}
             <PanelToggle isEmbedded={isEmbedded} isZen={isZen} />
           </div>
