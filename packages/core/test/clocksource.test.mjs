@@ -7,8 +7,6 @@ This program is free software: you can redistribute it and/or modify it under th
 import { describe, expect, it } from 'vitest';
 import { anchorCycle, catchUpTime } from '../clocksource.mjs';
 
-const hapAt = (cycle) => ({ whole: { begin: { valueOf: () => cycle } } });
-
 describe('anchorCycle', () => {
   const source = (jumpCycle) => ({
     jumpCycle,
@@ -31,15 +29,12 @@ describe('anchorCycle', () => {
 describe('catchUpTime', () => {
   const minLatency = 0.01;
   it('schedules at its own time when there is margin ahead', () => {
-    expect(catchUpTime(hapAt(2), 10.5, 10, 0, minLatency)).toBe(10.5);
+    expect(catchUpTime(10.5, 10, minLatency)).toBe(10.5);
   });
   it('fires immediately when due within the latency margin', () => {
-    expect(catchUpTime(hapAt(2), 10.005, 10, 0, minLatency)).toBe(10 + minLatency);
+    expect(catchUpTime(10.005, 10, minLatency)).toBe(10 + minLatency);
   });
-  it('fires the downbeat immediately even if slightly late', () => {
-    expect(catchUpTime(hapAt(0), 9.9, 10, 0, minLatency)).toBe(10 + minLatency);
-  });
-  it('drops a non-downbeat onset that is too late', () => {
-    expect(catchUpTime(hapAt(2), 9.9, 10, 0, minLatency)).toBe(undefined);
+  it('drops an onset that is already late', () => {
+    expect(catchUpTime(9.9, 10, minLatency)).toBe(undefined);
   });
 });

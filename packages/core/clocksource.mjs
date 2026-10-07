@@ -25,11 +25,11 @@ export function anchorCycle(source, now) {
   return jump;
 }
 
-export function catchUpTime(hap, targetTime, now, jumpCycle, minLatency) {
+export function catchUpTime(targetTime, now, minLatency) {
   if (targetTime - now > minLatency) {
     return targetTime;
   }
-  if (targetTime >= now || hap.whole.begin.valueOf() === jumpCycle) {
+  if (targetTime >= now) {
     return now + minLatency;
   }
   return undefined;

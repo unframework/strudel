@@ -143,7 +143,7 @@ export class Cyclist {
           return;
         }
         const targetTime = source.timeAt(hap.whole.begin) + this.latency;
-        const when = catchUpTime(hap, targetTime, this.getTime(), source.jumpCycle, this.clock.minLatency);
+        const when = catchUpTime(targetTime, this.getTime(), this.clock.minLatency);
         if (when === undefined) {
           return;
         }
