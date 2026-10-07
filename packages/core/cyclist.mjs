@@ -38,6 +38,7 @@ export class Cyclist {
     this.clockGeneration = undefined;
     this.clockInCharge = false;
     this.clockStarted = false;
+    this.clockOffset = 0; // external cycle at (re)start, so the pattern counts from ~0
     this.warnedExternalCps = false;
     this.clock = createClock(
       getTime,
@@ -132,11 +133,13 @@ export class Cyclist {
 
       if (source.generation !== this.clockGeneration) {
         this.clockGeneration = source.generation;
-        this.lastEnd = anchorCycle(source, now);
+        const anchor = anchorCycle(source, now);
+        this.clockOffset = Math.floor(anchor);
+        this.lastEnd = anchor - this.clockOffset;
       }
 
       const begin = this.lastEnd;
-      const end = Math.max(begin, source.cycleAt(phase + duration));
+      const end = Math.max(begin, source.cycleAt(phase + duration) - this.clockOffset);
       this.lastBegin = begin;
       this.lastEnd = end;
       this.lastTick = phase;
@@ -147,7 +150,7 @@ export class Cyclist {
         if (!hap.hasOnset()) {
           return;
         }
-        const targetTime = source.timeAt(hap.whole.begin) + this.latency;
+        const targetTime = source.timeAt(hap.whole.begin + this.clockOffset) + this.latency;
         const when = catchUpTime(targetTime, this.getTime(), this.clock.minLatency);
         if (when === undefined) {
           return;
@@ -170,6 +173,7 @@ export class Cyclist {
       this.clockGeneration = undefined;
       this.clockInCharge = false;
       this.clockStarted = false;
+      this.clockOffset = 0;
       this.warnedExternalCps = false;
       logger('[cyclist] following external clock');
       this.wake();
@@ -196,7 +200,7 @@ export class Cyclist {
       return 0;
     }
     if (this.clockInCharge && this.clockSource) {
-      return this.clockSource.cycleAt(this.getTime());
+      return this.clockSource.cycleAt(this.getTime()) - this.clockOffset;
     }
     const secondsSinceLastTick = this.getTime() - this.lastTick - this.clock.duration;
     return this.lastBegin + secondsSinceLastTick * this.cps; // + this.clock.minLatency;

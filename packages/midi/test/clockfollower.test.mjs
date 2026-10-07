@@ -138,4 +138,25 @@ describe('MidiClockFollower', () => {
     }
     expect(maxErr).toBeLessThan(0.02);
   });
+
+  it('applies reconfigured options while keeping tracking state', () => {
+    const follower = new MidiClockFollower();
+    feed120(follower);
+    follower.feed([MIDI_START], 0.5);
+    const ticks = follower.tickCount;
+    follower.configure({ nudge: 0.1, window: 48 });
+    expect(follower.nudge).toBe(0.1);
+    expect(follower.window).toBe(48);
+    expect(follower.running).toBe(true);
+    expect(follower.tickCount).toBe(ticks);
+  });
+
+  it('clears the fit when beatsPerCycle changes', () => {
+    const follower = new MidiClockFollower();
+    feed120(follower);
+    expect(follower.fit).not.toBe(null);
+    follower.configure({ beatsPerCycle: 8 });
+    expect(follower.fit).toBe(null);
+    expect(follower.ticksPerCycle).toBe(24 * 8);
+  });
 });
