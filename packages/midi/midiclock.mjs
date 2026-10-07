@@ -48,6 +48,10 @@ function detach(input) {
  * progress is followed immediately at an arbitrary phase, realigned by the next Start. The first
  * playback still needs one user gesture to unlock the browser's audio engine.
  *
+ * Re-evaluating with the same device keeps the running follower, so tempo and position survive.
+ * Stopping and restarting the transport re-zeroes the cycle count while dropping in at the clock's
+ * current phase.
+ *
  * Only works with the single-instance scheduler (turn off "Sync across Browser Tabs").
  *
  * @name midiclock
@@ -66,11 +70,16 @@ export async function midiclock(input, options = {}) {
   }
 
   await enableWebMidi();
+
+  const existing = connections[input];
+  const follower = existing?.follower ?? new MidiClockFollower(options);
+  const collator = existing?.collator ?? new ClockCollator({ getTargetClockTime: () => getAudioContext().currentTime });
+  if (existing) {
+    follower.configure(options);
+  }
   detach(input);
 
-  const follower = new MidiClockFollower(options);
-  const collator = new ClockCollator({ getTargetClockTime: () => getAudioContext().currentTime });
-  const conn = { listener: null, device: null, follower, connListener: null, disconnListener: null };
+  const conn = { listener: null, device: null, follower, collator, connListener: null, disconnListener: null };
   connections[input] = conn;
 
   conn.listener = (e) => {

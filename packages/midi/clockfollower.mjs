@@ -42,13 +42,8 @@ export function fitLine(samples) {
 }
 
 export class MidiClockFollower {
-  constructor({ beatsPerCycle = 4, window = 24, stallSeconds = 0.5, nudge = 0, catchup = 0.2 } = {}) {
-    this.ticksPerCycle = PPQN * beatsPerCycle;
-    this.window = window;
-    this.stallSeconds = stallSeconds;
-    this.nudge = nudge;
-    this.catchup = catchup;
-
+  constructor(options = {}) {
+    this.ticksPerCycle = 0;
     this.samples = [];
     this.tickCount = 0;
     this.fit = null;
@@ -61,6 +56,20 @@ export class MidiClockFollower {
     this.anchorTime = 0;
     this.lastClockTime = -Infinity;
     this.deviceName = null;
+    this.configure(options);
+  }
+
+  configure({ beatsPerCycle = 4, window = 24, stallSeconds = 0.5, nudge = 0, catchup = 0.2 } = {}) {
+    const ticksPerCycle = PPQN * beatsPerCycle;
+    if (this.ticksPerCycle && ticksPerCycle !== this.ticksPerCycle) {
+      this.samples = [];
+      this.fit = null;
+    }
+    this.ticksPerCycle = ticksPerCycle;
+    this.window = window;
+    this.stallSeconds = stallSeconds;
+    this.nudge = nudge;
+    this.catchup = catchup;
   }
 
   feed(bytes, time) {
