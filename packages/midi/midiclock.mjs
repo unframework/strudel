@@ -104,6 +104,7 @@ export async function midiclock(input, options = {}) {
       return;
     }
     conn.device = device;
+    follower.deviceName = device.name;
     device.addListener('midimessage', conn.listener);
     logger(`[midi] following clock from "${device.name}"`);
   };
@@ -116,6 +117,7 @@ export async function midiclock(input, options = {}) {
     if (conn.device && e.port.name === conn.device.name) {
       conn.device.removeListener('midimessage', conn.listener);
       conn.device = null;
+      follower.deviceName = null;
       logger(`[midi] clock device disconnected: ${e.port.name}`);
     }
   };

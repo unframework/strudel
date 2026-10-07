@@ -60,6 +60,7 @@ export class MidiClockFollower {
     this.anchorTick = 0;
     this.anchorTime = 0;
     this.lastClockTime = -Infinity;
+    this.deviceName = null;
   }
 
   feed(bytes, time) {
@@ -126,6 +127,10 @@ export class MidiClockFollower {
     }
     const ticks = (cycle - this.nudge * this.cps) * this.ticksPerCycle;
     return (ticks - this.fit.intercept) / this.fit.slope;
+  }
+
+  get bpm() {
+    return this.fit ? (this.fit.slope * 60) / PPQN : 0;
   }
 
   isRunning(now) {
