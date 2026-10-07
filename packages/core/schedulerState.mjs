@@ -51,3 +51,35 @@ export function setIsStarted(val) {
 export function getIsStarted() {
   return isStarted;
 }
+
+let clockSourceFunc;
+let wakeFunc;
+let transport = {};
+
+export function setClockSourceFunc(func) {
+  clockSourceFunc = func;
+}
+
+export function setClockSource(source) {
+  return clockSourceFunc?.(source ?? null);
+}
+
+export function setWakeFunc(func) {
+  wakeFunc = func;
+}
+
+export function wakeScheduler() {
+  return wakeFunc?.();
+}
+
+export function setTransportFuncs(funcs) {
+  transport = funcs;
+}
+
+export function startScheduler() {
+  return transport.start?.();
+}
+
+export function pauseScheduler() {
+  return transport.pause?.();
+}

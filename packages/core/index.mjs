@@ -10,6 +10,7 @@ import Fraction from './fraction.mjs';
 import createClock from './zyklus.mjs';
 import { logger } from './logger.mjs';
 export { Fraction, controls, createClock };
+export * from './clocksource.mjs';
 export * from './controls.mjs';
 export * from './cyclist.mjs';
 export * from './evaluate.mjs';
