@@ -81,4 +81,50 @@ describe('MidiClockFollower', () => {
     expect(follower.isRunning(0.6)).toBe(true);
     expect(follower.isRunning(1.1)).toBe(false);
   });
+
+  it('follows a clock stream that is already running, without a Start', () => {
+    const follower = new MidiClockFollower();
+    follower.feed([MIDI_CLOCK], 0);
+    follower.feed([MIDI_CLOCK], 1 / 48);
+    expect(follower.isRunning(1 / 48)).toBe(true);
+  });
+
+  it('stays held after Stop even if clock keeps streaming', () => {
+    const follower = new MidiClockFollower();
+    feed120(follower);
+    follower.feed([MIDI_START], 0.5);
+    follower.feed([MIDI_STOP], 0.52);
+    follower.feed([MIDI_CLOCK], 0.54);
+    expect(follower.isRunning(0.54)).toBe(false);
+  });
+
+  it('adapts cps to a tempo change', () => {
+    const follower = new MidiClockFollower({ window: 24 });
+    follower.feed([MIDI_START], 0);
+    let t = 0;
+    for (let i = 1; i <= 48; i++) {
+      t = i / 48;
+      follower.feed([MIDI_CLOCK], t);
+    }
+    for (let i = 1; i <= 48; i++) {
+      t += 1 / 56;
+      follower.feed([MIDI_CLOCK], t);
+    }
+    expect(follower.cps).toBeCloseTo(56 / 96, 2);
+  });
+
+  it('bounds position error under timestamp jitter however long it has run', () => {
+    const follower = new MidiClockFollower({ window: 24 });
+    follower.feed([MIDI_START], 0);
+    const jitter = [0.002, -0.0015, 0.001, -0.002, 0.0005];
+    let maxErr = 0;
+    for (let i = 1; i <= 2000; i++) {
+      const t = i / 48 + jitter[i % jitter.length];
+      follower.feed([MIDI_CLOCK], t);
+      if (i > 24) {
+        maxErr = Math.max(maxErr, Math.abs(follower.cycleAt(t) - (i - 1) / 96));
+      }
+    }
+    expect(maxErr).toBeLessThan(0.02);
+  });
 });

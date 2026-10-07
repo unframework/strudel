@@ -65,6 +65,9 @@ export class MidiClockFollower {
   feed(bytes, time) {
     switch (bytes[0]) {
       case MIDI_CLOCK:
+        if (!this.running && !this.stopped) {
+          this._jump(this.tickCount, time); // join a stream already in progress; phase snaps on next Start
+        }
         this._clock(time);
         break;
       case MIDI_START:
@@ -103,24 +106,26 @@ export class MidiClockFollower {
     this.anchorTime = time;
     this.jumpCycle = tick / this.ticksPerCycle;
     this.samples = [];
+    this.fit = null;
     this.running = true;
     this.stopped = false;
     this.generation++;
   }
 
   cycleAt(time) {
-    const rate = this.fit ? this.fit.slope : 0;
-    const ticks = this.anchorTick + rate * (time - this.anchorTime);
+    if (!this.fit) {
+      return this.anchorTick / this.ticksPerCycle + this.nudge * this.cps;
+    }
+    const ticks = this.fit.slope * time + this.fit.intercept;
     return ticks / this.ticksPerCycle + this.nudge * this.cps;
   }
 
   timeAt(cycle) {
-    const rate = this.fit ? this.fit.slope : 0;
-    if (rate === 0) {
+    if (!this.fit || this.fit.slope === 0) {
       return this.anchorTime;
     }
     const ticks = (cycle - this.nudge * this.cps) * this.ticksPerCycle;
-    return this.anchorTime + (ticks - this.anchorTick) / rate;
+    return (ticks - this.fit.intercept) / this.fit.slope;
   }
 
   isRunning(now) {

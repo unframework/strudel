@@ -17,7 +17,14 @@ import {
 import { getAudioContext } from '@strudel/webaudio';
 import { WebMidi, enableWebMidi } from './midi.mjs';
 import { getDevice, getMidiDeviceNamesString } from './util.mjs';
-import { MIDI_CONTINUE, MIDI_SONG_POSITION, MIDI_START, MIDI_STOP, MidiClockFollower } from './clockfollower.mjs';
+import {
+  MIDI_CLOCK,
+  MIDI_CONTINUE,
+  MIDI_SONG_POSITION,
+  MIDI_START,
+  MIDI_STOP,
+  MidiClockFollower,
+} from './clockfollower.mjs';
 
 const connections = {};
 
@@ -37,8 +44,9 @@ function detach(input) {
  *
  * Pass a device name/index to start following, or `false` to disconnect and return to the
  * internal clock. Tempo is derived from the incoming 24-ppqn clock, external Start snaps the
- * playhead to the downbeat, and external Start/Stop drive the play button. The first playback
- * still needs one user gesture to unlock the browser's audio engine.
+ * playhead to the downbeat, and external Start/Stop drive the play button. A clock already in
+ * progress is followed immediately at an arbitrary phase, realigned by the next Start. The first
+ * playback still needs one user gesture to unlock the browser's audio engine.
  *
  * Only works with the single-instance scheduler (turn off "Sync across Browser Tabs").
  *
@@ -68,6 +76,7 @@ export async function midiclock(input, options = {}) {
   conn.listener = (e) => {
     const bytes = e.message.data;
     const time = collator.calculateTimestamp(getPerformanceTimeSeconds(), e.timestamp / 1000);
+    const wasRunning = follower.running;
     follower.feed(bytes, time);
     switch (bytes[0]) {
       case MIDI_START:
@@ -80,6 +89,12 @@ export async function midiclock(input, options = {}) {
         break;
       case MIDI_STOP:
         pauseScheduler();
+        break;
+      case MIDI_CLOCK:
+        if (!wasRunning && follower.running) {
+          startScheduler();
+          wakeScheduler();
+        }
         break;
     }
   };
