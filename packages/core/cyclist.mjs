@@ -37,6 +37,7 @@ export class Cyclist {
     this.clockSource = null;
     this.clockGeneration = undefined;
     this.clockInCharge = false;
+    this.clockStarted = false;
     this.warnedExternalCps = false;
     this.clock = createClock(
       getTime,
@@ -117,12 +118,16 @@ export class Cyclist {
         this.num_ticks_since_cps_change = 0;
         this.num_cycles_at_cps_change = this.lastEnd;
       }
+      if (!this.clockStarted) {
+        return; // armed, waiting for the external transport to start — stay silent
+      }
       this.internalTick(phase, duration, t);
       return;
     }
 
     try {
       this.clockInCharge = true;
+      this.clockStarted = true;
       this.cps = source.cps;
 
       if (source.generation !== this.clockGeneration) {
@@ -164,6 +169,7 @@ export class Cyclist {
       this.clockSource = source;
       this.clockGeneration = undefined;
       this.clockInCharge = false;
+      this.clockStarted = false;
       this.warnedExternalCps = false;
       logger('[cyclist] following external clock');
       this.wake();
