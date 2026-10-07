@@ -6,6 +6,7 @@ This program is free software: you can redistribute it and/or modify it under th
 
 import createClock from './zyklus.mjs';
 import { errorLogger, logger } from './logger.mjs';
+import { anchorCycle, catchUpTime } from './clocksource.mjs';
 
 export class Cyclist {
   constructor({
@@ -30,54 +31,21 @@ export class Cyclist {
     this.num_cycles_at_cps_change = 0;
     this.seconds_at_cps_change; // clock phase when cps was changed
     this.onToggle = onToggle;
+    this.onTrigger = onTrigger;
+    this.onError = onError;
     this.latency = latency; // fixed trigger time offset
+    this.clockSource = null;
+    this.clockGeneration = undefined;
+    this.clockInCharge = false;
+    this.warnedExternalCps = false;
     this.clock = createClock(
       getTime,
       // called slightly before each cycle
       (phase, duration, _, t) => {
-        if (this.num_ticks_since_cps_change === 0) {
-          this.num_cycles_at_cps_change = this.lastEnd;
-          this.seconds_at_cps_change = phase;
-        }
-        this.num_ticks_since_cps_change++;
-        const seconds_since_cps_change = this.num_ticks_since_cps_change * duration;
-        const num_cycles_since_cps_change = seconds_since_cps_change * this.cps;
-
-        try {
-          const begin = this.lastEnd;
-          this.lastBegin = begin;
-          const end = this.num_cycles_at_cps_change + num_cycles_since_cps_change;
-          this.lastEnd = end;
-          this.lastTick = phase;
-
-          if (phase < t) {
-            // avoid querying haps that are in the past anyway
-            console.log(`skip query: too late`);
-            return;
-          }
-
-          // query the pattern for events
-          const haps = this.pattern.queryArc(begin, end, { _cps: this.cps, cyclist: 'cyclist' });
-
-          haps.forEach((hap) => {
-            if (hap.hasOnset()) {
-              const targetTime =
-                (hap.whole.begin - this.num_cycles_at_cps_change) / this.cps + this.seconds_at_cps_change + latency;
-              const duration = hap.duration / this.cps;
-              // the following line is dumb and only here for backwards compatibility
-              // see https://codeberg.org/uzu/strudel/pulls/1004
-              const deadline = targetTime - phase;
-              // this onTrigger has another signature
-              onTrigger?.(hap, deadline, duration, this.cps, targetTime);
-              if (hap.value.cps !== undefined && this.cps != hap.value.cps) {
-                this.cps = hap.value.cps;
-                this.num_ticks_since_cps_change = 0;
-              }
-            }
-          });
-        } catch (e) {
-          errorLogger(e);
-          onError?.(e);
+        if (this.clockSource) {
+          this.externalTick(phase, duration, t);
+        } else {
+          this.internalTick(phase, duration, t);
         }
       },
       interval, // duration of each cycle
@@ -87,9 +55,142 @@ export class Cyclist {
       clearInterval,
     );
   }
+  internalTick(phase, duration, t) {
+    if (this.num_ticks_since_cps_change === 0) {
+      this.num_cycles_at_cps_change = this.lastEnd;
+      this.seconds_at_cps_change = phase;
+    }
+    this.num_ticks_since_cps_change++;
+    const seconds_since_cps_change = this.num_ticks_since_cps_change * duration;
+    const num_cycles_since_cps_change = seconds_since_cps_change * this.cps;
+
+    try {
+      const begin = this.lastEnd;
+      this.lastBegin = begin;
+      const end = this.num_cycles_at_cps_change + num_cycles_since_cps_change;
+      this.lastEnd = end;
+      this.lastTick = phase;
+
+      if (phase < t) {
+        // avoid querying haps that are in the past anyway
+        console.log(`skip query: too late`);
+        return;
+      }
+
+      // query the pattern for events
+      const haps = this.pattern.queryArc(begin, end, { _cps: this.cps, cyclist: 'cyclist' });
+
+      haps.forEach((hap) => {
+        if (hap.hasOnset()) {
+          const targetTime =
+            (hap.whole.begin - this.num_cycles_at_cps_change) / this.cps + this.seconds_at_cps_change + this.latency;
+          const duration = hap.duration / this.cps;
+          // the following line is dumb and only here for backwards compatibility
+          // see https://codeberg.org/uzu/strudel/pulls/1004
+          const deadline = targetTime - phase;
+          // this onTrigger has another signature
+          this.onTrigger?.(hap, deadline, duration, this.cps, targetTime);
+          if (hap.value.cps !== undefined && this.cps != hap.value.cps) {
+            this.cps = hap.value.cps;
+            this.num_ticks_since_cps_change = 0;
+          }
+        }
+      });
+    } catch (e) {
+      errorLogger(e);
+      this.onError?.(e);
+    }
+  }
+  externalTick(phase, duration, t) {
+    const source = this.clockSource;
+    const now = this.getTime();
+
+    if (!source.isRunning(now)) {
+      if (source.isStopped?.()) {
+        this.clockInCharge = false; // held: don't query or advance
+        return;
+      }
+      if (this.clockInCharge) {
+        logger('[cyclist] external clock lost, back on internal clock', 'warning');
+        this.clockInCharge = false;
+        this.clockGeneration = undefined;
+        this.num_ticks_since_cps_change = 0;
+        this.num_cycles_at_cps_change = this.lastEnd;
+      }
+      this.internalTick(phase, duration, t);
+      return;
+    }
+
+    try {
+      this.clockInCharge = true;
+      this.cps = source.cps;
+
+      if (source.generation !== this.clockGeneration) {
+        this.clockGeneration = source.generation;
+        this.lastEnd = anchorCycle(source, now);
+      }
+
+      const begin = this.lastEnd;
+      const end = Math.max(begin, source.cycleAt(phase + duration));
+      this.lastBegin = begin;
+      this.lastEnd = end;
+      this.lastTick = phase;
+
+      const haps = this.pattern.queryArc(begin, end, { _cps: source.cps, cyclist: 'cyclist' });
+
+      haps.forEach((hap) => {
+        if (!hap.hasOnset()) {
+          return;
+        }
+        const targetTime = source.timeAt(hap.whole.begin) + this.latency;
+        const when = catchUpTime(hap, targetTime, this.getTime(), source.jumpCycle, this.clock.minLatency);
+        if (when === undefined) {
+          return;
+        }
+        const hapDuration = hap.duration / source.cps;
+        this.onTrigger?.(hap, when - phase, hapDuration, source.cps, when);
+      });
+    } catch (e) {
+      errorLogger(e);
+      this.onError?.(e);
+    }
+  }
+  setClockSource(source) {
+    source = source ?? null;
+    if (source === this.clockSource) {
+      return;
+    }
+    if (source) {
+      this.clockSource = source;
+      this.clockGeneration = undefined;
+      this.clockInCharge = false;
+      this.warnedExternalCps = false;
+      logger('[cyclist] following external clock');
+      this.wake();
+      return;
+    }
+    const lastCps = this.clockSource?.cps;
+    this.clockSource = null;
+    this.clockInCharge = false;
+    if (Number.isFinite(lastCps) && lastCps > 0) {
+      this.cps = lastCps;
+    }
+    this.num_ticks_since_cps_change = 0;
+    this.num_cycles_at_cps_change = this.lastEnd;
+    logger('[cyclist] back to internal clock');
+  }
+  wake() {
+    if (!this.started || !this.clockSource) {
+      return;
+    }
+    this.clock.tick?.();
+  }
   now() {
     if (!this.started) {
       return 0;
+    }
+    if (this.clockInCharge && this.clockSource) {
+      return this.clockSource.cycleAt(this.getTime());
     }
     const secondsSinceLastTick = this.getTime() - this.lastTick - this.clock.duration;
     return this.lastBegin + secondsSinceLastTick * this.cps; // + this.clock.minLatency;
@@ -102,6 +203,8 @@ export class Cyclist {
     await this.beforeStart?.();
     this.num_ticks_since_cps_change = 0;
     this.num_cycles_at_cps_change = 0;
+    this.clockGeneration = undefined;
+    this.clockInCharge = false;
     if (!this.pattern) {
       throw new Error('Scheduler: no pattern set! call .setPattern first.');
     }
@@ -118,6 +221,7 @@ export class Cyclist {
     logger('[cyclist] stop');
     this.clock.stop();
     this.lastEnd = 0;
+    this.clockInCharge = false;
     this.setStarted(false);
   }
   async setPattern(pat, autostart = false) {
@@ -127,6 +231,13 @@ export class Cyclist {
     }
   }
   setCps(cps = 0.5) {
+    if (this.clockInCharge) {
+      if (!this.warnedExternalCps) {
+        logger('[cyclist] setcps ignored while following external clock', 'warning');
+        this.warnedExternalCps = true;
+      }
+      return;
+    }
     if (this.cps === cps) {
       return;
     }
