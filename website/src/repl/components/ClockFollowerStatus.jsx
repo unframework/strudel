@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { getTime } from '@strudel/core';
+import { useEffect, useRef } from 'react';
+import { getAudioContext } from '@strudel/webaudio';
 import { useSettings } from '../../settings.mjs';
 
 const ACCENT = '#3b82f6';
@@ -10,71 +10,99 @@ function readFollower(editorRef) {
   if (!follower) {
     return null;
   }
-  let cycle = 0;
-  let running = false;
-  try {
-    const now = getTime();
-    cycle = follower.cycleAt(now);
-    running = follower.isRunning(now);
-  } catch (_) {}
-  return { deviceName: follower.deviceName ?? null, bpm: follower.bpm ?? 0, cycle, running };
+  const now = getAudioContext().currentTime;
+  return {
+    deviceName: follower.deviceName ?? null,
+    bpm: follower.bpm ?? 0,
+    cycle: follower.cycleAt(now),
+    running: follower.isRunning(now),
+  };
 }
 
 export function ClockFollowerStatus({ context }) {
   const { editorRef } = context;
   const { isCSSAnimationDisabled } = useSettings();
-  const [status, setStatus] = useState(null);
-  const [flash, setFlash] = useState(0);
+  const rootRef = useRef(null);
+  const labelRef = useRef(null);
 
   useEffect(() => {
-    const id = setInterval(() => {
-      const s = readFollower(editorRef);
-      setStatus(s && { deviceName: s.deviceName, bpm: s.bpm, running: s.running });
-    }, 500);
-    return () => clearInterval(id);
-  }, [editorRef]);
+    let lastLabel;
+    let lastOpacity;
+    let lastCursor;
+    let raf = 0;
 
-  useEffect(() => {
-    if (!status?.running || isCSSAnimationDisabled) {
-      setFlash(0);
-      return;
-    }
-    let raf;
-    let running = true;
-    function tick() {
-      if (!running) return;
+    const paintBlink = () => {
+      const root = rootRef.current;
+      if (!root) return;
       const s = readFollower(editorRef);
-      if (s) {
+      let color = '';
+      if (s?.running) {
         const phase = s.cycle - Math.floor(s.cycle);
-        setFlash(phase < FLASH_WINDOW ? 1 - phase / FLASH_WINDOW : 0);
+        const flash = phase < FLASH_WINDOW ? 1 - phase / FLASH_WINDOW : 0;
+        if (flash > 0) {
+          color = `color-mix(in srgb, currentColor, ${ACCENT} ${Math.round(flash * 70)}%)`;
+        }
       }
-      raf = requestAnimationFrame(tick);
-    }
-    raf = requestAnimationFrame(tick);
-    return () => {
-      running = false;
-      cancelAnimationFrame(raf);
+      root.style.color = color;
+      raf = requestAnimationFrame(paintBlink);
     };
-  }, [status?.running, isCSSAnimationDisabled, editorRef]);
 
-  if (!status) {
-    return (
-      <span className="shrink-0 whitespace-nowrap text-sm font-medium opacity-40" title="no MIDI clock connected">
-        ⧗ no clock
-      </span>
-    );
-  }
+    const poll = setInterval(() => {
+      const root = rootRef.current;
+      const labelEl = labelRef.current;
+      if (!root || !labelEl) return;
+      const s = readFollower(editorRef);
+      const connected = !!s;
+      const label = connected
+        ? `⧗ ${s.deviceName ?? 'waiting…'} · ${s.bpm ? `${Math.round(s.bpm)} BPM` : '—'}`
+        : '⧗ no clock';
+      if (label !== lastLabel) {
+        labelEl.textContent = label;
+        lastLabel = label;
+      }
+      const opacity = connected ? (s.running ? 1 : 0.6) : 0.4;
+      if (opacity !== lastOpacity) {
+        root.style.opacity = opacity;
+        lastOpacity = opacity;
+      }
+      const cursor = s?.running ? 'pointer' : '';
+      if (cursor !== lastCursor) {
+        root.style.cursor = cursor;
+        lastCursor = cursor;
+      }
+      const shouldBlink = connected && s.running && !isCSSAnimationDisabled;
+      if (shouldBlink && !raf) {
+        raf = requestAnimationFrame(paintBlink);
+      } else if (!shouldBlink && raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+        root.style.color = '';
+      }
+    }, 200);
 
-  const tempo = status.bpm ? `${status.bpm.toFixed(1)} BPM` : '—';
+    return () => {
+      clearInterval(poll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [editorRef, isCSSAnimationDisabled]);
+
+  const handleRecue = () => {
+    const scheduler = editorRef?.current?.repl?.scheduler;
+    const follower = scheduler?.clockSource;
+    if (!follower?.recue) return;
+    follower.recue(getAudioContext().currentTime);
+    scheduler.wake?.();
+  };
+
   return (
     <span
-      className="shrink-0 whitespace-nowrap text-sm font-medium"
-      style={{
-        color: flash > 0 ? `color-mix(in srgb, currentColor, ${ACCENT} ${Math.round(flash * 70)}%)` : undefined,
-        opacity: status.running ? 1 : 0.6,
-      }}
+      ref={rootRef}
+      onClick={handleRecue}
+      className="shrink-0 whitespace-nowrap px-2 text-sm font-medium text-foreground"
+      style={{ opacity: 0.4 }}
+      title="MIDI clock follower — click to re-cue the downbeat to now"
     >
-      ⧗ {status.deviceName ?? 'waiting…'} · {tempo}
+      <span ref={labelRef}>⧗ no clock</span>
     </span>
   );
 }

@@ -151,6 +151,28 @@ describe('MidiClockFollower', () => {
     expect(follower.tickCount).toBe(ticks);
   });
 
+  it('re-cues the downbeat to the current moment while keeping tempo', () => {
+    const follower = new MidiClockFollower();
+    feed120(follower);
+    follower.feed([MIDI_START], 0.5);
+    for (let i = 1; i <= 12; i++) {
+      follower.feed([MIDI_CLOCK], 0.5 + i / 48);
+    }
+    const now = 0.5 + 12 / 48;
+    const before = follower.cycleAt(now);
+    expect(before - Math.round(before)).not.toBeCloseTo(0, 2); // mid-cycle, off the downbeat
+
+    const bpm = follower.bpm;
+    const gen = follower.generation;
+    follower.recue(now);
+
+    expect(follower.generation).toBe(gen + 1);
+    expect(follower.bpm).toBeCloseTo(bpm, 6);
+    const after = follower.cycleAt(now);
+    expect(after - Math.round(after)).toBeCloseTo(0, 9); // now sits exactly on a downbeat
+    expect(follower.jumpCycle).toBe(Math.round(after));
+  });
+
   it('clears the fit when beatsPerCycle changes', () => {
     const follower = new MidiClockFollower();
     feed120(follower);

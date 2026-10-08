@@ -142,6 +142,18 @@ export class MidiClockFollower {
     return this.fit ? (this.fit.slope * 60) / PPQN : 0;
   }
 
+  // realign the cycle grid so `now` lands on a downbeat, keeping the tracked tempo
+  recue(now) {
+    if (!this.fit || !this.cps) {
+      return;
+    }
+    const current = this.cycleAt(now);
+    const target = Math.round(current);
+    this.nudge += (target - current) / this.cps;
+    this.jumpCycle = target;
+    this.generation++;
+  }
+
   isRunning(now) {
     return this.running && !this.stopped && now - this.lastClockTime < this.stallSeconds;
   }
