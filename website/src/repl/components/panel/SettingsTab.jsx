@@ -39,12 +39,12 @@ function Checkbox({ label, value, onChange, disabled = false }) {
 }
 
 //      value: ?ID, options: Map<ID, any>, onChange: ID => null, onClick: event => void, isDisabled: boolean
-export function SelectInputDuplicate({ value, options, onChange, onClick, isDisabled }) {
+export function SelectInputDuplicate({ value, options, onChange, onClick, isDisabled, className }) {
   return (
     <select
       disabled={isDisabled}
       onClick={onClick}
-      className={cx('p-2', inputClass)}
+      className={cx('p-2', inputClass, className)}
       value={value ?? ''}
       onChange={(e) => onChange(e.target.value)}
     >

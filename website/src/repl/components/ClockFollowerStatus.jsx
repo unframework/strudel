@@ -19,8 +19,10 @@ function formatBpm(bpm) {
 }
 
 function buildLabel(s) {
-  const name = s ? (s.deviceName ?? 'waiting…') : 'no clock';
-  return `${name} ♩ ${formatBpm(s ? s.bpm : 0)}`;
+  if (s && !s.deviceName) {
+    return 'waiting…';
+  }
+  return `♩ ${formatBpm(s ? s.bpm : 0)}`;
 }
 
 function readFollower(editorRef) {

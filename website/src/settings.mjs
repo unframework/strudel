@@ -69,6 +69,7 @@ export const defaultSettings = {
   multiChannelOrbits: false,
   includePrebakeScriptInShare: true,
   settingsTab: 'settings',
+  midiClockInput: '',
 };
 
 let search = null;
