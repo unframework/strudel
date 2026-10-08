@@ -10,7 +10,6 @@ import {
   logger,
   pauseScheduler,
   setClockSource,
-  silence,
   startScheduler,
   wakeScheduler,
 } from '@strudel/core';
@@ -39,36 +38,13 @@ function detach(input) {
   delete connections[input];
 }
 
-/**
- * Follow an external MIDI clock as Strudel's transport, syncing tempo and start/stop.
- *
- * Pass a device name/index to start following, or `false` to disconnect and return to the
- * internal clock. Tempo is derived from the incoming 24-ppqn clock, external Start snaps the
- * playhead to the downbeat, and external Start/Stop drive the play button. A clock already in
- * progress is followed immediately at an arbitrary phase, realigned by the next Start. The first
- * playback still needs one user gesture to unlock the browser's audio engine.
- *
- * Re-evaluating with the same device keeps the running follower, so tempo and position survive.
- * Stopping and restarting the transport re-zeroes the cycle count while dropping in at the clock's
- * current phase.
- *
- * Only works with the single-instance scheduler (turn off "Sync across Browser Tabs").
- *
- * @name midiclock
- * @tags external_io, midi
- * @param {string | number | false} input MIDI device name or index, or false to disconnect
- * @param {object} [options] beatsPerCycle (default 4), window, stallSeconds, nudge, catchup
- * @example
- * await midiclock('IAC Driver Bus 1')
- * $: s("bd*4,[~ cp]*2").bank("tr909")
- */
-export async function midiclock(input, options = {}) {
-  if (input === false) {
-    Object.keys(connections).forEach(detach);
-    setClockSource(null);
-    return silence;
-  }
+export function stopMidiClock() {
+  Object.keys(connections).forEach(detach);
+  setClockSource(null);
+}
 
+// Only works with the single-instance scheduler (turn off "Sync across Browser Tabs").
+export async function followMidiClock(input, options = {}) {
   await enableWebMidi();
 
   const existing = connections[input];
@@ -141,5 +117,4 @@ export async function midiclock(input, options = {}) {
   }
 
   setClockSource(follower);
-  return silence;
 }

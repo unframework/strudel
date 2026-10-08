@@ -71,6 +71,11 @@ export function enableWebMidi(options = {}) {
   });
 }
 
+export async function getMidiInputNames() {
+  await enableWebMidi();
+  return WebMidi.inputs.map((input) => input.name);
+}
+
 // send start/stop messages to outputs when repl starts/stops
 if (typeof window !== 'undefined') {
   window.addEventListener('message', (e) => {
