@@ -2,8 +2,26 @@ import { useEffect, useRef } from 'react';
 import { getAudioContext } from '@strudel/webaudio';
 import { useSettings } from '../../settings.mjs';
 
-const ACCENT = '#3b82f6';
-const FLASH_WINDOW = 0.15;
+const PPQN = 24;
+const BEAT_OPACITY = 1;
+const BEAT_FADE_OPACITY = 0.7;
+const HELD_OPACITY = 0.5;
+const IDLE_OPACITY = 0.35;
+const NBSP = '\u00A0';
+
+function formatBpm(bpm) {
+  if (!bpm) {
+    return `---${NBSP}${NBSP}`;
+  }
+  const [intPart, dec] = bpm.toFixed(1).split('.');
+  const frac = dec === '0' ? `${NBSP}${NBSP}` : `.${dec}`;
+  return `${intPart.padStart(3, NBSP)}${frac}`;
+}
+
+function buildLabel(s) {
+  const name = s ? (s.deviceName ?? 'waiting…') : 'no clock';
+  return `${name} ♩ ${formatBpm(s ? s.bpm : 0)}`;
+}
 
 function readFollower(editorRef) {
   const follower = editorRef?.current?.repl?.scheduler?.clockSource;
@@ -11,12 +29,19 @@ function readFollower(editorRef) {
     return null;
   }
   const now = getAudioContext().currentTime;
+  const cycle = follower.cycleAt(now);
+  const beatsPerCycle = follower.ticksPerCycle / PPQN;
   return {
     deviceName: follower.deviceName ?? null,
     bpm: follower.bpm ?? 0,
-    cycle: follower.cycleAt(now),
     running: follower.isRunning(now),
+    beat: Math.floor((cycle - Math.floor(cycle)) * beatsPerCycle),
   };
+}
+
+function staticOpacity(s) {
+  if (!s) return IDLE_OPACITY;
+  return s.running ? BEAT_OPACITY : HELD_OPACITY;
 }
 
 export function ClockFollowerStatus({ context }) {
@@ -27,24 +52,23 @@ export function ClockFollowerStatus({ context }) {
 
   useEffect(() => {
     let lastLabel;
-    let lastOpacity;
     let lastCursor;
+    let lastFaded;
+    let lastStatic;
     let raf = 0;
 
-    const paintBlink = () => {
+    const paintBeat = () => {
       const root = rootRef.current;
       if (!root) return;
       const s = readFollower(editorRef);
-      let color = '';
       if (s?.running) {
-        const phase = s.cycle - Math.floor(s.cycle);
-        const flash = phase < FLASH_WINDOW ? 1 - phase / FLASH_WINDOW : 0;
-        if (flash > 0) {
-          color = `color-mix(in srgb, currentColor, ${ACCENT} ${Math.round(flash * 70)}%)`;
+        const faded = s.beat % 2 === 1;
+        if (faded !== lastFaded) {
+          root.style.opacity = faded ? BEAT_FADE_OPACITY : BEAT_OPACITY;
+          lastFaded = faded;
         }
       }
-      root.style.color = color;
-      raf = requestAnimationFrame(paintBlink);
+      raf = requestAnimationFrame(paintBeat);
     };
 
     const poll = setInterval(() => {
@@ -53,30 +77,36 @@ export function ClockFollowerStatus({ context }) {
       if (!root || !labelEl) return;
       const s = readFollower(editorRef);
       const connected = !!s;
-      const label = connected
-        ? `⧗ ${s.deviceName ?? 'waiting…'} · ${s.bpm ? `${Math.round(s.bpm)} BPM` : '—'}`
-        : '⧗ no clock';
+
+      const label = buildLabel(s);
       if (label !== lastLabel) {
         labelEl.textContent = label;
         lastLabel = label;
       }
-      const opacity = connected ? (s.running ? 1 : 0.6) : 0.4;
-      if (opacity !== lastOpacity) {
-        root.style.opacity = opacity;
-        lastOpacity = opacity;
-      }
+
       const cursor = s?.running ? 'pointer' : '';
       if (cursor !== lastCursor) {
         root.style.cursor = cursor;
         lastCursor = cursor;
       }
+
       const shouldBlink = connected && s.running && !isCSSAnimationDisabled;
       if (shouldBlink && !raf) {
-        raf = requestAnimationFrame(paintBlink);
+        lastFaded = undefined;
+        lastStatic = undefined;
+        raf = requestAnimationFrame(paintBeat);
       } else if (!shouldBlink && raf) {
         cancelAnimationFrame(raf);
         raf = 0;
-        root.style.color = '';
+        lastStatic = undefined;
+      }
+
+      if (!raf) {
+        const opacity = staticOpacity(s);
+        if (opacity !== lastStatic) {
+          root.style.opacity = opacity;
+          lastStatic = opacity;
+        }
       }
     }, 200);
 
@@ -99,10 +129,10 @@ export function ClockFollowerStatus({ context }) {
       ref={rootRef}
       onClick={handleRecue}
       className="shrink-0 whitespace-nowrap px-2 text-sm font-medium text-foreground"
-      style={{ opacity: 0.4 }}
+      style={{ opacity: IDLE_OPACITY }}
       title="MIDI clock follower — click to re-cue the downbeat to now"
     >
-      <span ref={labelRef}>⧗ no clock</span>
+      <span ref={labelRef}>{buildLabel(null)}</span>
     </span>
   );
 }
