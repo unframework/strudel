@@ -1,17 +1,16 @@
 <svg width="250" height="256" xmlns="http://www.w3.org/2000/svg">
  <defs>
   <linearGradient x1="0.14647" y1="0.14645" x2="0.85355" y2="0.85354" spreadMethod="pad" id="linearGradient56">
-   <stop stop-color="#564421" offset="0" id="stop50"/>
-   <stop stop-color="#c2a15e" offset="0.5" id="stop52"/>
-   <stop stop-color="#ae8a42" offset="1" id="stop54"/>
+   <stop stop-color="#5c3a00" offset="0" id="stop50"/>
+   <stop stop-color="#a9741c" offset="1" id="stop54"/>
   </linearGradient>
   <linearGradient x1="-0.00001" y1="0.5" x2="1.00001" y2="0.5" spreadMethod="pad" id="linearGradient100">
-   <stop stop-color="#564421" offset="0" id="stop96"/>
-   <stop stop-color="#c2a15e" offset="1" id="stop98"/>
+   <stop stop-color="#5c3a00" offset="0" id="stop96"/>
+   <stop stop-color="#a9741c" offset="1" id="stop98"/>
   </linearGradient>
   <linearGradient x1="0.00005" y1="0.50018" x2="1.00013" y2="0.50018" spreadMethod="pad" id="linearGradient164">
-   <stop stop-color="#c2a15e" offset="0" id="stop160"/>
-   <stop stop-color="#ae8a42" offset="1" id="stop162"/>
+   <stop stop-color="#a9741c" offset="0" id="stop160"/>
+   <stop stop-color="#5c3a00" offset="1" id="stop162"/>
   </linearGradient>
  </defs>
  <g>
