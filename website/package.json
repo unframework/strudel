@@ -32,6 +32,7 @@
     "@strudel/core": "workspace:*",
     "@strudel/csound": "workspace:*",
     "@strudel/desktopbridge": "workspace:*",
+    "@strudel/dirt-patches": "workspace:*",
     "@strudel/draw": "workspace:*",
     "@strudel/edo": "workspace:*",
     "@strudel/gamepad": "workspace:*",
