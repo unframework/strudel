@@ -86,6 +86,7 @@ export function loadModules() {
     import('@strudel/mqtt'),
     import('@strudel/mondo'),
     import('@strudel/linectrl'),
+    import('@strudel/dirt-patches'),
   ];
   if (isTauri()) {
     modules = modules.concat([
