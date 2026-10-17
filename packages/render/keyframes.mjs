@@ -1,7 +1,7 @@
 import { EditorView, Decoration } from '@codemirror/view';
 import { EditorState, StateEffect, StateField } from '@codemirror/state';
 import { javascript } from '@codemirror/lang-javascript';
-import theme from '@strudel/codemirror/themes/blackscreen.mjs';
+import theme from '@strudel/codemirror/themes/noctisLilac.mjs';
 
 // StateEffect to set highlight decorations
 const setHighlights = StateEffect.define();
@@ -48,20 +48,20 @@ function highlightStyle(intensity, seed, age) {
   const alpha = intensity * pop;
   const rnd = seededRandom(seed);
 
-  const scale = 1 + (0.1 + 0.1 * rnd) * alpha;
-  const offsetX = (rnd - 0.5) * 1.5 * alpha;
+  const offsetY = -0.2 * alpha;
 
   // As the hap fades out (intensity 1 → 0), stretch vertically.
   const fadeOut = Math.max(0, 1 - intensity);
-  const scaleY = scale * (1 + fadeOut * fadeOut * 4);
+  const rotate = (rnd - 0.5) * fadeOut * 0.1;
+  const scale = 1 + fadeOut * 0.6;
 
-  const a = Math.min(1, alpha).toFixed(2);
+  const a = Math.min(1, alpha * (1 - fadeOut)).toFixed(2);
 
   return [
-    `background-color: rgba(230,180,255,${a})`,
-    `color: rgba(0,0,0,${a})`,
+    `background-color: rgba(17,0,5,${a})`,
+    `color: rgba(242,241,248,${a})`,
     `display: inline-block`,
-    `transform: scale(${scale.toFixed(3)},${scaleY.toFixed(3)}) translateX(${offsetX.toFixed(1)}px)`,
+    `transform: rotate(${rotate.toFixed(3)}rad) scale(${scale.toFixed(3)}) translateY(${offsetY.toFixed(1)}px)`,
     `transform-origin: center`,
     `border-radius: 0.5px`,
   ].join('; ');
@@ -76,7 +76,7 @@ window.applyHighlights = function (locations) {
     .filter(({ start, end }) => start < docLength && end <= docLength && start < end)
     .map(({ start, end, intensity, age, id }) => {
       const style = highlightStyle(intensity ?? 1, id, age ?? 0);
-      return Decoration.mark({ attributes: { style } }).range(start, end);
+      return Decoration.mark({ class: 'kf-hl', attributes: { style } }).range(start, end);
     });
 
   const decorations = Decoration.set(marks, true);

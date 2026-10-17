@@ -5,7 +5,7 @@ Render a Strudel sketch to a seamless-loop WAV + video.
 2. Renders video keyframes from the hap timeline
 3. Stitches into final video with ffmpeg
 
-Usage: python loop.py -i sketch.js --cycles 8 [--margin 1] [--fade 0.25] [-o output]
+Usage: python loop.py -i sketch.js --cycles 8 [--margin 1] [--fade 0.25] [--even-loudness] [-o output]
 
 Requires: node, ffmpeg
 """
@@ -44,6 +44,7 @@ def main():
     parser.add_argument("--width", type=int, default=720, help="Video width (default: 720)")
     parser.add_argument("--height", type=int, default=1280, help="Max video height (default: 1280)")
     parser.add_argument("--no-video", action="store_true", help="Skip video rendering, audio only")
+    parser.add_argument("--even-loudness", action="store_true", help="Even out slow loudness swings, then limit at -1 dB")
     args = parser.parse_args()
 
     input_path = args.input
@@ -87,13 +88,20 @@ def main():
         lead_start = ms - fade
         delay_ms = (bs - fade) * 1000
 
-        # dB to fraction = 10 ^ (-1/20) = 0.8913
+        # -1 dB as linear amplitude: 10 ^ (-1/20)
+        ceiling = 0.8913
+        if args.even_loudness:
+            # 500ms frames, 31-frame (~15s) gain smoothing, max +12 dB
+            master = f"dynaudnorm=f=500:g=31:p={ceiling}:m=4,alimiter=limit={ceiling}:level=0"
+        else:
+            master = f"acompressor=threshold={ceiling}:ratio=8:attack=200:release=1000"
+
         filter_complex = (
             f"[0]atrim={ms},asetpts=PTS-STARTPTS,afade=t=out:st={overlay_at}:d={fade}[body];"
             f"[0]atrim={lead_start}:{ms},asetpts=PTS-STARTPTS,afade=t=in:d={fade}[lead];"
             f"[lead]adelay={delay_ms}|{delay_ms}[lead_delayed];"
             f"[body][lead_delayed]amix=inputs=2:duration=first:normalize=0,"
-            f"acompressor=threshold=0.8913:ratio=8:attack=200:release=1000"
+            f"{master}"
         )
 
         run([

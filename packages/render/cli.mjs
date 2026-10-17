@@ -17,6 +17,7 @@ const { values: args } = parseArgs({
     cycles: { type: 'string', default: '4' },
     'sample-rate': { type: 'string', default: '44100' },
     output: { type: 'string', short: 'o', default: 'output.wav' },
+    timeout: { type: 'string', default: '600' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -30,6 +31,7 @@ Options:
   --cycles <n>              End cycle (default: 4)
   --sample-rate <n>         Sample rate in Hz (default: 44100)
   -o, --output <path>       Output WAV file path (default: output.wav)
+  --timeout <seconds>       Max audio render time (default: 600)
   -h, --help                Show this help
 `);
   process.exit(0);
@@ -45,6 +47,7 @@ const begin = parseFloat(args.begin);
 const cycles = parseFloat(args.cycles);
 const sampleRate = parseInt(args['sample-rate']);
 const outputPath = args.output;
+const renderTimeout = parseFloat(args.timeout) * 1000;
 
 async function render() {
   // Create temp directory for the WAV download
@@ -64,6 +67,8 @@ async function render() {
   const browser = await puppeteer.launch({
     headless: true,
     args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'],
+    // The render runs inside a single page.evaluate call, so let it outlast our own timeout
+    protocolTimeout: renderTimeout + 60000,
   });
 
   try {
@@ -96,7 +101,6 @@ async function render() {
 
     console.log(`Rendering cycles ${begin}..${cycles} (${sampleRate}Hz)...`);
 
-    const renderTimeout = 180000;
     let timeoutId;
     const timeoutPromise = new Promise((_, reject) => {
       timeoutId = setTimeout(() => reject(new Error(`Render timed out after ${renderTimeout / 1000}s`)), renderTimeout);
