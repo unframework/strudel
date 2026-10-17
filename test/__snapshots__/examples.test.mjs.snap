@@ -2703,6 +2703,155 @@ exports[`runs examples > example "cpm" example index 0 1`] = `
 ]
 `;
 
+exports[`runs examples > example "cr" example index 0 1`] = `
+[
+  "[ 0/1 → 1/4 | note:c4 s:white decay:0.01 sustain:0 cr:1 crmodel:beam crdecay:1.5 ]",
+  "[ 1/4 → 1/2 | note:e4 s:white decay:0.01 sustain:0 cr:1 crmodel:beam crdecay:1.5 ]",
+  "[ 1/2 → 3/4 | note:g4 s:white decay:0.01 sustain:0 cr:1 crmodel:beam crdecay:1.5 ]",
+  "[ 3/4 → 1/1 | note:b4 s:white decay:0.01 sustain:0 cr:1 crmodel:beam crdecay:1.5 ]",
+  "[ 1/1 → 5/4 | note:c4 s:white decay:0.01 sustain:0 cr:1 crmodel:beam crdecay:1.5 ]",
+  "[ 5/4 → 3/2 | note:e4 s:white decay:0.01 sustain:0 cr:1 crmodel:beam crdecay:1.5 ]",
+  "[ 3/2 → 7/4 | note:g4 s:white decay:0.01 sustain:0 cr:1 crmodel:beam crdecay:1.5 ]",
+  "[ 7/4 → 2/1 | note:b4 s:white decay:0.01 sustain:0 cr:1 crmodel:beam crdecay:1.5 ]",
+  "[ 2/1 → 9/4 | note:c4 s:white decay:0.01 sustain:0 cr:1 crmodel:beam crdecay:1.5 ]",
+  "[ 9/4 → 5/2 | note:e4 s:white decay:0.01 sustain:0 cr:1 crmodel:beam crdecay:1.5 ]",
+  "[ 5/2 → 11/4 | note:g4 s:white decay:0.01 sustain:0 cr:1 crmodel:beam crdecay:1.5 ]",
+  "[ 11/4 → 3/1 | note:b4 s:white decay:0.01 sustain:0 cr:1 crmodel:beam crdecay:1.5 ]",
+  "[ 3/1 → 13/4 | note:c4 s:white decay:0.01 sustain:0 cr:1 crmodel:beam crdecay:1.5 ]",
+  "[ 13/4 → 7/2 | note:e4 s:white decay:0.01 sustain:0 cr:1 crmodel:beam crdecay:1.5 ]",
+  "[ 7/2 → 15/4 | note:g4 s:white decay:0.01 sustain:0 cr:1 crmodel:beam crdecay:1.5 ]",
+  "[ 15/4 → 4/1 | note:b4 s:white decay:0.01 sustain:0 cr:1 crmodel:beam crdecay:1.5 ]",
+]
+`;
+
+exports[`runs examples > example "crbright" example index 0 1`] = `
+[
+  "[ 0/1 → 1/2 | note:c4 s:white decay:0.01 sustain:0 cr:1 crbright:0.2 ]",
+  "[ 1/2 → 1/1 | note:g4 s:white decay:0.01 sustain:0 cr:1 crbright:0.2 ]",
+  "[ 1/1 → 3/2 | note:c4 s:white decay:0.01 sustain:0 cr:1 crbright:0.9 ]",
+  "[ 3/2 → 2/1 | note:g4 s:white decay:0.01 sustain:0 cr:1 crbright:0.9 ]",
+  "[ 2/1 → 5/2 | note:c4 s:white decay:0.01 sustain:0 cr:1 crbright:0.2 ]",
+  "[ 5/2 → 3/1 | note:g4 s:white decay:0.01 sustain:0 cr:1 crbright:0.2 ]",
+  "[ 3/1 → 7/2 | note:c4 s:white decay:0.01 sustain:0 cr:1 crbright:0.9 ]",
+  "[ 7/2 → 4/1 | note:g4 s:white decay:0.01 sustain:0 cr:1 crbright:0.9 ]",
+]
+`;
+
+exports[`runs examples > example "crdecay" example index 0 1`] = `
+[
+  "[ 0/1 → 1/2 | note:c4 s:white decay:0.01 sustain:0 cr:1 crdecay:0.5 ]",
+  "[ 1/2 → 1/1 | note:g4 s:white decay:0.01 sustain:0 cr:1 crdecay:0.5 ]",
+  "[ 1/1 → 3/2 | note:c4 s:white decay:0.01 sustain:0 cr:1 crdecay:3 ]",
+  "[ 3/2 → 2/1 | note:g4 s:white decay:0.01 sustain:0 cr:1 crdecay:3 ]",
+  "[ 2/1 → 5/2 | note:c4 s:white decay:0.01 sustain:0 cr:1 crdecay:0.5 ]",
+  "[ 5/2 → 3/1 | note:g4 s:white decay:0.01 sustain:0 cr:1 crdecay:0.5 ]",
+  "[ 3/1 → 7/2 | note:c4 s:white decay:0.01 sustain:0 cr:1 crdecay:3 ]",
+  "[ 7/2 → 4/1 | note:g4 s:white decay:0.01 sustain:0 cr:1 crdecay:3 ]",
+]
+`;
+
+exports[`runs examples > example "crfreq" example index 0 1`] = `
+[
+  "[ 0/1 → 1/4 | s:white decay:0.01 sustain:0 cr:1 crfreq:110 ]",
+  "[ 1/4 → 1/2 | s:white decay:0.01 sustain:0 cr:1 crfreq:110 ]",
+  "[ 1/2 → 3/4 | s:white decay:0.01 sustain:0 cr:1 crfreq:110 ]",
+  "[ 3/4 → 1/1 | s:white decay:0.01 sustain:0 cr:1 crfreq:110 ]",
+  "[ 1/1 → 5/4 | s:white decay:0.01 sustain:0 cr:1 crfreq:165 ]",
+  "[ 5/4 → 3/2 | s:white decay:0.01 sustain:0 cr:1 crfreq:165 ]",
+  "[ 3/2 → 7/4 | s:white decay:0.01 sustain:0 cr:1 crfreq:165 ]",
+  "[ 7/4 → 2/1 | s:white decay:0.01 sustain:0 cr:1 crfreq:165 ]",
+  "[ 2/1 → 9/4 | s:white decay:0.01 sustain:0 cr:1 crfreq:110 ]",
+  "[ 9/4 → 5/2 | s:white decay:0.01 sustain:0 cr:1 crfreq:110 ]",
+  "[ 5/2 → 11/4 | s:white decay:0.01 sustain:0 cr:1 crfreq:110 ]",
+  "[ 11/4 → 3/1 | s:white decay:0.01 sustain:0 cr:1 crfreq:110 ]",
+  "[ 3/1 → 13/4 | s:white decay:0.01 sustain:0 cr:1 crfreq:165 ]",
+  "[ 13/4 → 7/2 | s:white decay:0.01 sustain:0 cr:1 crfreq:165 ]",
+  "[ 7/2 → 15/4 | s:white decay:0.01 sustain:0 cr:1 crfreq:165 ]",
+  "[ 15/4 → 4/1 | s:white decay:0.01 sustain:0 cr:1 crfreq:165 ]",
+]
+`;
+
+exports[`runs examples > example "crgain" example index 0 1`] = `
+[
+  "[ 0/1 → 1/2 | note:c3 s:triangle cr:0.5 crgain:0.3 ]",
+  "[ 1/2 → 1/1 | note:e3 s:triangle cr:0.5 crgain:0.3 ]",
+  "[ 1/1 → 3/2 | note:c3 s:triangle cr:0.5 crgain:0.3 ]",
+  "[ 3/2 → 2/1 | note:e3 s:triangle cr:0.5 crgain:0.3 ]",
+  "[ 2/1 → 5/2 | note:c3 s:triangle cr:0.5 crgain:0.3 ]",
+  "[ 5/2 → 3/1 | note:e3 s:triangle cr:0.5 crgain:0.3 ]",
+  "[ 3/1 → 7/2 | note:c3 s:triangle cr:0.5 crgain:0.3 ]",
+  "[ 7/2 → 4/1 | note:e3 s:triangle cr:0.5 crgain:0.3 ]",
+]
+`;
+
+exports[`runs examples > example "crhit" example index 0 1`] = `
+[
+  "[ 0/1 → 1/4 | note:c4 s:white decay:0.01 sustain:0 cr:1 crhit:0.1 ]",
+  "[ 1/4 → 1/2 | note:c4 s:white decay:0.01 sustain:0 cr:1 crhit:0.3 ]",
+  "[ 1/2 → 3/4 | note:c4 s:white decay:0.01 sustain:0 cr:1 crhit:0.5 ]",
+  "[ 3/4 → 1/1 | note:c4 s:white decay:0.01 sustain:0 cr:1 crhit:0.7 ]",
+  "[ 1/1 → 5/4 | note:c4 s:white decay:0.01 sustain:0 cr:1 crhit:0.1 ]",
+  "[ 5/4 → 3/2 | note:c4 s:white decay:0.01 sustain:0 cr:1 crhit:0.3 ]",
+  "[ 3/2 → 7/4 | note:c4 s:white decay:0.01 sustain:0 cr:1 crhit:0.5 ]",
+  "[ 7/4 → 2/1 | note:c4 s:white decay:0.01 sustain:0 cr:1 crhit:0.7 ]",
+  "[ 2/1 → 9/4 | note:c4 s:white decay:0.01 sustain:0 cr:1 crhit:0.1 ]",
+  "[ 9/4 → 5/2 | note:c4 s:white decay:0.01 sustain:0 cr:1 crhit:0.3 ]",
+  "[ 5/2 → 11/4 | note:c4 s:white decay:0.01 sustain:0 cr:1 crhit:0.5 ]",
+  "[ 11/4 → 3/1 | note:c4 s:white decay:0.01 sustain:0 cr:1 crhit:0.7 ]",
+  "[ 3/1 → 13/4 | note:c4 s:white decay:0.01 sustain:0 cr:1 crhit:0.1 ]",
+  "[ 13/4 → 7/2 | note:c4 s:white decay:0.01 sustain:0 cr:1 crhit:0.3 ]",
+  "[ 7/2 → 15/4 | note:c4 s:white decay:0.01 sustain:0 cr:1 crhit:0.5 ]",
+  "[ 15/4 → 4/1 | note:c4 s:white decay:0.01 sustain:0 cr:1 crhit:0.7 ]",
+]
+`;
+
+exports[`runs examples > example "crinharm" example index 0 1`] = `
+[
+  "[ 0/1 → 1/2 | note:c4 s:white decay:0.01 sustain:0 cr:1 crinharm:0 ]",
+  "[ 1/2 → 1/1 | note:g4 s:white decay:0.01 sustain:0 cr:1 crinharm:0 ]",
+  "[ 1/1 → 3/2 | note:c4 s:white decay:0.01 sustain:0 cr:1 crinharm:0.3 ]",
+  "[ 3/2 → 2/1 | note:g4 s:white decay:0.01 sustain:0 cr:1 crinharm:0.3 ]",
+  "[ 2/1 → 5/2 | note:c4 s:white decay:0.01 sustain:0 cr:1 crinharm:0 ]",
+  "[ 5/2 → 3/1 | note:g4 s:white decay:0.01 sustain:0 cr:1 crinharm:0 ]",
+  "[ 3/1 → 7/2 | note:c4 s:white decay:0.01 sustain:0 cr:1 crinharm:0.3 ]",
+  "[ 7/2 → 4/1 | note:g4 s:white decay:0.01 sustain:0 cr:1 crinharm:0.3 ]",
+]
+`;
+
+exports[`runs examples > example "crmaterial" example index 0 1`] = `
+[
+  "[ 0/1 → 1/2 | note:c4 s:white decay:0.01 sustain:0 cr:1 crmaterial:0.1 ]",
+  "[ 1/2 → 1/1 | note:g4 s:white decay:0.01 sustain:0 cr:1 crmaterial:0.1 ]",
+  "[ 1/1 → 3/2 | note:c4 s:white decay:0.01 sustain:0 cr:1 crmaterial:0.9 ]",
+  "[ 3/2 → 2/1 | note:g4 s:white decay:0.01 sustain:0 cr:1 crmaterial:0.9 ]",
+  "[ 2/1 → 5/2 | note:c4 s:white decay:0.01 sustain:0 cr:1 crmaterial:0.1 ]",
+  "[ 5/2 → 3/1 | note:g4 s:white decay:0.01 sustain:0 cr:1 crmaterial:0.1 ]",
+  "[ 3/1 → 7/2 | note:c4 s:white decay:0.01 sustain:0 cr:1 crmaterial:0.9 ]",
+  "[ 7/2 → 4/1 | note:g4 s:white decay:0.01 sustain:0 cr:1 crmaterial:0.9 ]",
+]
+`;
+
+exports[`runs examples > example "crmodel" example index 0 1`] = `
+[
+  "[ 0/1 → 1/4 | note:c3 s:white decay:0.01 sustain:0 cr:1 crmodel:string ]",
+  "[ 1/4 → 1/2 | note:c3 s:white decay:0.01 sustain:0 cr:1 crmodel:string ]",
+  "[ 1/2 → 3/4 | note:c3 s:white decay:0.01 sustain:0 cr:1 crmodel:string ]",
+  "[ 3/4 → 1/1 | note:c3 s:white decay:0.01 sustain:0 cr:1 crmodel:string ]",
+  "[ 1/1 → 5/4 | note:c3 s:white decay:0.01 sustain:0 cr:1 crmodel:tube ]",
+  "[ 5/4 → 3/2 | note:c3 s:white decay:0.01 sustain:0 cr:1 crmodel:tube ]",
+  "[ 3/2 → 7/4 | note:c3 s:white decay:0.01 sustain:0 cr:1 crmodel:tube ]",
+  "[ 7/4 → 2/1 | note:c3 s:white decay:0.01 sustain:0 cr:1 crmodel:tube ]",
+  "[ 2/1 → 9/4 | note:c3 s:white decay:0.01 sustain:0 cr:1 crmodel:beam ]",
+  "[ 9/4 → 5/2 | note:c3 s:white decay:0.01 sustain:0 cr:1 crmodel:beam ]",
+  "[ 5/2 → 11/4 | note:c3 s:white decay:0.01 sustain:0 cr:1 crmodel:beam ]",
+  "[ 11/4 → 3/1 | note:c3 s:white decay:0.01 sustain:0 cr:1 crmodel:beam ]",
+  "[ 3/1 → 13/4 | note:c3 s:white decay:0.01 sustain:0 cr:1 crmodel:membrane ]",
+  "[ 13/4 → 7/2 | note:c3 s:white decay:0.01 sustain:0 cr:1 crmodel:membrane ]",
+  "[ 7/2 → 15/4 | note:c3 s:white decay:0.01 sustain:0 cr:1 crmodel:membrane ]",
+  "[ 15/4 → 4/1 | note:c3 s:white decay:0.01 sustain:0 cr:1 crmodel:membrane ]",
+]
+`;
+
 exports[`runs examples > example "crush" example index 0 1`] = `
 [
   "[ 0/1 → 1/6 | s:hh crush:16 ]",
@@ -3676,6 +3825,43 @@ exports[`runs examples > example "dry" example index 0 1`] = `
   "[ 15/4 → 31/8 | n:0 s:superpiano room:0.7 dry:1 ]",
   "[ 15/4 → 31/8 | n:3 s:superpiano room:0.7 dry:1 ]",
   "[ 15/4 → 31/8 | n:7 s:superpiano room:0.7 dry:1 ]",
+]
+`;
+
+exports[`runs examples > example "dsaw" example index 0 1`] = `
+[
+  "[ 0/1 → 1/4 | s:dsaw voice:0 freq:58.27 gain:0.5 room:0.4 ]",
+  "[ 0/1 → 1/4 | s:dsaw voice:1 freq:58.85 gain:0.275 pan:0.4 room:0.4 ]",
+  "[ 1/4 → 1/2 | s:dsaw voice:0 freq:58.27 gain:0.5 room:0.4 ]",
+  "[ 1/4 → 1/2 | s:dsaw voice:1 freq:58.85 gain:0.275 pan:0.4 room:0.4 ]",
+  "[ 1/2 → 3/4 | s:dsaw voice:0 freq:58.27 gain:0.5 room:0.4 ]",
+  "[ 1/2 → 3/4 | s:dsaw voice:1 freq:58.85 gain:0.275 pan:0.4 room:0.4 ]",
+  "[ 3/4 → 1/1 | s:dsaw voice:0 freq:58.27 gain:0.5 room:0.4 ]",
+  "[ 3/4 → 1/1 | s:dsaw voice:1 freq:58.85 gain:0.275 pan:0.4 room:0.4 ]",
+  "[ 1/1 → 5/4 | s:dsaw voice:0 freq:58.27 gain:0.5008481548256647 room:0.4 ]",
+  "[ 1/1 → 5/4 | s:dsaw voice:1 freq:58.85 gain:0.2754664851541156 pan:0.40006257515464616 room:0.4 ]",
+  "[ 5/4 → 3/2 | s:dsaw voice:0 freq:58.27 gain:0.5008481548256647 room:0.4 ]",
+  "[ 5/4 → 3/2 | s:dsaw voice:1 freq:58.85 gain:0.2754664851541156 pan:0.40006257515464616 room:0.4 ]",
+  "[ 3/2 → 7/4 | s:dsaw voice:0 freq:58.27 gain:0.5008481548256647 room:0.4 ]",
+  "[ 3/2 → 7/4 | s:dsaw voice:1 freq:58.85 gain:0.2754664851541156 pan:0.40006257515464616 room:0.4 ]",
+  "[ 7/4 → 2/1 | s:dsaw voice:0 freq:58.27 gain:0.5008481548256647 room:0.4 ]",
+  "[ 7/4 → 2/1 | s:dsaw voice:1 freq:58.85 gain:0.2754664851541156 pan:0.40006257515464616 room:0.4 ]",
+  "[ 2/1 → 9/4 | s:dsaw voice:0 freq:58.27 gain:0.5060433446348047 room:0.4 ]",
+  "[ 2/1 → 9/4 | s:dsaw voice:1 freq:58.85 gain:0.27832383954914264 pan:0.4004702127587354 room:0.4 ]",
+  "[ 9/4 → 5/2 | s:dsaw voice:0 freq:58.27 gain:0.5060433446348047 room:0.4 ]",
+  "[ 9/4 → 5/2 | s:dsaw voice:1 freq:58.85 gain:0.27832383954914264 pan:0.4004702127587354 room:0.4 ]",
+  "[ 5/2 → 11/4 | s:dsaw voice:0 freq:58.27 gain:0.5060433446348047 room:0.4 ]",
+  "[ 5/2 → 11/4 | s:dsaw voice:1 freq:58.85 gain:0.27832383954914264 pan:0.4004702127587354 room:0.4 ]",
+  "[ 11/4 → 3/1 | s:dsaw voice:0 freq:58.27 gain:0.5060433446348047 room:0.4 ]",
+  "[ 11/4 → 3/1 | s:dsaw voice:1 freq:58.85 gain:0.27832383954914264 pan:0.4004702127587354 room:0.4 ]",
+  "[ 3/1 → 13/4 | s:dsaw voice:0 freq:58.27 gain:0.5180488892513891 room:0.4 ]",
+  "[ 3/1 → 13/4 | s:dsaw voice:1 freq:58.85 gain:0.2849268890882641 pan:0.401487854378445 room:0.4 ]",
+  "[ 13/4 → 7/2 | s:dsaw voice:0 freq:58.27 gain:0.5180488892513891 room:0.4 ]",
+  "[ 13/4 → 7/2 | s:dsaw voice:1 freq:58.85 gain:0.2849268890882641 pan:0.401487854378445 room:0.4 ]",
+  "[ 7/2 → 15/4 | s:dsaw voice:0 freq:58.27 gain:0.5180488892513891 room:0.4 ]",
+  "[ 7/2 → 15/4 | s:dsaw voice:1 freq:58.85 gain:0.2849268890882641 pan:0.401487854378445 room:0.4 ]",
+  "[ 15/4 → 4/1 | s:dsaw voice:0 freq:58.27 gain:0.5180488892513891 room:0.4 ]",
+  "[ 15/4 → 4/1 | s:dsaw voice:1 freq:58.85 gain:0.2849268890882641 pan:0.401487854378445 room:0.4 ]",
 ]
 `;
 
@@ -5488,6 +5674,37 @@ exports[`runs examples > example "getDur" example index 0 1`] = `
   "[ 1/1 → 2/1 | s:sax cps:null ]",
   "[ 2/1 → 3/1 | s:sax cps:null ]",
   "[ 3/1 → 4/1 | s:sax cps:null ]",
+]
+`;
+
+exports[`runs examples > example "grit" example index 0 1`] = `
+[
+  "[ 0/1 → 1/2 | note:c2 s:sawtooth grit:4 ]",
+  "[ 1/2 → 1/1 | note:eb2 s:sawtooth grit:4 ]",
+  "[ 1/1 → 3/2 | note:c2 s:sawtooth grit:4 ]",
+  "[ 3/2 → 2/1 | note:eb2 s:sawtooth grit:4 ]",
+  "[ 2/1 → 5/2 | note:c2 s:sawtooth grit:4 ]",
+  "[ 5/2 → 3/1 | note:eb2 s:sawtooth grit:4 ]",
+  "[ 3/1 → 7/2 | note:c2 s:sawtooth grit:4 ]",
+  "[ 7/2 → 4/1 | note:eb2 s:sawtooth grit:4 ]",
+]
+`;
+
+exports[`runs examples > example "gritfreq" example index 0 1`] = `
+[
+  "[ 0/1 → 1/1 | note:a#1 s:dsaw grit:4 gritfreq:466.16 ]",
+  "[ 1/1 → 2/1 | note:a#1 s:dsaw grit:4 gritfreq:466.16 ]",
+  "[ 2/1 → 3/1 | note:a#1 s:dsaw grit:4 gritfreq:466.16 ]",
+  "[ 3/1 → 4/1 | note:a#1 s:dsaw grit:4 gritfreq:466.16 ]",
+]
+`;
+
+exports[`runs examples > example "gritmix" example index 0 1`] = `
+[
+  "[ 0/1 → 1/1 | note:c2 s:sawtooth grit:4 gritmix:0.6 ]",
+  "[ 1/1 → 2/1 | note:c2 s:sawtooth grit:4 gritmix:0.6 ]",
+  "[ 2/1 → 3/1 | note:c2 s:sawtooth grit:4 gritmix:0.6 ]",
+  "[ 3/1 → 4/1 | note:c2 s:sawtooth grit:4 gritmix:0.6 ]",
 ]
 `;
 
@@ -8618,6 +8835,98 @@ exports[`runs examples > example "often" example index 0 1`] = `
   "[ 29/8 → 15/4 | s:hh ]",
   "[ 15/4 → 31/8 | s:hh ]",
   "[ 31/8 → 4/1 | s:hh speed:0.5 ]",
+]
+`;
+
+exports[`runs examples > example "ohpf" example index 0 1`] = `
+[
+  "[ 0/1 → 1/8 | s:dsaw freq:58.27 ohpf:126.49110640673518 ]",
+  "[ 1/8 → 1/4 | s:dsaw freq:58.27 ohpf:126.49110640673518 ]",
+  "[ 1/4 → 3/8 | s:dsaw freq:58.27 ohpf:126.49110640673518 ]",
+  "[ 3/8 → 1/2 | s:dsaw freq:58.27 ohpf:126.49110640673518 ]",
+  "[ 1/2 → 5/8 | s:dsaw freq:58.27 ohpf:126.49110640673518 ]",
+  "[ 5/8 → 3/4 | s:dsaw freq:58.27 ohpf:126.49110640673518 ]",
+  "[ 3/4 → 7/8 | s:dsaw freq:58.27 ohpf:126.49110640673518 ]",
+  "[ 7/8 → 1/1 | s:dsaw freq:58.27 ohpf:126.49110640673518 ]",
+  "[ 1/1 → 9/8 | s:dsaw freq:58.27 ohpf:285.50477881678376 ]",
+  "[ 9/8 → 5/4 | s:dsaw freq:58.27 ohpf:285.50477881678376 ]",
+  "[ 5/4 → 11/8 | s:dsaw freq:58.27 ohpf:285.50477881678376 ]",
+  "[ 11/8 → 3/2 | s:dsaw freq:58.27 ohpf:285.50477881678376 ]",
+  "[ 3/2 → 13/8 | s:dsaw freq:58.27 ohpf:285.50477881678376 ]",
+  "[ 13/8 → 7/4 | s:dsaw freq:58.27 ohpf:285.50477881678376 ]",
+  "[ 7/4 → 15/8 | s:dsaw freq:58.27 ohpf:285.50477881678376 ]",
+  "[ 15/8 → 2/1 | s:dsaw freq:58.27 ohpf:285.50477881678376 ]",
+  "[ 2/1 → 17/8 | s:dsaw freq:58.27 ohpf:399.9999999999999 ]",
+  "[ 17/8 → 9/4 | s:dsaw freq:58.27 ohpf:399.9999999999999 ]",
+  "[ 9/4 → 19/8 | s:dsaw freq:58.27 ohpf:399.9999999999999 ]",
+  "[ 19/8 → 5/2 | s:dsaw freq:58.27 ohpf:399.9999999999999 ]",
+  "[ 5/2 → 21/8 | s:dsaw freq:58.27 ohpf:399.9999999999999 ]",
+  "[ 21/8 → 11/4 | s:dsaw freq:58.27 ohpf:399.9999999999999 ]",
+  "[ 11/4 → 23/8 | s:dsaw freq:58.27 ohpf:399.9999999999999 ]",
+  "[ 23/8 → 3/1 | s:dsaw freq:58.27 ohpf:399.9999999999999 ]",
+  "[ 3/1 → 25/8 | s:dsaw freq:58.27 ohpf:285.50477881678376 ]",
+  "[ 25/8 → 13/4 | s:dsaw freq:58.27 ohpf:285.50477881678376 ]",
+  "[ 13/4 → 27/8 | s:dsaw freq:58.27 ohpf:285.50477881678376 ]",
+  "[ 27/8 → 7/2 | s:dsaw freq:58.27 ohpf:285.50477881678376 ]",
+  "[ 7/2 → 29/8 | s:dsaw freq:58.27 ohpf:285.50477881678376 ]",
+  "[ 29/8 → 15/4 | s:dsaw freq:58.27 ohpf:285.50477881678376 ]",
+  "[ 15/4 → 31/8 | s:dsaw freq:58.27 ohpf:285.50477881678376 ]",
+  "[ 31/8 → 4/1 | s:dsaw freq:58.27 ohpf:285.50477881678376 ]",
+]
+`;
+
+exports[`runs examples > example "ohpq" example index 0 1`] = `
+[
+  "[ 0/1 → 1/1 | s:dsaw freq:58.27 ohpf:200 ohpq:6 ]",
+  "[ 1/1 → 2/1 | s:dsaw freq:58.27 ohpf:200 ohpq:6 ]",
+  "[ 2/1 → 3/1 | s:dsaw freq:58.27 ohpf:200 ohpq:6 ]",
+  "[ 3/1 → 4/1 | s:dsaw freq:58.27 ohpf:200 ohpq:6 ]",
+]
+`;
+
+exports[`runs examples > example "olpf" example index 0 1`] = `
+[
+  "[ 0/1 → 1/8 | s:dsaw freq:58.27 olpf:441.58804331639226 olpq:4 ]",
+  "[ 1/8 → 1/4 | s:dsaw freq:58.27 olpf:441.58804331639226 olpq:4 ]",
+  "[ 1/4 → 3/8 | s:dsaw freq:58.27 olpf:441.58804331639226 olpq:4 ]",
+  "[ 3/8 → 1/2 | s:dsaw freq:58.27 olpf:441.58804331639226 olpq:4 ]",
+  "[ 1/2 → 5/8 | s:dsaw freq:58.27 olpf:441.58804331639226 olpq:4 ]",
+  "[ 5/8 → 3/4 | s:dsaw freq:58.27 olpf:441.58804331639226 olpq:4 ]",
+  "[ 3/4 → 7/8 | s:dsaw freq:58.27 olpf:441.58804331639226 olpq:4 ]",
+  "[ 7/8 → 1/1 | s:dsaw freq:58.27 olpf:441.58804331639226 olpq:4 ]",
+  "[ 1/1 → 9/8 | s:dsaw freq:58.27 olpf:667.5249989031356 olpq:4 ]",
+  "[ 9/8 → 5/4 | s:dsaw freq:58.27 olpf:667.5249989031356 olpq:4 ]",
+  "[ 5/4 → 11/8 | s:dsaw freq:58.27 olpf:667.5249989031356 olpq:4 ]",
+  "[ 11/8 → 3/2 | s:dsaw freq:58.27 olpf:667.5249989031356 olpq:4 ]",
+  "[ 3/2 → 13/8 | s:dsaw freq:58.27 olpf:667.5249989031356 olpq:4 ]",
+  "[ 13/8 → 7/4 | s:dsaw freq:58.27 olpf:667.5249989031356 olpq:4 ]",
+  "[ 7/4 → 15/8 | s:dsaw freq:58.27 olpf:667.5249989031356 olpq:4 ]",
+  "[ 15/8 → 2/1 | s:dsaw freq:58.27 olpf:667.5249989031356 olpq:4 ]",
+  "[ 2/1 → 17/8 | s:dsaw freq:58.27 olpf:947.5411793471676 olpq:4 ]",
+  "[ 17/8 → 9/4 | s:dsaw freq:58.27 olpf:947.5411793471676 olpq:4 ]",
+  "[ 9/4 → 19/8 | s:dsaw freq:58.27 olpf:947.5411793471676 olpq:4 ]",
+  "[ 19/8 → 5/2 | s:dsaw freq:58.27 olpf:947.5411793471676 olpq:4 ]",
+  "[ 5/2 → 21/8 | s:dsaw freq:58.27 olpf:947.5411793471676 olpq:4 ]",
+  "[ 21/8 → 11/4 | s:dsaw freq:58.27 olpf:947.5411793471676 olpq:4 ]",
+  "[ 11/4 → 23/8 | s:dsaw freq:58.27 olpf:947.5411793471676 olpq:4 ]",
+  "[ 23/8 → 3/1 | s:dsaw freq:58.27 olpf:947.5411793471676 olpq:4 ]",
+  "[ 3/1 → 25/8 | s:dsaw freq:58.27 olpf:1197.425444614103 olpq:4 ]",
+  "[ 25/8 → 13/4 | s:dsaw freq:58.27 olpf:1197.425444614103 olpq:4 ]",
+  "[ 13/4 → 27/8 | s:dsaw freq:58.27 olpf:1197.425444614103 olpq:4 ]",
+  "[ 27/8 → 7/2 | s:dsaw freq:58.27 olpf:1197.425444614103 olpq:4 ]",
+  "[ 7/2 → 29/8 | s:dsaw freq:58.27 olpf:1197.425444614103 olpq:4 ]",
+  "[ 29/8 → 15/4 | s:dsaw freq:58.27 olpf:1197.425444614103 olpq:4 ]",
+  "[ 15/4 → 31/8 | s:dsaw freq:58.27 olpf:1197.425444614103 olpq:4 ]",
+  "[ 31/8 → 4/1 | s:dsaw freq:58.27 olpf:1197.425444614103 olpq:4 ]",
+]
+`;
+
+exports[`runs examples > example "olpq" example index 0 1`] = `
+[
+  "[ 0/1 → 1/1 | s:dsaw freq:58.27 olpf:600 olpq:8 ]",
+  "[ 1/1 → 2/1 | s:dsaw freq:58.27 olpf:600 olpq:8 ]",
+  "[ 2/1 → 3/1 | s:dsaw freq:58.27 olpf:600 olpq:8 ]",
+  "[ 3/1 → 4/1 | s:dsaw freq:58.27 olpf:600 olpq:8 ]",
 ]
 `;
 
