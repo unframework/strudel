@@ -67,7 +67,7 @@ Licensing info for the default sound banks can be found over on the [dough-sampl
 
 ```
 pnpm build
-(cd cdk-infra && AWS_PROFILE=nm pnpm cdk deploy)
+(cd cdk-infra && pnpm cdk deploy)
 ```
 
 ## Contributing
