@@ -9,8 +9,24 @@ SuperDirt patches for [drone-server](https://github.com/unframework/drone-server
 | `scd/drone.scd` | `dsaw`, `dsine`, `dtri`, `dsquare` steered drone voices |
 | `scd/grit.scd` | `grit…` orbit saturator |
 | `scd/ofilters.scd` | `olpf`/`ohpf` orbit filters |
+| `scd/daverb.scd` | `daverb`/`dv…` Dattorro plate reverb, needs the DaVerb UGen |
 
-`scd/index.scd` loads them in order; `ofilters` places itself after `grit`, and `corpus` runs after the amplitude envelope.
+`scd/index.scd` loads them in order; `ofilters` places itself after `grit`, `daverb` after SuperDirt's reverb, and `corpus` runs after the amplitude envelope.
+
+## daverb
+
+`ugens/DaVerb` is a scsynth port of superdough's `dattorro-reverb` worklet and renders the same output sample for sample. Unlike the browser, where each event has its own send level, `daverb` and the `dv…` parameters apply orbit-wide and the latest event wins, so give reverbed layers their own orbit.
+
+### Building the DaVerb UGen
+
+```sh
+sudo apt install cmake
+git clone --depth 1 -b Version-3.13.0 https://github.com/supercollider/supercollider ~/src/supercollider  # match scsynth -v
+cmake -S ugens/DaVerb -B build -DSC_PATH=~/src/supercollider -DCMAKE_BUILD_TYPE=Release
+cmake --build build && cmake --install build
+```
+
+This installs into `~/.local/share/SuperCollider/Extensions/DaVerb`. Restart the engine afterwards, since sclang only picks up new classes on startup and `dirt reload` is not enough.
 
 ## Strudel compatibility
 
