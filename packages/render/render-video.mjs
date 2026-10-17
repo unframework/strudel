@@ -128,7 +128,7 @@ async function renderFrames() {
 
     const t0 = performance.now();
     const timings = { evaluate: 0, screenshot: 0 };
-    const TAIL_SECONDS = 0.1; // fade-out tail after hap ends
+    const TAIL_SECONDS = 0.3; // fade-out tail after hap ends
     let idCounter = 0;
     let prevLocMap = new Map(); // persists across frames to track id continuity
 
