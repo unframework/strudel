@@ -94,8 +94,8 @@ public:
         for (int i = 0; i < kNumTaps; ++i)
             mTaps[i] = static_cast<uint32_t>(std::lround(kTapSeconds[i] * sampleRate));
 
-        set_calc_function<DaVerb, &DaVerb::next>();
         reset();
+        set_calc_function<DaVerb, &DaVerb::next>();
     }
 
     ~DaVerb() {
