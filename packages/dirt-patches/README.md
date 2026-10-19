@@ -10,8 +10,9 @@ SuperDirt patches for [drone-server](https://github.com/unframework/drone-server
 | `scd/grit.scd` | `grit…` orbit saturator |
 | `scd/ofilters.scd` | `olpf`/`ohpf` orbit filters |
 | `scd/daverb.scd` | `daverb`/`dv…` Dattorro plate reverb, needs the DaVerb UGen |
+| `scd/tremolo.scd` | Strudel's `tremolo`/`tremolosync` with `tremolodepth`, `tremoloskew`, `tremolophase`, `tremoloshape` |
 
-`scd/index.scd` loads them in order; `ofilters` places itself after `grit`, `daverb` after SuperDirt's reverb, and `corpus` runs after the amplitude envelope.
+`scd/index.scd` loads them in order; `ofilters` places itself after `grit`, `daverb` after SuperDirt's reverb, `corpus` runs after the amplitude envelope, and `tremolo` takes the place of SuperDirt's own `tremolo` module (`tremolorate`), so it follows `corpus`.
 
 ## daverb
 
