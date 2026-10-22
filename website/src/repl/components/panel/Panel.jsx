@@ -4,6 +4,7 @@ import { StrudelIcon } from '@src/repl/components/icons/StrudelIcon';
 import { useSettings, setIsZen, setIsPanelOpened, setActiveFooter as setTab } from '../../../settings.mjs';
 import '../../Repl.css';
 import { useLogger } from '../useLogger';
+import { AnnotateTab } from './AnnotateTab';
 import { ConsoleTab } from './ConsoleTab';
 import ExportTab from './ExportTab';
 import { FilesTab } from './FilesTab';
@@ -242,6 +243,7 @@ const tabNames = {
   patterns: 'patterns',
   snippets: 'snippets',
   sounds: 'sounds',
+  annotate: 'annotate',
   reference: 'reference',
   export: 'export',
   console: 'console',
@@ -280,6 +282,8 @@ function PanelContent({ context, tab }) {
       return <ConsoleTab />;
     case tabNames.sounds:
       return <SoundsTab />;
+    case tabNames.annotate:
+      return <AnnotateTab />;
     case tabNames.reference:
       return <Reference />;
     case tabNames.export:

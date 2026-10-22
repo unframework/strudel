@@ -120,3 +120,12 @@ export function warpedGrid(meta, bpm) {
   }
   return { t0: warpTime(plan, beats[0].t) - beats[0].beat * spb, spb };
 }
+
+// FNV-1a, distinguishes marker edits in cache keys
+export function metaRevision(meta) {
+  let hash = 0x811c9dc5;
+  for (const char of JSON.stringify(meta)) {
+    hash = Math.imul(hash ^ char.charCodeAt(0), 0x01000193);
+  }
+  return (hash >>> 0).toString(36);
+}

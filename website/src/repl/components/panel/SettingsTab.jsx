@@ -12,7 +12,7 @@ import { exportScript, ImportPrebakeScriptButton } from './ImportPrebakeScriptBu
 import { useEffect, useRef } from 'react';
 import cx from '@src/cx.mjs';
 
-const inputClass =
+export const inputClass =
   'bg-background text-xs h-8 max-h-8 border border-box rounded-0 text-foreground border-muted placeholder-muted focus:outline-none focus:ring-0 focus:border-foreground';
 
 export function Textbox({ onChange, className, ...inputProps }) {
@@ -21,7 +21,7 @@ export function Textbox({ onChange, className, ...inputProps }) {
   );
 }
 
-function Checkbox({ label, value, onChange, disabled = false }) {
+export function Checkbox({ label, value, onChange, disabled = false }) {
   return (
     <label className="text-xs">
       <input
