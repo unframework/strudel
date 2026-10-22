@@ -2,61 +2,16 @@
 
 import cowsay from 'cowsay';
 import { createReadStream, existsSync, writeFileSync } from 'fs';
-import { readdir } from 'fs/promises';
+import { readFile, writeFile } from 'fs/promises';
 import http from 'http';
 import { join, resolve, sep } from 'path';
 import readline from 'readline';
 import os from 'os';
+import { parseSampleMeta, SIDECAR_SUFFIX, sidecarPath } from '@strudel/sample-meta';
+import { isAudioFile, getSampleMap } from './scan.mjs';
+import { warpedSample } from './warp.mjs';
 
-const LOG = !!process.env.LOG || false;
 const PORT = process.env.PORT || 5432;
-const VALID_AUDIO_EXTENSIONS = ['wav', 'mp3', 'ogg'];
-
-const isAudioFile = (f) => {
-  const ext = f.split('.').slice(-1)[0].toLowerCase();
-  return VALID_AUDIO_EXTENSIONS.includes(ext);
-};
-
-async function getFilesInDirectory(directory) {
-  let files = [];
-  const dirents = await readdir(directory, { withFileTypes: true });
-  for (const dirent of dirents) {
-    const fullPath = join(directory, dirent.name);
-    if (dirent.isDirectory()) {
-      if (dirent.name.startsWith('.')) {
-        LOG && console.warn(`ignore hidden folder: ${fullPath}`);
-        continue;
-      }
-      try {
-        const subFiles = (await getFilesInDirectory(fullPath)).filter(isAudioFile);
-        files = files.concat(subFiles);
-        LOG && console.log(`${dirent.name} (${subFiles.length})`);
-      } catch (err) {
-        LOG && console.warn(`skipped due to error: ${fullPath}`);
-      }
-    } else {
-      isAudioFile(fullPath) && files.push(fullPath);
-    }
-  }
-  return files;
-}
-
-async function getBanks(directory, flat = false) {
-  let files = await getFilesInDirectory(directory);
-  let banks = {};
-  directory = directory.split(sep).join('/');
-  files = files.map((path) => {
-    path = path.split(sep).join('/');
-    const subDir = path.replace(directory, '');
-    const subDirFlat = subDir.replaceAll('/', '_').slice(1); // remove initial underscore
-    const subDirFlatStem = subDirFlat.replace(/\.[^.]+$/, ''); // remove extension
-    let bank = flat ? subDirFlatStem : path.split('/').slice(-2)[0];
-    banks[bank] = banks[bank] || [];
-    banks[bank].push(subDir);
-    return subDir;
-  });
-  return { banks, files };
-}
 
 const args = process.argv.slice(2);
 
@@ -86,8 +41,7 @@ function getInput(query) {
 let directory = getArgValue('--dir') || process.cwd();
 directory = resolve(directory);
 if (args.includes('--json')) {
-  const { banks } = await getBanks(directory, getArgValue('--flat'));
-  const json = JSON.stringify(banks);
+  const json = JSON.stringify(await getSampleMap(directory, getArgValue('--flat')));
   const outFile = resolve(directory, 'strudel.json');
   if (existsSync(outFile)) {
     const answer = await getInput(`Warning: File already exists at ${outFile}. Overwrite? (y/N): `);
@@ -108,22 +62,62 @@ console.log(
   }),
 );
 
-const server = http.createServer(async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  const { banks, files } = await getBanks(directory, getArgValue('--flat'));
-  if (req.url === '/') {
-    res.setHeader('Content-Type', 'application/json');
-    return res.end(JSON.stringify(banks));
-  }
-  let subpath = decodeURIComponent(req.url);
-  const filePath = join(directory, subpath.split('/').join(sep));
+const writable = args.includes('--writable');
+const cacheDir = join(directory, '.warp-cache');
 
-  // console.log('GET:', filePath);
-  const isFound = existsSync(filePath);
-  if (!isFound) {
-    res.statusCode = 404;
-    res.end('File not found');
-    return;
+class HttpError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+}
+
+function resolveInDirectory(pathname) {
+  const filePath = resolve(directory, '.' + decodeURIComponent(pathname).split('/').join(sep));
+  if (!filePath.startsWith(directory + sep)) {
+    throw new HttpError(403, 'Forbidden');
+  }
+  return filePath;
+}
+
+async function readBody(req) {
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+async function readSidecar(audioPath) {
+  const sidecar = sidecarPath(audioPath);
+  if (!existsSync(sidecar)) {
+    throw new HttpError(404, 'Sample has no markers');
+  }
+  return parseSampleMeta(JSON.parse(await readFile(sidecar, 'utf8')));
+}
+
+async function putSidecar(req, res, filePath) {
+  if (!writable) {
+    throw new HttpError(405, 'Start the server with --writable to save markers');
+  }
+  const audioPath = filePath.slice(0, -SIDECAR_SUFFIX.length);
+  if (!filePath.endsWith(SIDECAR_SUFFIX) || !isAudioFile(audioPath) || !existsSync(audioPath)) {
+    throw new HttpError(400, 'Can only write sidecars of existing audio files');
+  }
+  let meta;
+  try {
+    meta = parseSampleMeta(JSON.parse(await readBody(req)));
+  } catch (err) {
+    throw new HttpError(400, err.message);
+  }
+  await writeFile(filePath, JSON.stringify(meta, null, 2) + '\n', 'utf8');
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(meta));
+}
+
+function streamFile(res, filePath) {
+  if (!existsSync(filePath)) {
+    throw new HttpError(404, 'File not found');
   }
   const readStream = createReadStream(filePath);
   readStream.on('error', (err) => {
@@ -132,6 +126,56 @@ const server = http.createServer(async (req, res) => {
     console.error(err);
   });
   readStream.pipe(res);
+}
+
+async function getFile(res, filePath, bpmParam) {
+  if (bpmParam === null) {
+    return streamFile(res, filePath);
+  }
+  const bpm = Number(bpmParam);
+  if (!(bpm > 0)) {
+    throw new HttpError(400, `Invalid bpm: ${bpmParam}`);
+  }
+  if (!isAudioFile(filePath) || !existsSync(filePath)) {
+    throw new HttpError(404, 'File not found');
+  }
+  const warpPath = await warpedSample({ cacheDir, audioPath: filePath, meta: await readSidecar(filePath), bpm });
+  res.setHeader('X-Warp-Path', warpPath);
+  streamFile(res, warpPath);
+}
+
+async function handle(req, res) {
+  const url = new URL(req.url, 'http://localhost');
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204;
+    return res.end();
+  }
+  if (url.pathname === '/' && req.method === 'GET') {
+    res.setHeader('Content-Type', 'application/json');
+    return res.end(JSON.stringify(await getSampleMap(directory, getArgValue('--flat'))));
+  }
+  const filePath = resolveInDirectory(url.pathname);
+  if (req.method === 'PUT') {
+    return putSidecar(req, res, filePath);
+  }
+  if (req.method === 'GET') {
+    return getFile(res, filePath, url.searchParams.get('bpm'));
+  }
+  throw new HttpError(405, 'Method not allowed');
+}
+
+const server = http.createServer(async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Expose-Headers', 'X-Warp-Path');
+  try {
+    await handle(req, res);
+  } catch (err) {
+    res.statusCode = err.status ?? 500;
+    res.end(err.status ? err.message : 'Internal server error');
+    err.status || console.error(err);
+  }
 });
 
 const IP_ADDRESS = '0.0.0.0';
