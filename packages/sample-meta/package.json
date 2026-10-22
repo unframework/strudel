@@ -1,0 +1,21 @@
+{
+  "name": "@strudel/sample-meta",
+  "version": "0.1.0",
+  "description": "Sample annotation sidecars: cue markers, tempo fit, warp plans",
+  "type": "module",
+  "main": "index.mjs",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
