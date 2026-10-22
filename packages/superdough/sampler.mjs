@@ -1,6 +1,6 @@
 import { getBaseURL, getCommonSampleInfo } from './util.mjs';
 import { getSound, registerSound, registerWaveTable, soundMap } from './index.mjs';
-import { gridBpm, parseSampleMeta, sourceGrid } from '@strudel/sample-meta';
+import { gridBpm, metaRevision, parseSampleMeta, sourceGrid } from '@strudel/sample-meta';
 import { getAudioContext } from './audioContext.mjs';
 import {
   getADSRValues,
@@ -67,12 +67,13 @@ export const getSampleBuffer = async (hapValue, bank, resolveUrl) => {
   let { url: sampleUrl, label, playbackRate } = getSampleInfo(hapValue, bank);
   const ac = getAudioContext();
   if (hapValue.beatwarp) {
-    const warpedUrl = beatwarpUrl(sampleUrl, hapValue.beatwarp);
+    const meta = requireSampleMeta(sampleUrl);
+    const warpedUrl = beatwarpUrl(sampleUrl, meta, hapValue.beatwarp);
     if (getCachedBuffer(warpedUrl)) {
       sampleUrl = warpedUrl;
     } else {
       loadBuffer(warpedUrl, ac, label).catch((err) => logger(`[sampler] beatwarp failed: ${err.message}`, 'error'));
-      playbackRate *= hapValue.beatwarp / gridBpm(sourceGrid(requireSampleMeta(sampleUrl)));
+      playbackRate *= hapValue.beatwarp / gridBpm(sourceGrid(meta));
     }
   }
   if (resolveUrl) {
@@ -177,7 +178,7 @@ function githubPath(base, subpath = '') {
   return `https://raw.githubusercontent.com/${user}/${repo}/${branch}/${other}`;
 }
 
-export const beatwarpUrl = (url, bpm) => `${url}?bpm=${Math.round(bpm * 100) / 100}`;
+export const beatwarpUrl = (url, meta, bpm) => `${url}?bpm=${Math.round(bpm * 100) / 100}&rev=${metaRevision(meta)}`;
 
 export const setSampleMeta = (url, meta) => sampleMetas.set(url, meta);
 
