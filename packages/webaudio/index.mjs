@@ -8,4 +8,5 @@ export * from './webaudio.mjs';
 export * from './scope.mjs';
 export * from './spectrum.mjs';
 export * from './supradough.mjs';
+export * from './samplecues.mjs';
 export * from 'superdough';
