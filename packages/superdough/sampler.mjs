@@ -1,5 +1,6 @@
 import { getBaseURL, getCommonSampleInfo } from './util.mjs';
-import { registerSound, registerWaveTable, soundMap } from './index.mjs';
+import { getSound, registerSound, registerWaveTable, soundMap } from './index.mjs';
+import { gridBpm, parseSampleMeta, sourceGrid } from '@strudel/sample-meta';
 import { getAudioContext } from './audioContext.mjs';
 import {
   getADSRValues,
@@ -13,6 +14,7 @@ import { logger } from './logger.mjs';
 
 const bufferCache = {}; // string: Promise<ArrayBuffer>
 const loadCache = {}; // string: Promise<ArrayBuffer>
+const sampleMetas = new Map(); // full sample url -> SampleMeta
 
 export const getCachedBuffer = (url) => bufferCache[url];
 
@@ -63,10 +65,19 @@ export function getSampleInfo(hapValue, bank) {
 // takes hapValue and returns buffer + playbackRate.
 export const getSampleBuffer = async (hapValue, bank, resolveUrl) => {
   let { url: sampleUrl, label, playbackRate } = getSampleInfo(hapValue, bank);
+  const ac = getAudioContext();
+  if (hapValue.beatwarp) {
+    const warpedUrl = beatwarpUrl(sampleUrl, hapValue.beatwarp);
+    if (getCachedBuffer(warpedUrl)) {
+      sampleUrl = warpedUrl;
+    } else {
+      loadBuffer(warpedUrl, ac, label).catch((err) => logger(`[sampler] beatwarp failed: ${err.message}`, 'error'));
+      playbackRate *= hapValue.beatwarp / gridBpm(sourceGrid(requireSampleMeta(sampleUrl)));
+    }
+  }
   if (resolveUrl) {
     sampleUrl = await resolveUrl(sampleUrl);
   }
-  const ac = getAudioContext();
   const buffer = await loadBuffer(sampleUrl, ac, label);
 
   if (hapValue.unit === 'c') {
@@ -166,19 +177,56 @@ function githubPath(base, subpath = '') {
   return `https://raw.githubusercontent.com/${user}/${repo}/${branch}/${other}`;
 }
 
+export const beatwarpUrl = (url, bpm) => `${url}?bpm=${Math.round(bpm * 100) / 100}`;
+
+export const setSampleMeta = (url, meta) => sampleMetas.set(url, meta);
+
+function requireSampleMeta(url) {
+  const meta = sampleMetas.get(url);
+  if (!meta) {
+    throw new Error(`sample ${url} has no markers`);
+  }
+  return meta;
+}
+
+export function getSampleUrl(hapValue) {
+  const { s, bank } = hapValue;
+  const key = bank ? `${bank}_${s}` : s;
+  const samples = getSound(key)?.data?.samples;
+  if (!samples) {
+    throw new Error(`"${key}" is not a sample`);
+  }
+  return getCommonSampleInfo(hapValue, samples).url;
+}
+
+export const getSampleMeta = (hapValue) => requireSampleMeta(getSampleUrl(hapValue));
+
+export const hasSampleMeta = (url) => sampleMetas.has(url);
+
+function resolveBaseUrl(baseUrl) {
+  baseUrl = resolveSpecialPaths(baseUrl);
+  return baseUrl.startsWith('github:') ? githubPath(baseUrl, '') : baseUrl;
+}
+
+function registerSampleMetas(metas, baseUrl) {
+  baseUrl = resolveBaseUrl(baseUrl);
+  for (const [path, json] of Object.entries(metas)) {
+    setSampleMeta(baseUrl + path, parseSampleMeta(json));
+  }
+}
+
 export const processSampleMap = (sampleMap, fn, baseUrl = sampleMap._base || '') => {
   return Object.entries(sampleMap).forEach(([key, value]) => {
+    if (key.startsWith('_')) {
+      return;
+    }
     if (typeof value === 'string') {
       value = [value];
     }
     if (typeof value !== 'object') {
       throw new Error('wrong sample map format for ' + key);
     }
-    baseUrl = value._base || baseUrl;
-    baseUrl = resolveSpecialPaths(baseUrl);
-    if (baseUrl.startsWith('github:')) {
-      baseUrl = githubPath(baseUrl, '');
-    }
+    baseUrl = resolveBaseUrl(value._base || baseUrl);
     const fullUrl = (v) => baseUrl + v;
     if (Array.isArray(value)) {
       //return [key, value.map(replaceUrl)];
@@ -284,6 +332,9 @@ export const samples = async (sampleMap, baseUrl = sampleMap._base || '', option
     },
     baseUrl,
   );
+  if (sampleMap._meta) {
+    registerSampleMetas(sampleMap._meta, baseUrl);
+  }
 };
 
 const cutGroups = [];

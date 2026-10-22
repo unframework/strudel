@@ -36,10 +36,12 @@
     "@strudel/core": "workspace:*",
     "@strudel/draw": "workspace:*",
     "superdough": "workspace:*",
-    "supradough": "workspace:*"
+    "supradough": "workspace:*",
+    "@strudel/sample-meta": "workspace:*"
   },
   "devDependencies": {
-    "vite": "^6.0.11"
+    "vite": "^6.0.11",
+    "vitest": "^3.0.4"
   },
   "engines": {
     "node": ">=18.0.0"

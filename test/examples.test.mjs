@@ -22,6 +22,9 @@ const skippedExamples = [
   'midimaps',
   'clearScope',
   'bmod',
+  'beatsync',
+  'cue',
+  'fitbpm',
 ];
 
 describe('runs examples', () => {

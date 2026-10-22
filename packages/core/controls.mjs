@@ -2596,6 +2596,19 @@ export const { speed } = registerControl('speed');
  *
  */
 export const { stretch } = registerControl('stretch');
+
+/**
+ * Time-stretches a marked-up sample (pitch preserved) so that its beat markers land on the grid of the given tempo.
+ * Needs a sample served by `@strudel/sampler` with markers. Use `beatsync` to follow the current tempo.
+ *
+ * @name beatwarp
+ * @tags samples
+ * @param {number | Pattern} bpm target tempo in beats per minute (4 beats per cycle)
+ * @example
+ * s("voice").beatwarp(120)
+ *
+ */
+export const { beatwarp } = registerControl('beatwarp');
 /**
  * Used in conjunction with `speed`, accepts values of "r" (rate, default behavior), "c" (cycles), or "s" (seconds). Using `unit "c"` means `speed` will be interpreted in units of cycles, e.g. `speed "1"` means samples will be stretched to fill a cycle. Using `unit "s"` means the playback speed will be adjusted so that the duration is the number of seconds specified by `speed`.
  *
