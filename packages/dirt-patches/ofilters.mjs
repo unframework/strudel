@@ -48,3 +48,26 @@ export const { ohpf, ohp } = registerControl('ohpf', 'ohp');
  * s("dsaw").freq(58.27).ohpf(200).ohpq(6)
  */
 export const { ohpq } = registerControl('ohpq');
+
+/**
+ * Orbit-wide band-pass, the counterpart of `olpf`: same placement, glide and bypass rules. SuperDirt only (drone-server).
+ *
+ * @name obpf
+ * @tags dirt-patches, filter, orbit
+ * @param {number | Pattern} frequency center frequency in Hz
+ * @synonyms obp
+ * @example
+ * s("dpulse").freq(58.27).pw(0.9).obpf(sine.slow(12).rangex(1500, 4000)).obpq(1.5).segment(8)
+ */
+export const { obpf, obp } = registerControl('obpf', 'obp');
+
+/**
+ * Q of `obpf` as for `bpq`, higher is narrower (default 1).
+ *
+ * @name obpq
+ * @tags dirt-patches, filter, orbit
+ * @param {number | Pattern} q band-pass Q
+ * @example
+ * s("dsaw").freq(58.27).obpf(1200).obpq(4)
+ */
+export const { obpq } = registerControl('obpq');
