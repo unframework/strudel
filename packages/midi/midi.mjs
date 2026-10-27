@@ -495,7 +495,7 @@ async function _initializeInput(input) {
   if (initial) {
     const device = instance.initialDevice;
 
-    const otherInputs = WebMidi.inputs.filter((o) => o.name !== device.name);
+    const otherInputs = WebMidi.inputs.filter((o) => o.name !== device?.name);
     logger(
       device
         ? `[midi] Midi enabled! Using "${device.name}". ${
@@ -535,7 +535,6 @@ export async function midin(input) {
   const instance = await _initializeInput(input);
 
   const cc = instance.createCC.bind(instance);
-  cc.noteToggle = instance.createNoteToggle.bind(instance);
   cc._midiInput = instance;
 
   return cc;
@@ -551,10 +550,12 @@ function createMidiInputWidget(id, instance) {
   rootNode.style.border = '1px solid #888';
   rootNode.style.height = '2em';
 
-  instance.registerWidgetListener(() => {
+  const render = () => {
     rootNode.style.borderColor = instance.isConnected ? '#0f0' : '#f00';
     rootNode.innerText = `MIDI Input: ${instance.input} | Connected?: ${JSON.stringify(instance.isConnected)}`;
-  });
+  };
+  render();
+  instance.onConnectionChange(render);
 
   setWidget(id, rootNode);
 }
