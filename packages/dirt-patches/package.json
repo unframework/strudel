@@ -4,8 +4,16 @@
   "type": "module",
   "main": "index.mjs",
   "private": true,
+  "scripts": {
+    "parity": "node parity/compare.mjs"
+  },
   "dependencies": {
     "@strudel/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@strudel/osc": "workspace:*",
+    "@strudel/render": "workspace:*",
+    "vitest": "^3.0.4"
   },
   "engines": {
     "node": ">=18.0.0"
