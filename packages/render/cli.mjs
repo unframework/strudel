@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { parseArgs } from 'node:util';
-import { readFileSync, mkdtempSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, readdirSync, copyFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -130,7 +130,8 @@ async function render() {
     if (!wavFile) {
       throw new Error('No WAV file was downloaded');
     }
-    renameSync(join(downloadDir, wavFile), outputPath);
+    copyFileSync(join(downloadDir, wavFile), outputPath);
+    rmSync(downloadDir, { recursive: true });
     console.log(`Audio saved to: ${outputPath}`);
 
     const timelinePath = outputPath.replace(/(\.[^.]{0,5})?$/, '.jsonl');
