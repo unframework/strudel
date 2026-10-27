@@ -1,0 +1,16 @@
+export const cases = [
+  { name: 'sine', code: `note("c3").s("sine")` },
+  { name: 'sawtooth', code: `note("c3").s("sawtooth")` },
+  { name: 'square', code: `note("c3").s("square")` },
+  { name: 'triangle', code: `note("c3").s("triangle")` },
+  { name: 'fm-saw', code: `note("c2").s("sawtooth").fm("2:4.01")` },
+  { name: 'fm-square-modulator', code: `note("c3").s("sine").fm(3).fmwave("square")` },
+  { name: 'fm-envelope', code: `note("c3*2").s("sine").fm(6).fmdecay(.3).fmsustain(0)` },
+  { name: 'pluck', code: `note("c3 e3 g3 c4").s("sawtooth").decay(.15).sustain(0)` },
+  { name: 'lpf-resonance', code: `note("c2").s("sawtooth").lpf(600).resonance(12)` },
+  { name: 'lpf-envelope', code: `note("c2*4").s("sawtooth").lpf(300).lpenv(4).lpdecay(.2)` },
+  { name: 'vibrato', code: `note("a3").s("triangle").vib(6).vibmod(.5)` },
+  { name: 'pitch-envelope', code: `note("c3*2").s("sine").penv(12).pdecay(.1)` },
+  { name: 'supersaw', code: `note("c3").s("supersaw")` },
+  { name: 'pulse', code: `note("c3").s("pulse").pw(.3)` },
+];

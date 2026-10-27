@@ -40,3 +40,17 @@ This installs into `~/.local/share/SuperCollider/Extensions/DaVerb`. Restart the
 - **Levels and length:** `gain` is linear like Strudel (SuperDirt's own curve is gain⁴), and `clip`/`legato` set note length (Strudel sends `clip`, which stock SuperDirt ignores).
 
 It installs through SuperDirt's own extension points: a `~diversion` hook renames Strudel's `sustain` before SuperDirt computes note length, a `~play` hook resolves the envelopes once it has, and the `envelope`, `lpf`, `hpf` and `bpf` modules are replaced. Not ported: filter LFOs (`lprate`…), FM operators beyond the first, noise FM waves, `partials`, `bank`, and the exponential pitch envelope curve.
+
+## Parity harness
+
+`pnpm parity` renders each pattern in `parity/cases.mjs` through both engines and compares the results: overall level, octave-band spectrum, RMS envelope over time, and the strongest spectral peaks. A case passes when all three differences stay within `--tolerance` dB (default 1). Differences more than 40 dB below the loudest part of a render are ignored, so near-silent residue doesn't swamp the result.
+
+```sh
+pnpm parity                                    # every case
+pnpm parity fm lpf --detail                    # cases whose name contains "fm" or "lpf", with full tables
+pnpm parity --code 'note("c2").s("sawtooth").fm("2:4.01")'   # ad-hoc pattern
+```
+
+Both sides run the real code. Strudel renders through `@strudel/render` (superdough in headless Chromium on an `OfflineAudioContext`). SuperDirt runs in a separate sclang with these patches loaded, against a server that is never booted: its OSC output is recorded and played through `scsynth` in non-realtime mode, so the live drone engine is never touched. Each hap reaches SuperDirt as the same controls `@strudel/osc` would send it. Orbit `amp` is 1, so levels compare the synthesis, not the engine's mix. Renders, the event list and `report.json` land in `parity/out/<case>/` for listening.
+
+To cover a newly ported feature, add a case with a pattern that isolates it.
