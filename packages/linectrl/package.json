@@ -4,8 +4,15 @@
   "type": "module",
   "main": "index.mjs",
   "private": true,
+  "scripts": {
+    "test": "vitest run"
+  },
   "dependencies": {
-    "@strudel/core": "workspace:*"
+    "@strudel/core": "workspace:*",
+    "@strudel/midi": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.4"
   },
   "engines": {
     "node": ">=18.0.0"

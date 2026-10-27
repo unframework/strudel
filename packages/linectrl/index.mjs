@@ -208,3 +208,5 @@ Pattern.prototype.trl = function (chars, ...fns) {
   const fn = fns.length === 0 ? (x) => x : fns.length === 1 ? fns[0] : fns;
   return trImpl(true, chars, fn, this);
 };
+
+export * from './controls/index.mjs';
