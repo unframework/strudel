@@ -1,8 +1,22 @@
+var phasor = { |freq| Phasor.ar(DC.ar(0), freq * SampleDur.ir) }; // audio-rate trig makes rate audio-rate
+var stepSize = { |freq| (freq.abs * SampleDur.ir).clip(1e-6, 0.5) };
+var blep = { |phase, dt|
+	var head = (phase / dt).min(1);
+	var tail = ((phase - 1) / dt).max(-1);
+	((2 * head) - head.squared - 1) + (tail.squared + (2 * tail) + 1)
+};
+var sawWave = { |phase, freq| (2 * phase) - 1 - blep.(phase, stepSize.(freq)) };
+var pulseWave = { |freq, duty|
+	var phase = phasor.(freq);
+	var dt = stepSize.(freq);
+	((phase < duty) * 2 - 1) + blep.(phase, dt) - blep.((phase + 1 - duty).frac, dt)
+};
+var webAudioPeakNormal = 0.847;
 var oscillators = (
 	sine: { |freq| SinOsc.ar(freq) },
-	sawtooth: { |freq| Saw.ar(freq) },
-	square: { |freq| Pulse.ar(freq) },
-	triangle: { |freq| LFTri.ar(freq) }
+	sawtooth: { |freq| sawWave.((phasor.(freq) + 0.5).frac, freq) * webAudioPeakNormal },
+	square: { |freq| pulseWave.(freq, 0.5) * webAudioPeakNormal },
+	triangle: { |freq| 1 - (4 * ((phasor.(freq) + 0.25).frac - 0.5).abs) }
 );
 var aliases = (sin: \sine, saw: \sawtooth, sqr: \square, tri: \triangle);
 var noises = (
@@ -12,7 +26,7 @@ var noises = (
 	crackle: { Dust2.ar(\density.kr(0.03) * 0.01 * SampleRate.ir) }
 );
 var synthNames = (oscillators.keys.asArray ++ aliases.keys.asArray ++ noises.keys.asArray ++ [\pulse, \supersaw]).asSet;
-var fmWaves = (sine: 0, triangle: 1, square: 2, sawtooth: 3);
+var fmWaves = [\sine, \triangle, \square, \sawtooth];
 var filterModels = ['12db', 'ladder', '24db'];
 var maxVoices = 16;
 
@@ -43,7 +57,7 @@ var pitched = { |freq|
 	var fmExp = EnvGen.kr(envelope.(0.001, 1, fmSustain.max(0.001), fmTimes, \exp), held);
 	var fmEnv = 1 + ((fmLin + ((fmExp - fmLin) * \fmExp.kr(1)) - 1) * \fmEnvOn.kr(0));
 	var modFreq = freq * \fmh.kr(1);
-	var modulator = Select.ar(\fmWave.kr(0), [SinOsc.ar(modFreq), LFTri.ar(modFreq), Pulse.ar(modFreq), Saw.ar(modFreq)]);
+	var modulator = Select.ar(\fmWave.kr(0), fmWaves.collect { |wave| oscillators[wave].(modFreq) });
 	(freq + (modulator * fmEnv * \fmi.kr(0) * modFreq)) * (pitchEnv + vibrato).midiratio
 };
 
@@ -72,7 +86,7 @@ var addSynthDefs = { |numChannels|
 
 	SynthDef(\pulse, { |out, freq = 440, pan = 0, pw = 0.5, pwrate = 1, pwsweep = 0|
 		var width = pw + (LFTri.kr(pwrate) * pwsweep * 0.5);
-		var sig = Pulse.ar(pitched.(freq), (1 - width.clip(-0.99, 0.99)) / 2);
+		var sig = pulseWave.(pitched.(freq).max(0), (1 - width.clip(-0.99, 0.99)) / 2);
 		Out.ar(out, DirtPan.ar(LeakDC.ar(sig) * 0.3, numChannels, pan))
 	}).add;
 
@@ -82,8 +96,11 @@ var addSynthDefs = { |numChannels|
 		var step = detune / (voices - 1).max(1);
 		var center = detune * 0.5 * spreading;
 		var width = spread.clip(0, 1) * spreading;
-		var carrier = pitched.(freq);
-		var saws = maxVoices.collect { |i| Saw.ar(carrier * ((i * step) - center).midiratio) * (i < voices) };
+		var carrier = pitched.(freq).max(0);
+		var saws = maxVoices.collect { |i|
+			var voiceFreq = carrier * ((i * step) - center).midiratio;
+			sawWave.((phasor.(voiceFreq) + Rand(0, 1)).frac, voiceFreq) * (i < voices)
+		};
 		var sig = Pan2.ar(saws[0, 2..].sum, width) + Pan2.ar(saws[1, 3..].sum, width.neg);
 		Out.ar(out, DirtPan.ar(sig * (0.3 / voices.sqrt), numChannels, pan))
 	}).add;
@@ -203,7 +220,7 @@ var finish = {
 			~pitchRelease = times[3];
 		};
 
-		~fmWave = fmWaves[~fmwave ? \sine] ? 0;
+		~fmWave = fmWaves.indexOf(~fmwave ? \sine) ? 0;
 		fmEnv !? {
 			~fmEnvOn = 1;
 			~fmExp = if((~fmenv ? \exp) == \exp) { 1 } { 0 };
