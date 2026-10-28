@@ -35,7 +35,8 @@ export function parseControlsFromHap(hap, cps) {
   hap.ensureObjectValue();
   const cycle = hap.wholeOrPart().begin.valueOf();
   const delta = hap.duration.valueOf() / cps;
-  const controls = Object.assign({}, { cps, cycle, delta }, hap.value);
+  const valued = Object.entries(hap.value).filter(([, value]) => value != null);
+  const controls = Object.assign({ cps, cycle, delta }, Object.fromEntries(valued));
   // make sure n and note are numbers
   controls.n && (controls.n = parseNumeral(controls.n));
   if (typeof controls.note !== 'undefined') {
