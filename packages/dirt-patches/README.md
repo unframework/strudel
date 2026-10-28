@@ -6,13 +6,13 @@ SuperDirt patches for [drone-server](https://github.com/unframework/drone-server
 | --- | --- |
 | `scd/synths.scd` | superdough-compatible synths, ADSR, `lpf`/`hpf`/`bpf` and their envelopes, Strudel's `gain`, `clip` and `delaysync` semantics |
 | `scd/corpus.scd` | `cr…` Corpus resonator |
-| `scd/drone.scd` | `dsaw`, `dsine`, `dtri`, `dsquare`, `dpulse` steered drone voices |
+| `scd/drone.scd` | `dsaw`, `dsine`, `dtri`, `dsquare`, `dpulse` steered drone voices with gliding FM |
 | `scd/grit.scd` | `grit…` orbit saturator |
 | `scd/ofilters.scd` | `olpf`/`ohpf`/`obpf` orbit filters |
 | `scd/daverb.scd` | `daverb`/`dv…` Dattorro plate reverb, needs the DaVerb UGen |
 | `scd/tremolo.scd` | Strudel's `tremolo`/`tremolosync` with `tremolodepth`, `tremoloskew`, `tremolophase`, `tremoloshape` |
 
-`scd/index.scd` loads them in order; `ofilters` places itself after `grit`, `daverb` after SuperDirt's reverb, `corpus` runs after the amplitude envelope, and `tremolo` takes the place of SuperDirt's own `tremolo` module (`tremolorate`), so it follows `corpus`.
+`scd/oscillators.scd` is not a patch but the through-zero polyBLEP oscillators and FM operator shared by `synths` and `drone`. `scd/index.scd` loads the patches in order; `ofilters` places itself after `grit`, `daverb` after SuperDirt's reverb, `corpus` runs after the amplitude envelope, and `tremolo` takes the place of SuperDirt's own `tremolo` module (`tremolorate`), so it follows `corpus`.
 
 ## daverb
 
