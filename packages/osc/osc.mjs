@@ -53,7 +53,21 @@ export function parseControlsFromHap(hap, cps) {
   controls.unit === 'c' && controls.speed != null && (controls.speed = controls.speed / cps);
   const channels = controls.channels;
   channels != undefined && (controls.channels = JSON.stringify(channels));
-  return controls;
+  return dropUnencodable(controls);
+}
+
+const isEncodable = (value) => Number.isFinite(value) || typeof value === 'string' || typeof value === 'boolean';
+
+function dropUnencodable(controls) {
+  const [encodable, dropped] = [true, false].map((keep) =>
+    Object.entries(controls).filter(([, value]) => isEncodable(value) === keep),
+  );
+  dropped.length &&
+    logger(
+      `[osc] dropped unencodable controls: ${dropped.map(([key, value]) => `${key}=${value}`).join(', ')}`,
+      'warning',
+    );
+  return Object.fromEntries(encodable);
 }
 
 const collator = new ClockCollator({});
