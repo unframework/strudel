@@ -1,23 +1,6 @@
-var phasor = { |freq| Phasor.ar(DC.ar(0), freq * SampleDur.ir) }; // audio-rate trig makes rate audio-rate
-var stepSize = { |freq| (freq.abs * SampleDur.ir).clip(1e-6, 0.5) };
-var blep = { |phase, dt|
-	var head = (phase / dt).min(1);
-	var tail = ((phase - 1) / dt).max(-1);
-	((2 * head) - head.squared - 1) + (tail.squared + (2 * tail) + 1)
-};
-var sawWave = { |phase, freq| (2 * phase) - 1 - blep.(phase, stepSize.(freq)) };
-var pulseWave = { |freq, duty|
-	var phase = phasor.(freq);
-	var dt = stepSize.(freq);
-	((phase < duty) * 2 - 1) + blep.(phase, dt) - blep.((phase + 1 - duty).frac, dt)
-};
-var webAudioPeakNormal = 0.847;
-var oscillators = (
-	sine: { |freq| SinOsc.ar(freq) },
-	sawtooth: { |freq| sawWave.((phasor.(freq) + 0.5).frac, freq) * webAudioPeakNormal },
-	square: { |freq| pulseWave.(freq, 0.5) * webAudioPeakNormal },
-	triangle: { |freq| 1 - (4 * ((phasor.(freq) + 0.25).frac - 0.5).abs) }
-);
+var osc = (thisProcess.nowExecutingPath.dirname +/+ "oscillators.scd").load;
+var phasor = osc[\phasor], sawWave = osc[\sawWave], pulseWave = osc[\pulseWave], fm = osc[\fm];
+var oscillators = osc[\waves], fmWaves = osc[\fmWaves];
 var aliases = (sin: \sine, saw: \sawtooth, sqr: \square, tri: \triangle);
 var noises = (
 	white: { WhiteNoise.ar },
@@ -26,7 +9,6 @@ var noises = (
 	crackle: { Dust2.ar(\density.kr(0.03) * 0.01 * SampleRate.ir) }
 );
 var synthNames = (oscillators.keys.asArray ++ aliases.keys.asArray ++ noises.keys.asArray ++ [\pulse, \supersaw]).asSet;
-var fmWaves = [\sine, \triangle, \square, \sawtooth];
 var filterModels = ['12db', 'ladder', '24db'];
 var maxVoices = 16;
 
@@ -56,9 +38,7 @@ var pitched = { |freq|
 	var fmLin = EnvGen.kr(envelope.(0, 1, fmSustain, fmTimes, \lin), held);
 	var fmExp = EnvGen.kr(envelope.(0.001, 1, fmSustain.max(0.001), fmTimes, \exp), held);
 	var fmEnv = 1 + ((fmLin + ((fmExp - fmLin) * \fmExp.kr(1)) - 1) * \fmEnvOn.kr(0));
-	var modFreq = freq * \fmh.kr(1);
-	var modulator = Select.ar(\fmWave.kr(0), fmWaves.collect { |wave| oscillators[wave].(modFreq) });
-	(freq + (modulator * fmEnv * \fmi.kr(0) * modFreq)) * (pitchEnv + vibrato).midiratio
+	fm.(freq, \fmi.kr(0), \fmh.kr(1), \fmWave.kr(0), fmEnv) * (pitchEnv + vibrato).midiratio
 };
 
 var cutoff = {
