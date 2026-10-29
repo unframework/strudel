@@ -11,11 +11,11 @@ import {
 import { registerSoundfonts } from '@strudel/soundfonts';
 
 // Register no-op stubs for UI-only methods that may appear in pattern code
-Pattern.prototype._scope =
-  Pattern.prototype._scope ||
-  function () {
+['_scope', '_plot'].forEach((method) => {
+  Pattern.prototype[method] ||= function () {
     return this;
   };
+});
 
 async function prebake() {
   const ds = 'https://raw.githubusercontent.com/felixroos/dough-samples/main';

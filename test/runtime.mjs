@@ -93,6 +93,8 @@ const toneHelpersMocked = {
   'tune',
   'midi',
   '_scope',
+  '_plot',
+  'plot',
   '_spiral',
   '_pitchwheel',
   '_pianoroll',

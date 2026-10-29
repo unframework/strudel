@@ -275,6 +275,12 @@ registerWidget('_scope', (id, options = {}, pat) => {
   return pat.tag(id).scope({ ...options, ctx, id });
 });
 
+registerWidget('_plot', (id, options = {}, pat) => {
+  options = { width: 500, height: 80, ...options };
+  const ctx = getCanvasWidget(id, options).getContext('2d');
+  return pat.plot({ ...options, ctx, id });
+});
+
 registerWidget('_pitchwheel', (id, options = {}, pat) => {
   let _size = options.size || 200;
   options = { width: _size, height: _size, ...options, size: _size / 5 };
