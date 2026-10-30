@@ -12,6 +12,8 @@ var synthNames = (oscillators.keys.asArray ++ aliases.keys.asArray ++ noises.key
 var filterModels = ['12db', 'ladder', '24db'];
 var maxVoices = 16;
 
+var defaultUnison = 5;
+var supersawName = { |voices| "strudel_supersaw%".format(voices).asSymbol };
 var adsr = { |attack, decay, sustain, release, defaults|
 	if([attack, decay, sustain, release].every(_.isNil)) {
 		defaults
@@ -47,6 +49,23 @@ var cutoff = {
 	freq.clip(10, SampleRate.ir * 0.45)
 };
 
+var supersaw = { |voices, numChannels|
+	{ |out, freq = 440, pan = 0, spread = 0.6, detune = 0.18|
+		var spreading = (voices > 1).binaryValue;
+		var step = detune / (voices - 1).max(1);
+		var center = detune * 0.5 * spreading;
+		var width = spread.clip(0, 1) * spreading;
+		var carrier = pitched.(freq).max(0);
+		var saws = voices.collect { |i|
+			var voiceFreq = carrier * ((i * step) - center).midiratio;
+			sawWave.((phasor.(voiceFreq) + Rand(0, 1)).frac, voiceFreq)
+		};
+		var sides = [saws[0, 2..], saws[1, 3..]].reject(_.isEmpty);
+		var sig = sides.collect { |side, i| Pan2.ar(side.sum, width * [1, -1][i]) }.sum;
+		Out.ar(out, DirtPan.ar(sig * (0.3 / voices.sqrt), numChannels, pan))
+	}
+};
+
 var addSynthDefs = { |numChannels|
 	oscillators.keysValuesDo { |name, oscillator|
 		var def = { |out, freq = 440, pan = 0, noise = 0|
@@ -70,20 +89,8 @@ var addSynthDefs = { |numChannels|
 		Out.ar(out, DirtPan.ar(LeakDC.ar(sig) * 0.3, numChannels, pan))
 	}).add;
 
-	SynthDef(\supersaw, { |out, freq = 440, pan = 0, unison = 5, spread = 0.6, detune = 0.18|
-		var voices = unison.round.clip(1, maxVoices);
-		var spreading = voices > 1;
-		var step = detune / (voices - 1).max(1);
-		var center = detune * 0.5 * spreading;
-		var width = spread.clip(0, 1) * spreading;
-		var carrier = pitched.(freq).max(0);
-		var saws = maxVoices.collect { |i|
-			var voiceFreq = carrier * ((i * step) - center).midiratio;
-			sawWave.((phasor.(voiceFreq) + Rand(0, 1)).frac, voiceFreq) * (i < voices)
-		};
-		var sig = Pan2.ar(saws[0, 2..].sum, width) + Pan2.ar(saws[1, 3..].sum, width.neg);
-		Out.ar(out, DirtPan.ar(sig * (0.3 / voices.sqrt), numChannels, pan))
-	}).add;
+	(1..maxVoices).do { |voices| SynthDef(supersawName.(voices), supersaw.(voices, numChannels)).add };
+	SynthDef(\supersaw, supersaw.(defaultUnison, numChannels)).add;
 
 	SynthDef(\strudel_adsr, { |out, holdTime = 1, envAttack = 0.001, envDecay = 0.05, envSustain = 0.6, envRelease = 0.01|
 		var env = EnvGen.ar(envelope.(0, 1, envSustain, [envAttack, envDecay, envRelease], \lin), gate.(holdTime));
@@ -211,7 +218,10 @@ var finish = {
 		};
 
 		if(~s == \pulse and: { ~pwsweep.isNil }) { ~pwsweep = if(~pwrate.notNil) { 0.3 } { 0 } };
-		if(~s == \supersaw) { ~detune = ~detune ?? { if(~n.isNumber) { ~n } { 0.18 } } };
+		if(~s == \supersaw) {
+			~detune = ~detune ?? { if(~n.isNumber) { ~n } { 0.18 } };
+			~instrument = supersawName.((~unison ? defaultUnison).round.clip(1, maxVoices).asInteger);
+		};
 	};
 	nil
 };
