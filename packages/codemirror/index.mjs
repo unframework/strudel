@@ -6,3 +6,4 @@ export * from './themes.mjs';
 export * from './widget.mjs';
 export { Vim } from './keybindings.mjs';
 export * from './basicSetup.mjs';
+export * from './inlineWidget.mjs';

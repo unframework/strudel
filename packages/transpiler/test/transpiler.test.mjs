@@ -40,6 +40,16 @@ describe('transpiler', () => {
   it('handles strudel S(...) inside kabelsalat K(...)', () => {
     expect(transpiler('K(S("bd".fast(4)))', simple).output).toEqual("worklet('pat[0]', m('bd', 4).fast(4));");
   });
+  it('binds markers() to a widget for its sample', () => {
+    const { output, widgets } = transpiler(`markers("voice:0", [[0.4, 0, 'accent']])`, { ...simple, id: 'ed' });
+    expect(output).toEqual(
+      "markersWithID('ed_widget_markers_voice:0', 'voice:0', [[\n        0.4,\n        0,\n        'accent'\n    ]]);",
+    );
+    expect(widgets).toEqual([{ to: 40, index: 0, type: 'markers', id: 'ed_widget_markers_voice:0' }]);
+  });
+  it('requires a literal sample name in markers()', () => {
+    expect(() => transpiler('markers(name, [])', simple)).toThrow();
+  });
   /*   it('parses dynamic imports', () => {
     expect(
       transpiler("const { default: foo } = await import('https://bar.com/foo.js');", {
