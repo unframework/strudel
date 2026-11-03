@@ -121,11 +121,49 @@ export function warpedGrid(meta, bpm) {
   return { t0: warpTime(plan, beats[0].t) - beats[0].beat * spb, spb };
 }
 
-// FNV-1a, distinguishes marker edits in cache keys
-export function metaRevision(meta) {
-  let hash = 0x811c9dc5;
-  for (const char of JSON.stringify(meta)) {
-    hash = Math.imul(hash ^ char.charCodeAt(0), 0x01000193);
+const roundBpm = (bpm) => Math.round(bpm * 100) / 100;
+
+export function warpQuery(meta, bpm) {
+  const params = new URLSearchParams({
+    bpm: roundBpm(bpm),
+    beats: beatMarkers(meta)
+      .map((m) => `${m.t}:${m.beat}`)
+      .join(','),
+  });
+  if (meta.bpm) {
+    params.set('srcbpm', meta.bpm);
   }
-  return (hash >>> 0).toString(36);
+  return params.toString();
+}
+
+export function parseWarpQuery(params) {
+  const bpm = z.coerce.number().positive().parse(params.get('bpm'));
+  const markers = (params.get('beats') ?? '')
+    .split(',')
+    .filter(Boolean)
+    .map((pair) => {
+      const [t, beat] = pair.split(':').map(Number);
+      return { t, beat };
+    });
+  const srcbpm = params.get('srcbpm');
+  return { bpm, meta: parseSampleMeta({ version: 1, markers, bpm: srcbpm === null ? undefined : Number(srcbpm) }) };
+}
+
+const markerTupleSchema = z.union([
+  z.tuple([markerSchema.shape.t, z.number(), z.string().min(1)]).transform(([t, beat, name]) => ({ t, beat, name })),
+  z.tuple([markerSchema.shape.t, z.number()]).transform(([t, beat]) => ({ t, beat })),
+  z.tuple([markerSchema.shape.t, z.string().min(1)]).transform(([t, name]) => ({ t, name })),
+  z.tuple([markerSchema.shape.t]).transform(([t]) => ({ t })),
+]);
+
+export const parseMarkerTuples = (tuples) =>
+  parseSampleMeta({ version: 1, markers: z.array(markerTupleSchema).parse(tuples) });
+
+const sourceString = (s) => `'${s.replace(/[\\']/g, '\\$&')}'`;
+
+export function formatMarkerTuples(meta) {
+  const tuples = meta.markers.map(({ t, beat, name }) =>
+    [t, beat, name && sourceString(name)].filter((x) => x !== undefined).join(', '),
+  );
+  return `[${tuples.map((tuple) => `[${tuple}]`).join(', ')}]`;
 }

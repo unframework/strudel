@@ -80,13 +80,48 @@ const sliderTranspilerPlugin = {
   }),
 };
 
-export const widgetTranspilerPlugins = [sliderTranspilerPlugin, deviceTranspilerPlugin, widgetTranspilerPlugin];
+const markersTranspilerPlugin = {
+  walk: (context) => ({
+    enter: function (node) {
+      if (!isMarkersFunction(node)) return;
+      context.widgets ??= [];
+      const { widgets, options } = context;
+      const [sound, ...rest] = node.arguments;
+      if (sound?.type !== 'Literal' || typeof sound.value !== 'string') {
+        throw new Error(`markers() takes the sample name as a string, like markers('voice:0', [])`);
+      }
+      const widgetConfig = {
+        to: node.end,
+        index: 0,
+        type: 'markers',
+        id: `${options.id || ''}_widget_markers_${sound.value}`,
+      };
+      options.emitWidgets && widgets.push(widgetConfig);
+      node.callee.name = 'markersWithID';
+      node.arguments = [plainString(widgetConfig.id), plainString(sound.value), ...rest];
+      return this.replace(node);
+    },
+  }),
+};
+
+export const widgetTranspilerPlugins = [
+  sliderTranspilerPlugin,
+  deviceTranspilerPlugin,
+  markersTranspilerPlugin,
+  widgetTranspilerPlugin,
+];
 
 // these functions are connected to @strudel/codemirror -> slider.mjs
 // maybe someday there will be pluggable transpiler functions, then move this there
 function isSliderFunction(node) {
   return node.type === 'CallExpression' && node.callee.name === 'slider';
 }
+
+function isMarkersFunction(node) {
+  return node.type === 'CallExpression' && node.callee.name === 'markers';
+}
+
+const plainString = (value) => ({ type: 'Literal', value, raw: `'${value}'` });
 
 function isDeviceFunction(node) {
   return node.type === 'CallExpression' && node.callee.name === 'midin';

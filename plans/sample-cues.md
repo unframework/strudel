@@ -59,9 +59,22 @@ The sample server is the hub. Annotations live next to the audio files, and warp
   - **custom bpm:** the warp target. Unticked, it uses the REPL tempo.
 - "Save" writes the sidecar with a PUT, which only works when the server runs with `--writable`. Patterns pick up the new markers immediately.
 
+### Markers in code (spike)
+
+Exploring markers as part of the sketch instead of sidecars, in the spirit of `slider()`: the code is the source of truth and an inline widget edits it.
+
+```js
+markers('voice:0', [[0, 0], [0.5, 1], [1, 2, 'accent'], [1.5, 3]])
+```
+
+- Tuples are `[t, beat?, name?]`. Evaluating registers the meta for that sample's URL, overriding its sidecar.
+- The transpiler turns the call into `markersWithID(id, sound, tuples)`, keyed by sound, and the widget renders under the line: a summary chip that expands into the same `SampleEditor` the annotate tab uses.
+- Edits update patterns right away and rewrite the array literal in the editor (found via the syntax tree), so CodeMirror undo applies and share links carry the markers.
+- Warp URLs carry the beat markers (`?bpm=&beats=t:beat,…`), so the server renders without sidecars and the warped preview reflects unsaved edits.
+- Open questions: undo only reaches the widget on re-evaluation; deleting a `markers()` call leaves its meta registered until reload; two calls for the same sample share one widget; the array literal is long, and could be folded behind the chip; sound index `voice:0` shifts when files are added.
+
 ## Known limitations
 
-- The warped preview reflects saved markers only; unsaved edits aren't rendered.
 - Renders lag by about 5 ms (stretcher latency). Spacing between markers is exact.
 - Sections are stretched separately and then joined, so seams may be audible at markers. If so, switch to `rubberband-cli --timemap` for a single continuous pass.
 - `cue` can't be combined with `begin`, and it must come after `beatwarp`, `beatsync` and `speed` in the chain.

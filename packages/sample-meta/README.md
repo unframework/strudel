@@ -11,4 +11,6 @@ Annotation sidecars for samples. `voice.wav` is described by `voice.wav.json`:
 - A warp plan stretches the audio between neighbouring beat markers so that every beat marker lands exactly on the target tempo's grid. Head and tail stretch like their neighbouring segment.
 - A grid is `{ t0, spb }`: time of beat 0 and seconds per beat.
 
-The sample server renders warp plans with ffmpeg's `rubberband` filter (pitch-preserving) and serves them as `<file>?bpm=<target>`.
+- Sketches can carry markers in code instead, as `[t, beat?, name?]` tuples: `markers('voice:0', [[0.41, 0], [1.3, 2, 'accent']])`.
+
+The sample server renders warp plans with ffmpeg's `rubberband` filter (pitch-preserving) and serves them as `<file>?<warpQuery>`. The query carries the beat markers, so renders don't depend on where the markers are stored.

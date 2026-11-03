@@ -1,6 +1,6 @@
 import { getBaseURL, getCommonSampleInfo } from './util.mjs';
 import { getSound, registerSound, registerWaveTable, soundMap } from './index.mjs';
-import { gridBpm, metaRevision, parseSampleMeta, sourceGrid } from '@strudel/sample-meta';
+import { gridBpm, parseSampleMeta, sourceGrid, warpQuery } from '@strudel/sample-meta';
 import { getAudioContext } from './audioContext.mjs';
 import {
   getADSRValues,
@@ -178,7 +178,7 @@ function githubPath(base, subpath = '') {
   return `https://raw.githubusercontent.com/${user}/${repo}/${branch}/${other}`;
 }
 
-export const beatwarpUrl = (url, meta, bpm) => `${url}?bpm=${Math.round(bpm * 100) / 100}&rev=${metaRevision(meta)}`;
+export const beatwarpUrl = (url, meta, bpm) => `${url}?${warpQuery(meta, bpm)}`;
 
 export const setSampleMeta = (url, meta) => sampleMetas.set(url, meta);
 

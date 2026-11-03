@@ -87,6 +87,7 @@ export function loadModules() {
     import('@strudel/mondo'),
     import('@strudel/linectrl'),
     import('@strudel/dirt-patches'),
+    import('./annotate/inline.jsx'),
   ];
   if (isTauri()) {
     modules = modules.concat([

@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
   cueTime,
+  formatMarkerTuples,
   gridBpm,
   gridTime,
   inferBeats,
+  parseMarkerTuples,
   parseSampleMeta,
+  parseWarpQuery,
   sourceGrid,
   warpPlan,
   warpTime,
   warpedGrid,
+  warpQuery,
 } from '../index.mjs';
 
 const speech = parseSampleMeta({
@@ -94,5 +98,44 @@ describe('inferBeats', () => {
   it('numbers taps by the median spacing', () => {
     const taps = [{ t: 0.1 }, { t: 0.6 }, { t: 1.62 }, { t: 2.1 }];
     expect(inferBeats(taps).map((m) => m.beat)).toEqual([0, 1, 3, 4]);
+  });
+});
+
+describe('marker tuples', () => {
+  it('round-trip through source text', () => {
+    const tuples = [
+      [1.31, 2, 'accent'],
+      [0.4, 0],
+      [2, "breath's"],
+      [0.86, 1],
+    ];
+    const meta = parseMarkerTuples(tuples);
+    expect(meta.markers).toEqual([...speech.markers.slice(0, 3), { t: 2, name: "breath's" }]);
+    expect(formatMarkerTuples(meta)).toBe("[[0.4, 0], [0.86, 1], [1.31, 2, 'accent'], [2, 'breath\\'s']]");
+  });
+
+  it('rejects tuples without a time or with extra fields', () => {
+    expect(() => parseMarkerTuples([['accent']])).toThrow();
+    expect(() => parseMarkerTuples([[1, 2, 'a', 3]])).toThrow();
+  });
+});
+
+describe('warpQuery', () => {
+  it('carries only what the render depends on', () => {
+    const query = warpQuery(speech, 120.004);
+    expect(query).toBe('bpm=120&beats=0.4%3A0%2C0.86%3A1%2C1.31%3A2');
+    const { bpm, meta } = parseWarpQuery(new URLSearchParams(query));
+    expect(bpm).toBe(120);
+    expect(warpPlan(meta, bpm)).toEqual(warpPlan(speech, bpm));
+  });
+
+  it('keeps the bpm fallback', () => {
+    const { meta } = parseWarpQuery(new URLSearchParams(warpQuery({ version: 1, markers: [], bpm: 90 }, 120)));
+    expect(meta).toEqual({ version: 1, markers: [], bpm: 90 });
+  });
+
+  it('rejects malformed queries', () => {
+    expect(() => parseWarpQuery(new URLSearchParams('bpm=0'))).toThrow();
+    expect(() => parseWarpQuery(new URLSearchParams('bpm=120&beats=x:1'))).toThrow();
   });
 });

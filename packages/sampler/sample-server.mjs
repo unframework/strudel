@@ -2,12 +2,12 @@
 
 import cowsay from 'cowsay';
 import { createReadStream, existsSync, writeFileSync } from 'fs';
-import { readFile, writeFile } from 'fs/promises';
+import { writeFile } from 'fs/promises';
 import http from 'http';
 import { join, resolve, sep } from 'path';
 import readline from 'readline';
 import os from 'os';
-import { parseSampleMeta, SIDECAR_SUFFIX, sidecarPath } from '@strudel/sample-meta';
+import { parseSampleMeta, parseWarpQuery, SIDECAR_SUFFIX } from '@strudel/sample-meta';
 import { isAudioFile, getSampleMap } from './scan.mjs';
 import { warpedSample } from './warp.mjs';
 
@@ -88,14 +88,6 @@ async function readBody(req) {
   return Buffer.concat(chunks).toString('utf8');
 }
 
-async function readSidecar(audioPath) {
-  const sidecar = sidecarPath(audioPath);
-  if (!existsSync(sidecar)) {
-    throw new HttpError(404, 'Sample has no markers');
-  }
-  return parseSampleMeta(JSON.parse(await readFile(sidecar, 'utf8')));
-}
-
 async function putSidecar(req, res, filePath) {
   if (!writable) {
     throw new HttpError(405, 'Start the server with --writable to save markers');
@@ -128,18 +120,20 @@ function streamFile(res, filePath) {
   readStream.pipe(res);
 }
 
-async function getFile(res, filePath, bpmParam) {
-  if (bpmParam === null) {
+async function getFile(res, filePath, params) {
+  if (!params.has('bpm')) {
     return streamFile(res, filePath);
   }
-  const bpm = Number(bpmParam);
-  if (!(bpm > 0)) {
-    throw new HttpError(400, `Invalid bpm: ${bpmParam}`);
+  let warp;
+  try {
+    warp = parseWarpQuery(params);
+  } catch (err) {
+    throw new HttpError(400, `Invalid warp query: ${err.message}`);
   }
   if (!isAudioFile(filePath) || !existsSync(filePath)) {
     throw new HttpError(404, 'File not found');
   }
-  const warpPath = await warpedSample({ cacheDir, audioPath: filePath, meta: await readSidecar(filePath), bpm });
+  const warpPath = await warpedSample({ cacheDir, audioPath: filePath, ...warp });
   res.setHeader('X-Warp-Path', warpPath);
   streamFile(res, warpPath);
 }
@@ -159,7 +153,7 @@ async function handle(req, res) {
     return putSidecar(req, res, filePath);
   }
   if (req.method === 'GET') {
-    return getFile(res, filePath, url.searchParams.get('bpm'));
+    return getFile(res, filePath, url.searchParams);
   }
   throw new HttpError(405, 'Method not allowed');
 }
