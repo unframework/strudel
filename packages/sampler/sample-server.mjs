@@ -2,12 +2,11 @@
 
 import cowsay from 'cowsay';
 import { createReadStream, existsSync, writeFileSync } from 'fs';
-import { writeFile } from 'fs/promises';
 import http from 'http';
 import { join, resolve, sep } from 'path';
 import readline from 'readline';
 import os from 'os';
-import { parseSampleMeta, parseWarpQuery, SIDECAR_SUFFIX } from '@strudel/sample-meta';
+import { parseWarpQuery } from '@strudel/sample-meta';
 import { isAudioFile, getSampleMap } from './scan.mjs';
 import { warpedSample } from './warp.mjs';
 
@@ -62,7 +61,6 @@ console.log(
   }),
 );
 
-const writable = args.includes('--writable');
 const cacheDir = join(directory, '.warp-cache');
 
 class HttpError extends Error {
@@ -78,33 +76,6 @@ function resolveInDirectory(pathname) {
     throw new HttpError(403, 'Forbidden');
   }
   return filePath;
-}
-
-async function readBody(req) {
-  const chunks = [];
-  for await (const chunk of req) {
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks).toString('utf8');
-}
-
-async function putSidecar(req, res, filePath) {
-  if (!writable) {
-    throw new HttpError(405, 'Start the server with --writable to save markers');
-  }
-  const audioPath = filePath.slice(0, -SIDECAR_SUFFIX.length);
-  if (!filePath.endsWith(SIDECAR_SUFFIX) || !isAudioFile(audioPath) || !existsSync(audioPath)) {
-    throw new HttpError(400, 'Can only write sidecars of existing audio files');
-  }
-  let meta;
-  try {
-    meta = parseSampleMeta(JSON.parse(await readBody(req)));
-  } catch (err) {
-    throw new HttpError(400, err.message);
-  }
-  await writeFile(filePath, JSON.stringify(meta, null, 2) + '\n', 'utf8');
-  res.setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify(meta));
 }
 
 function streamFile(res, filePath) {
@@ -140,18 +111,11 @@ async function getFile(res, filePath, params) {
 
 async function handle(req, res) {
   const url = new URL(req.url, 'http://localhost');
-  if (req.method === 'OPTIONS') {
-    res.statusCode = 204;
-    return res.end();
-  }
   if (url.pathname === '/' && req.method === 'GET') {
     res.setHeader('Content-Type', 'application/json');
     return res.end(JSON.stringify(await getSampleMap(directory, getArgValue('--flat'))));
   }
   const filePath = resolveInDirectory(url.pathname);
-  if (req.method === 'PUT') {
-    return putSidecar(req, res, filePath);
-  }
   if (req.method === 'GET') {
     return getFile(res, filePath, url.searchParams);
   }
@@ -160,8 +124,6 @@ async function handle(req, res) {
 
 const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Access-Control-Expose-Headers', 'X-Warp-Path');
   try {
     await handle(req, res);

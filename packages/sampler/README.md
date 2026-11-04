@@ -30,14 +30,8 @@ npx --yes @strudel/sampler --json > strudel.json
 ```
 
 this is useful if you want to create a sample pack from the current folder.
-## markers and warping
-
-Each audio file can have a sidecar `<file>.json` with cue markers, beat markers and an optional bpm (see `@strudel/sample-meta`). Sidecars are included in the served map under `_meta`.
-
-```sh
-npx @strudel/sampler --writable # allows saving sidecars from the REPL via PUT /<file>.json
-```
+## warping
 
 `GET /<file>?bpm=<target>&beats=<t>:<beat>,…` returns the file time-stretched (pitch preserved) so that the given beat markers land on the target tempo's grid (`srcbpm=<bpm>` instead of `beats` stretches uniformly). Renders need `ffmpeg` with the `rubberband` filter and are cached in `.warp-cache/`, keyed by audio content, markers and bpm. The `X-Warp-Path` response header holds the rendered file's path on disk.
 
-In patterns, `s("voice").beatsync()` plays the warp for the current tempo (`beatwarp(bpm)` for a fixed one), `cue("accent")` starts the sample early so the named marker falls on the event onset, and `fitbpm()` resamples to the current tempo instead of warping. Markers are edited in the REPL's annotate tab.
+Markers live in the sketch, as `markers('voice:0', [[0.41, 0], [1.3, 2, 'accent']])` with an inline waveform editor. In patterns, `s("voice").beatsync()` plays the warp for the current tempo (`beatwarp(bpm)` for a fixed one), `cue("accent")` starts the sample early so the named marker falls on the event onset, and `fitbpm()` resamples to the current tempo instead of warping.

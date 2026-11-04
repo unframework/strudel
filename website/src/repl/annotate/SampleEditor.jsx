@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActionButton } from '../components/button/action-button.jsx';
 import { Checkbox, inputClass } from '../components/panel/SettingsTab.jsx';
 import { startPreview } from './preview.mjs';
-import { attempt, fitSummary, gridTimes, nextTapBeat, previewBlips, viewTimeline } from './timeline.mjs';
+import { attempt, fitSummary, gridTimes, previewBlips, viewTimeline } from './timeline.mjs';
 import { drawWaveform, MARKER_HIT_PX, timeToX, xToTime } from './waveform.mjs';
 
 const WAVEFORM_HEIGHT = 160;
@@ -198,19 +198,18 @@ function usePreview({ buffer, blips, restartKey }) {
     };
   }, [playing, buffer, restartKey]);
 
-  return { playing, setPlaying, position, positionRef, seek };
+  return { playing, setPlaying, position, seek };
 }
 
 const replBpm = () => getCps() * 240;
 const byTime = (markers) => [...markers].sort((a, b) => a.t - b.t);
 
-export function SampleEditor({ url, buffer, meta, onChange, shortcuts, children }) {
+export function SampleEditor({ url, buffer, meta, onChange }) {
   const [warped, setWarped] = useState(false);
   const [blipsOn, setBlipsOn] = useState(true);
   const [clickOn, setClickOn] = useState(false);
   const [customBpmOn, setCustomBpmOn] = useState(false);
   const [customBpm, setCustomBpm] = useState(120);
-  const [offbeats, setOffbeats] = useState(false);
   const [picked, setPicked] = useState();
   const [seekCount, setSeekCount] = useState(0);
   const selected = meta.markers.includes(picked) ? picked : undefined;
@@ -246,26 +245,8 @@ export function SampleEditor({ url, buffer, meta, onChange, shortcuts, children 
     setPicked(undefined);
   };
 
-  const onKeyDown = (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
-      return;
-    }
-    if (e.key === ' ') {
-      e.preventDefault();
-      preview.setPlaying(!preview.playing);
-    } else if (e.key === 't' && preview.playing && !showWarped) {
-      const t = preview.positionRef.current;
-      addMarker({ t, beat: nextTapBeat(meta, t, offbeats ? 0.5 : 1) });
-    } else if ((e.key === 'Delete' || e.key === 'Backspace') && selected && !showWarped) {
-      deleteMarker(selected);
-    }
-  };
-
   return (
-    <div
-      className="flex flex-col gap-2 text-foreground text-xs outline-none"
-      {...(shortcuts && { tabIndex: 0, onKeyDown })}
-    >
+    <div className="flex flex-col gap-2 text-foreground text-xs">
       <div className="flex gap-4 items-center flex-wrap">
         <ActionButton label={preview.playing ? 'stop' : 'play'} onClick={() => preview.setPlaying(!preview.playing)} />
         <Checkbox label="marker blips" value={blipsOn} onChange={(e) => setBlipsOn(e.target.checked)} />
@@ -308,15 +289,11 @@ export function SampleEditor({ url, buffer, meta, onChange, shortcuts, children 
         <span>
           {fit.error ?? `fitted ${fit.value.bpm.toFixed(2)} bpm, worst nudge ${fit.value.worstMs.toFixed(1)} ms`}
         </span>
-        {shortcuts && (
-          <Checkbox label="tap offbeats" value={offbeats} onChange={(e) => setOffbeats(e.target.checked)} />
-        )}
         <ActionButton
           label="auto-number beats"
           disabled={showWarped}
           onClick={() => onChange({ ...meta, markers: inferBeats(meta.markers) })}
         />
-        {children}
       </div>
 
       {selected && !showWarped && (

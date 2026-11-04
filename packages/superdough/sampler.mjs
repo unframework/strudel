@@ -1,6 +1,6 @@
 import { getBaseURL, getCommonSampleInfo } from './util.mjs';
 import { getSound, registerSound, registerWaveTable, soundMap } from './index.mjs';
-import { gridBpm, parseSampleMeta, sourceGrid, warpQuery } from '@strudel/sample-meta';
+import { gridBpm, sourceGrid, warpQuery } from '@strudel/sample-meta';
 import { getAudioContext } from './audioContext.mjs';
 import {
   getADSRValues,
@@ -202,32 +202,19 @@ export function getSampleUrl(hapValue) {
 
 export const getSampleMeta = (hapValue) => requireSampleMeta(getSampleUrl(hapValue));
 
-export const hasSampleMeta = (url) => sampleMetas.has(url);
-
-function resolveBaseUrl(baseUrl) {
-  baseUrl = resolveSpecialPaths(baseUrl);
-  return baseUrl.startsWith('github:') ? githubPath(baseUrl, '') : baseUrl;
-}
-
-function registerSampleMetas(metas, baseUrl) {
-  baseUrl = resolveBaseUrl(baseUrl);
-  for (const [path, json] of Object.entries(metas)) {
-    setSampleMeta(baseUrl + path, parseSampleMeta(json));
-  }
-}
-
 export const processSampleMap = (sampleMap, fn, baseUrl = sampleMap._base || '') => {
   return Object.entries(sampleMap).forEach(([key, value]) => {
-    if (key.startsWith('_')) {
-      return;
-    }
     if (typeof value === 'string') {
       value = [value];
     }
     if (typeof value !== 'object') {
       throw new Error('wrong sample map format for ' + key);
     }
-    baseUrl = resolveBaseUrl(value._base || baseUrl);
+    baseUrl = value._base || baseUrl;
+    baseUrl = resolveSpecialPaths(baseUrl);
+    if (baseUrl.startsWith('github:')) {
+      baseUrl = githubPath(baseUrl, '');
+    }
     const fullUrl = (v) => baseUrl + v;
     if (Array.isArray(value)) {
       //return [key, value.map(replaceUrl)];
@@ -333,9 +320,6 @@ export const samples = async (sampleMap, baseUrl = sampleMap._base || '', option
     },
     baseUrl,
   );
-  if (sampleMap._meta) {
-    registerSampleMetas(sampleMap._meta, baseUrl);
-  }
 };
 
 const cutGroups = [];
