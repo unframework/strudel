@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-export const SIDECAR_SUFFIX = '.json';
-
 const markerSchema = z.object({
   t: z.number().nonnegative(),
   beat: z.number().optional(),
@@ -14,14 +12,10 @@ const sampleMetaSchema = z.object({
   bpm: z.number().positive().optional(),
 });
 
-export const emptySampleMeta = () => ({ version: 1, markers: [] });
-
 export function parseSampleMeta(json) {
   const meta = sampleMetaSchema.parse(json);
   return { ...meta, markers: [...meta.markers].sort((a, b) => a.t - b.t) };
 }
-
-export const sidecarPath = (audioPath) => audioPath + SIDECAR_SUFFIX;
 
 export const beatMarkers = (meta) => meta.markers.filter((m) => m.beat !== undefined);
 

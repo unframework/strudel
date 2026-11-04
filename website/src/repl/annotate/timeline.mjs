@@ -46,11 +46,6 @@ export function previewBlips({ markers, clicks }) {
   ];
 }
 
-export function nextTapBeat(meta, t, step) {
-  const before = beatMarkers(meta).filter((m) => m.t < t);
-  return before.length ? before.at(-1).beat + step : 0;
-}
-
 export function fitSummary(meta) {
   const fit = attempt(() => sourceGrid(meta));
   if (fit.error) {

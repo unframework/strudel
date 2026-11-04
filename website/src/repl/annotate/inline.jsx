@@ -63,9 +63,7 @@ function InlineMarkers({ el, sound, url, meta: evaluated }) {
         <div className="w-[640px] max-w-full border border-muted p-2">
           {buffer.status === 'loading' && <div>loading…</div>}
           {buffer.error && <div className="text-red-500">{buffer.error}</div>}
-          {buffer.value && (
-            <SampleEditor url={url} buffer={buffer.value} meta={meta} onChange={edit} shortcuts={false} />
-          )}
+          {buffer.value && <SampleEditor url={url} buffer={buffer.value} meta={meta} onChange={edit} />}
         </div>
       )}
     </div>

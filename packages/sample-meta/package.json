@@ -1,7 +1,7 @@
 {
   "name": "@strudel/sample-meta",
   "version": "0.1.0",
-  "description": "Sample annotation sidecars: cue markers, tempo fit, warp plans",
+  "description": "Sample beat and cue markers: tempo fit, warp plans",
   "type": "module",
   "main": "index.mjs",
   "private": true,
