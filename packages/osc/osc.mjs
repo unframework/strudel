@@ -4,7 +4,19 @@ Copyright (C) 2022 Strudel contributors - see <https://codeberg.org/uzu/strudel/
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more details. You should have received a copy of the GNU Affero General Public License along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { logger, parseNumeral, register, isNote, noteToMidi, ClockCollator } from '@strudel/core';
+import { logger, parseNumeral, register, isNote, noteToMidi, ClockCollator, clamp } from '@strudel/core';
+
+const DIRT_REVERB_LOOP_SECONDS = 0.25;
+const DIRT_REVERB_MEAN_DEPTH_JITTER = 0.025;
+const DIRT_REVERB_MAX_SIZE = 0.95;
+
+// inverts dirt_reverb's `size.linexp(0, 1, 0.01, 0.98)` loop gain
+export function decayToDirtSize(seconds) {
+  const loopGain = Math.pow(10, (-3 * DIRT_REVERB_LOOP_SECONDS) / seconds);
+  const depth = loopGain - DIRT_REVERB_MEAN_DEPTH_JITTER;
+  if (!(depth > 0.01)) return 0;
+  return clamp(Math.log(depth / 0.01) / Math.log(98), 0, DIRT_REVERB_MAX_SIZE);
+}
 
 let connection; // Promise<OSC>
 function connect() {
@@ -47,7 +59,8 @@ export function parseControlsFromHap(hap, cps) {
     }
   }
   controls.bank && (controls.s = controls.bank + controls.s);
-  controls.roomsize && (controls.size = parseNumeral(controls.roomsize));
+  const roomDecay = controls.roomsize ?? controls.size;
+  roomDecay != null && (controls.size = decayToDirtSize(parseNumeral(roomDecay)));
   // speed adjustment for CPS is handled on the DSP side in superdirt and pattern side in Strudel,
   // so we need to undo the adjustment before sending the message to superdirt.
   controls.unit === 'c' && controls.speed != null && (controls.speed = controls.speed / cps);

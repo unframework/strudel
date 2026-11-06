@@ -9,6 +9,7 @@
     "main": "dist/index.mjs"
   },
   "scripts": {
+    "test": "vitest run",
     "server": "node server.js",
     "tidal-sniffer": "node tidal-sniffer.js",
     "client": "npx serve -p 4321",
@@ -43,7 +44,8 @@
   },
   "devDependencies": {
     "pkg": "^5.8.1",
-    "vite": "^6.0.11"
+    "vite": "^6.0.11",
+    "vitest": "^3.0.4"
   },
   "engines": {
     "node": ">=18.0.0"
