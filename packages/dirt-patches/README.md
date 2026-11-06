@@ -11,8 +11,9 @@ SuperDirt patches for [drone-server](https://github.com/unframework/drone-server
 | `scd/ofilters.scd` | `olpf`/`ohpf`/`obpf` orbit filters |
 | `scd/daverb.scd` | `daverb`/`dv…` Dattorro plate reverb, needs the DaVerb UGen |
 | `scd/tremolo.scd` | Strudel's `tremolo`/`tremolosync` with `tremolodepth`, `tremoloskew`, `tremolophase`, `tremoloshape` |
+| `scd/duck.scd` | Strudel's `duckorbit` sidechain with `duckdepth`, `duckonset`, `duckattack` |
 
-`scd/oscillators.scd` is not a patch but the through-zero polyBLEP oscillators and FM operator shared by `synths` and `drone`. `scd/index.scd` loads the patches in order; `ofilters` places itself after `grit`, `daverb` after SuperDirt's reverb, `corpus` runs after the amplitude envelope, and `tremolo` takes the place of SuperDirt's own `tremolo` module (`tremolorate`), so it follows `corpus`.
+`scd/oscillators.scd` is not a patch but the through-zero polyBLEP oscillators and FM operator shared by `synths` and `drone`. `scd/index.scd` loads the patches in order; `ofilters` places itself after `grit`, `daverb` after SuperDirt's reverb, `corpus` runs after the amplitude envelope, and `tremolo` takes the place of SuperDirt's own `tremolo` module (`tremolorate`), so it follows `corpus`. `duck` goes last on each orbit, just ahead of SuperDirt's meter and output.
 
 ## daverb
 
@@ -28,6 +29,10 @@ cmake --build build && cmake --install build
 ```
 
 This installs into `~/.local/share/SuperCollider/Extensions/DaVerb`. Restart the engine afterwards, since sclang only picks up new classes on startup and `dirt reload` is not enough.
+
+## duck
+
+As in superdough, an event with `duckorbit` dips the whole output of its target orbits, delay and reverb tails included, and drone voices too since they play into the orbit. `duckorbit("2:3")` and the per-orbit `duckdepth`/`duckonset`/`duckattack` lists reach SuperDirt as `:`-joined strings, which `@strudel/osc` encodes. Targets map to orbits the way `orbit` does, wrapping past the last one. The ducking event itself must go through SuperDirt's normal playback, so a drone voice can be ducked but cannot trigger ducking.
 
 ## Strudel compatibility
 

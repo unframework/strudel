@@ -35,3 +35,10 @@ describe('parseControlsFromHap reverb size', () => {
     expect(controlsOf({ s: 'bd', room: 0.5 })).not.toHaveProperty('size');
   });
 });
+
+describe('parseControlsFromHap duck lists', () => {
+  it('joins per-orbit lists with colons', () => {
+    const controls = controlsOf({ s: 'bd', duckorbit: [2, 3], duckattack: [0.4, 0.1], duckdepth: 1 });
+    expect(controls).toMatchObject({ duckorbit: '2:3', duckattack: '0.4:0.1', duckdepth: 1 });
+  });
+});
