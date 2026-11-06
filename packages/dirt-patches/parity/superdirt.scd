@@ -29,40 +29,42 @@ var trimLead = { |path|
 	file.close;
 };
 
-try {
-	#eventsPath, outPath, seconds = thisProcess.argv;
+fork {
+	try {
+		#eventsPath, outPath, seconds = thisProcess.argv;
 
-	server.options
-		.numInputBusChannels_(0).numOutputBusChannels_(2)
-		.numBuffers_(1024 * 16).memSize_(8192 * 32).maxNodes_(1024 * 32).numWireBufs_(2048);
-	server.instVarPut(\addr, sink);
-	server.statusWatcher.instVarPut(\hasBooted, true).instVarPut(\notified, true).instVarPut(\sampleRate, sampleRate);
-	Server.default = server;
-	SynthDef.synthDefDir = outPath.dirname +/+ "synthdefs/";
-	File.mkdir(SynthDef.synthDefDir);
+		server.options
+			.numInputBusChannels_(0).numOutputBusChannels_(2)
+			.numBuffers_(1024 * 16).memSize_(8192 * 32).maxNodes_(1024 * 32).numWireBufs_(2048);
+		server.instVarPut(\addr, sink);
+		server.statusWatcher.instVarPut(\hasBooted, true).instVarPut(\notified, true).instVarPut(\sampleRate, sampleRate);
+		Server.default = server;
+		SynthDef.synthDefDir = outPath.dirname +/+ "synthdefs/";
+		File.mkdir(SynthDef.synthDefDir);
 
-	dirt = SuperDirt(2, server);
-	dirt.makeOrbits([0]);
-	(thisProcess.nowExecutingPath.dirname +/+ "../scd/index.scd").load.(dirt);
-	dirt.orbits.do(_.amp_(1));
+		dirt = SuperDirt(2, server);
+		dirt.makeOrbits(0 ! 4);
+		(thisProcess.nowExecutingPath.dirname +/+ "../scd/index.scd").load.(dirt);
+		dirt.orbits.do(_.amp_(1));
 
-	eventsPath.load.do { |entry|
-		var event = (latency: 0).putPairs(entry[1]);
-		onset = entry[0];
-		DirtEvent(dirt.orbits @@ (event[\orbit] ? 0), dirt.modules, event).play;
+		eventsPath.load.do { |entry|
+			var event = (latency: 0).putPairs(entry[1]);
+			onset = entry[0];
+			DirtEvent(dirt.orbits @@ (event[\orbit] ? 0), dirt.modules, event).play;
+		};
+
+		Score(
+			setup.reject(isHandshake).collect { |msg, i| [i * 1e-6, msg] }
+			++ timed.collect { |bundle| [bundle[0] + lead] ++ bundle.drop(1) }
+			++ [[seconds.asFloat + lead, [\c_set, 0, 0]]]
+		).recordNRT(
+			outPath ++ ".osc", outPath,
+			sampleRate: sampleRate, headerFormat: "WAV", sampleFormat: "float",
+			options: server.options, duration: seconds.asFloat + lead,
+			action: { trimLead.(outPath); 0.exit }
+		);
+	} { |error|
+		error.reportError;
+		1.exit;
 	};
-
-	Score(
-		setup.reject(isHandshake).collect { |msg, i| [i * 1e-6, msg] }
-		++ timed.collect { |bundle| [bundle[0] + lead] ++ bundle.drop(1) }
-		++ [[seconds.asFloat + lead, [\c_set, 0, 0]]]
-	).recordNRT(
-		outPath ++ ".osc", outPath,
-		sampleRate: sampleRate, headerFormat: "WAV", sampleFormat: "float",
-		options: server.options, duration: seconds.asFloat + lead,
-		action: { trimLead.(outPath); 0.exit }
-	);
-} { |error|
-	error.reportError;
-	1.exit;
 };

@@ -14,4 +14,8 @@ export const cases = [
   { name: 'pitch-envelope', code: `note("c3*2").s("sine").penv(12).pdecay(.1)` },
   { name: 'supersaw', code: `note("c3").s("supersaw")` },
   { name: 'pulse', code: `note("c3").s("pulse").pw(.3)` },
+  {
+    name: 'duck',
+    code: `stack(note("c3").s("sawtooth").orbit(2), s("~ sine ~ sine").gain(0).duckorbit(2).duckattack(.2))`,
+  },
 ];

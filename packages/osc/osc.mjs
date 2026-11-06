@@ -9,6 +9,8 @@ import { logger, parseNumeral, register, isNote, noteToMidi, ClockCollator, clam
 const DIRT_REVERB_LOOP_SECONDS = 0.25;
 const DIRT_REVERB_MEAN_DEPTH_JITTER = 0.025;
 const DIRT_REVERB_MAX_SIZE = 0.95;
+// split on ':' by dirt-patches' duck
+const COLON_LIST_CONTROLS = ['duckorbit', 'duckonset', 'duckattack', 'duckdepth'];
 
 // inverts dirt_reverb's `size.linexp(0, 1, 0.01, 0.98)` loop gain
 export function decayToDirtSize(seconds) {
@@ -66,6 +68,7 @@ export function parseControlsFromHap(hap, cps) {
   controls.unit === 'c' && controls.speed != null && (controls.speed = controls.speed / cps);
   const channels = controls.channels;
   channels != undefined && (controls.channels = JSON.stringify(channels));
+  COLON_LIST_CONTROLS.forEach((key) => Array.isArray(controls[key]) && (controls[key] = controls[key].join(':')));
   return dropUnencodable(controls);
 }
 
