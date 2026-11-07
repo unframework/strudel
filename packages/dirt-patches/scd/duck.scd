@@ -1,5 +1,9 @@
 var isDuck = { |effect| effect.name == \strudel_duck };
 var splitList = { |value| value.asString.split($:).collect(_.asFloat) };
+var lead = 0.01; // superdough starts the dip this early
+
+// escapes playSynths' bundle, which drops inner timestamps
+var sendBundle = { |server, time, msgs| (server.addr.tryPerform(\saveAddr) ? server.addr).sendBundle(time, *msgs) };
 
 var addSynthDef = { |numChannels|
 	SynthDef("strudel_duck" ++ numChannels, { |dryBus, effectBus, gate = 1, t_duck = 0, onset = 0, attack = 0.1, depth = 1|
@@ -36,8 +40,10 @@ var addSynthDef = { |numChannels|
 			var onset, attack, depth, effect;
 			#onset, attack, depth = lists.drop(1).collect { |list| list[i] ? list[0] };
 			effect = (dirt.orbits @@ target.asInteger).globalEffects.detect(isDuck);
-			effect.resume;
-			effect.synth.set(\t_duck, 1, \onset, onset, \attack, attack, \depth, depth);
+			sendBundle.(dirt.server, ~latency - lead, [
+				effect.synth.runMsg(true),
+				effect.synth.setMsg(\resumed, 1, \t_duck, 1, \onset, onset + lead, \attack, attack, \depth, depth)
+			]);
 		};
 	}, { ~duckorbit.notNil });
 }
