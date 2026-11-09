@@ -12,6 +12,7 @@ import { logger } from './logger.mjs';
 export { Fraction, controls, createClock };
 export * from './clocksource.mjs';
 export * from './controls.mjs';
+export * from './cue.mjs';
 export * from './cyclist.mjs';
 export * from './evaluate.mjs';
 export * from './hap.mjs';

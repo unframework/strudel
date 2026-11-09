@@ -12,11 +12,12 @@ import {
   lineNumbers,
 } from '@codemirror/view';
 import { persistentAtom } from '@nanostores/persistent';
-import { logger, registerControl, repl } from '@strudel/core';
+import { cueRun, logger, registerControl, repl } from '@strudel/core';
 import { cleanupDraw, cleanupDrawContext, Drawer } from '@strudel/draw';
 import { isAutoCompletionEnabled } from './autocomplete.mjs';
 import { basicSetup } from './basicSetup.mjs';
 import { evalBlock } from './block_utilities.mjs';
+import { cuePlugin, insertCueIds } from './cues.mjs';
 import { flash, isFlashEnabled } from './flash.mjs';
 import { highlightMiniLocations, isPatternHighlightingEnabled, updateMiniLocations } from './highlight.mjs';
 import { keybindings } from './keybindings.mjs';
@@ -97,6 +98,7 @@ export function initEditor({ initialCode = '', onChange, onEvaluate, onStop, roo
         bracketMatching: { brackets: ['(', '[', '{', "'", '"', '<'] },
       }),
       sliderPlugin,
+      cuePlugin,
       widgetPlugin,
       ttyMirrorPlugin,
       // indentOnInput(), // works without. already brought with javascript
@@ -198,6 +200,7 @@ export class StrudelMirror {
     }, drawTime);
 
     this.prebaked = prebake();
+    cueRun.isMinting = true;
     autodraw && this.drawFirstFrame();
     this.repl = repl({
       ...replOptions,
@@ -242,6 +245,7 @@ export class StrudelMirror {
         updateSliderWidgets(this.editor, sliders, range);
         updateWidgets(this.editor, widgets, range);
         updateMiniLocations(this.editor, this.miniLocations, range);
+        insertCueIds(this.editor, options);
         replOptions?.afterEval?.(options);
         // if no painters are set (.onPaint was not called), then we only need
         // the present moment (for highlighting)

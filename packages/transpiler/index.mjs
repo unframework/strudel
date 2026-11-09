@@ -12,6 +12,7 @@ import './plugin-kabelsalat.mjs';
 import './plugin-mini.mjs';
 import './plugin-sample.mjs';
 import './plugin-widgets.mjs';
+import './plugin-cues.mjs';
 
 export { registerWidgetType, getWidgetID } from './plugin-widgets.mjs';
 export const evaluate = (code, transpilerOptions) => _evaluate(code, transpiler, transpilerOptions);
