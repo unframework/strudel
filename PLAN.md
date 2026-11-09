@@ -15,6 +15,6 @@
 
 - MIDI controller bespoke surface
 - [sample cues, tempo fit and beat warping](plans/sample-cues.md)
-- [bar-cued changes](plans/cued-changes.md): edit a value or pattern as `OLD.c(NEW)` and it switches on the next 1/2/4-bar boundary, optionally eased
+- [bar-cued changes](plans/cued-changes.md): edit a value or pattern as `OLD.c(NEW)` and it switches on the next aligned cycle boundary, optionally eased; state is an id in code plus a local-storage entry
 
 ## TBD
