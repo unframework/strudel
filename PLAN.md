@@ -14,5 +14,6 @@
 ## Tasks
 
 - MIDI controller bespoke surface
+- [bar-cued changes](plans/cued-changes.md): edit a value or pattern as `OLD.c(NEW)` and it switches on the next aligned cycle boundary, optionally eased; state is an id in code plus in-memory timing for the current run
 
 ## TBD
