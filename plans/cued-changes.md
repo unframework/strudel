@@ -25,6 +25,7 @@ $drums: s("bd*4, hh*8").c(s("bd*8, hh*16"))        // whole patterns too
 
 - Signature: `OLD.c(NEW, align = 1, ease = 0, id?)`, all positional. `align` is the boundary in cycles. `ease` is the ramp length in cycles, 0 for a hard switch.
 - Easing interpolates numeric values per event: `lerp(OLD(t), NEW(t), progress)`. Non-numeric values (notes, `s`) switch at the boundary regardless of `ease`.
+- Outside the editor (`@strudel/web`, scripts) no id can be minted, so `.c()` just plays NEW.
 - The name `c` is unused in Strudel. `cue` already means sample cues.
 
 ### Id token
@@ -60,4 +61,3 @@ $drums: s("bd*4, hh*8").c(s("bd*8, hh*16"))        // whole patterns too
 ## Open questions
 
 - Automatically wrap a literal under the cursor as `OLD.c(OLD)` with NEW selected, so a cued edit doesn't mean retyping the old value?
-- Outside the editor (`@strudel/web`, scripts), no id can be minted. Should such a call play NEW immediately, or OLD?
