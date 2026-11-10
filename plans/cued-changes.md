@@ -61,7 +61,7 @@ $drums: s("bd*4, hh*8").c(s("bd*8, hh*16"))        // whole patterns too
 ### Code
 
 - `packages/core/cue.mjs`: `CueRun`, the `.c()` method and the switch/ease pattern.
-- `packages/transpiler/plugin-cues.mjs`: mints ids and fills in default `align`/`ease`.
+- `packages/transpiler/plugin-cues.mjs`: mints ids and fills in default `align`/`ease`. Since only the runtime knows whether the receiver is a pattern, it routes `X.c(…)` through `cueWithId(X, id, …)`. Only a pattern receiver uses the id, and the editor writes only ids that were used, so other objects' `c` methods are left alone. NEW can be any value.
 - `packages/codemirror/cues.mjs`: writes minted ids after evaluation, and the arc widget.
 
 ## Later
@@ -71,7 +71,6 @@ $drums: s("bd*4, hh*8").c(s("bd*8, hh*16"))        // whole patterns too
 
 ## Known limitations
 
-- Any method call named `.c(` gets an id, not just pattern methods.
 - Block evaluation only checks the evaluated block for ids already in use, so a new id could in theory match one in another block (about 1 in 1.7 million per id).
 - If an evaluation fails after transpiling, its minted ids are never written and simply go unused.
 - On long lines the widget can wrap onto its own line.
@@ -92,7 +91,6 @@ $drums: s("bd*4, hh*8").c(s("bd*8, hh*16"))        // whole patterns too
 
 ## Known limitations
 
-- Any method call named `.c(` gets an id, not just pattern methods.
 - Block evaluation only checks the evaluated block for ids already in use, so a new id could in theory match one in another block (about 1 in 1.7 million per id).
 - If an evaluation fails after transpiling, its minted ids are never written and simply go unused.
 - On long lines the widget can wrap onto its own line.

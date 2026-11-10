@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { CueRun, SETTLED, cuePattern, cuePhase, nextBoundary, pure, s, sequence } from '../index.mjs';
+import {
+  CueRun,
+  SETTLED,
+  cuePattern,
+  cuePhase,
+  cueRun,
+  cueWithId,
+  nextBoundary,
+  pure,
+  s,
+  sequence,
+} from '../index.mjs';
 
 function createRun(randoms = [0.1, 0.2, 0.3]) {
   const clock = { cycle: 10.5, now: () => clock.cycle };
@@ -110,8 +121,27 @@ describe('Pattern.c', () => {
   });
 
   it('rejects malformed arguments', () => {
+    expect(() => pure(1).c()).toThrow(/needs the pattern/);
     expect(() => pure(1).c(2, 0)).toThrow(/align/);
     expect(() => pure(1).c(2, 1, -1)).toThrow(/ease/);
     expect(() => pure(1).c(2, 1, 0, 'nope')).toThrow(/id/);
+  });
+});
+
+describe('cueWithId', () => {
+  it('claims the id when called on a pattern, with NEW as any value', () => {
+    const id = cueRun.mint(new Set());
+    const pat = cueWithId(pure(1), id, 2);
+
+    expect(cueRun.isClaimed(id)).toBe(true);
+    expect(values(pat, 0, 1)).toEqual([2]);
+  });
+
+  it("leaves other objects' c methods and the id alone", () => {
+    const id = cueRun.mint(new Set());
+    const other = { c: (...args) => args };
+
+    expect(cueWithId(other, id, 2)).toEqual([2]);
+    expect(cueRun.isClaimed(id)).toBe(false);
   });
 });

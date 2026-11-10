@@ -88,7 +88,7 @@ export const cuePlugin = ViewPlugin.fromClass(
 );
 
 export function insertCueIds(view, { code, meta, range }) {
-  const mints = meta?.cueMints ?? [];
+  const mints = (meta?.cueMints ?? []).filter((mint) => cueRun.isClaimed(mint.id));
   if (!mints.length) {
     return;
   }

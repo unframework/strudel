@@ -11,14 +11,14 @@ describe('cue plugin', () => {
   beforeEach(() => (cueRun.isMinting = true));
   afterEach(() => (cueRun.isMinting = false));
 
-  it('mints an id and fills in default alignment and easing', () => {
+  it('routes the call through cueWithId and fills in default alignment and easing for the code', () => {
     const code = 'x.c(2)';
     const { output, cueMints } = transpiler(code, options);
-    const [{ insert }] = cueMints;
+    const [{ id, insert }] = cueMints;
 
-    expect(insert).toMatch(/^, 1, 0, '#[0-9a-z]{4}'$/);
-    expect(applyMints(code, cueMints)).toBe(`x.c(2${insert})`);
-    expect(output).toBe(`x.c(2${insert});`);
+    expect(insert).toBe(`, 1, 0, '${id}'`);
+    expect(applyMints(code, cueMints)).toBe(`x.c(2, 1, 0, '${id}')`);
+    expect(output).toBe(`cueWithId(x, '${id}', 2);`);
   });
 
   it('keeps the arguments that are already written', () => {
@@ -26,11 +26,11 @@ describe('cue plugin', () => {
     expect(cueMints.map((mint) => mint.insert.split(', ').length)).toEqual([3, 2]);
   });
 
-  it('leaves calls that already have an id alone', () => {
-    const code = "x.c(2, 1, 0, '#abcd')";
+  it('leaves calls with an id or without arguments alone', () => {
+    const code = "x.c(2, 1, 0, '#abcd');\ny.c();";
     const { output, cueMints } = transpiler(code, options);
     expect(cueMints).toBeUndefined();
-    expect(output).toBe(`${code};`);
+    expect(output).toBe(code);
   });
 
   it('offsets insertion points for block-based evaluation', () => {
@@ -43,9 +43,5 @@ describe('cue plugin', () => {
     const { output, cueMints } = transpiler('x.c(2)', options);
     expect(cueMints).toBeUndefined();
     expect(output).toBe('x.c(2);');
-  });
-
-  it('rejects a call with nothing to change to', () => {
-    expect(() => transpiler('x.c()', options)).toThrow(/needs the pattern/);
   });
 });

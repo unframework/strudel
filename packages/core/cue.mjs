@@ -1,4 +1,4 @@
-import { Pattern, reify } from './pattern.mjs';
+import { Pattern, isPattern, reify } from './pattern.mjs';
 import { getCps, getIsStarted, getTime } from './schedulerState.mjs';
 
 const LOOKAHEAD_SECONDS = 0.1;
@@ -68,6 +68,10 @@ export class CueRun {
     this._minted.add(id);
     this._fresh.add(id);
     return id;
+  }
+
+  isClaimed(id) {
+    return this._minted.has(id) && !this._fresh.has(id);
   }
 
   arm(id, align, ease) {
@@ -167,6 +171,9 @@ function assertCycles(name, value, isValid) {
  * note("c2 eb2").s("sawtooth").lpf("800".c("2000", 2))
  */
 Pattern.prototype.c = function (next, align = 1, ease = 0, id) {
+  if (next === undefined) {
+    throw new Error('.c() needs the pattern to change to, like "800".c("2000")');
+  }
   assertCycles('align', align, (v) => v > 0);
   assertCycles('ease', ease, (v) => v >= 0);
   if (id === undefined) {
@@ -178,3 +185,11 @@ Pattern.prototype.c = function (next, align = 1, ease = 0, id) {
   cueRun.arm(id, align, ease);
   return cuePattern(cueRun, id, this, reify(next));
 };
+
+export function cueWithId(target, id, ...args) {
+  if (!isPattern(target)) {
+    return target.c(...args);
+  }
+  const [next, align = 1, ease = 0] = args;
+  return target.c(next, align, ease, id);
+}
