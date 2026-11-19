@@ -1,7 +1,10 @@
-import { CUE_ID_SOURCE, cueRun } from '@strudel/core';
+import { CUE_ID_SOURCE, cueRun, isCueId } from '@strudel/core';
 import { registerTranspilerPlugin } from './transpiler.mjs';
 
-const DEFAULT_ARGS = [1, 0];
+// Default ease is written out to show it, while the default align of 0 is left implicit
+const DEFAULT_EASE = 1;
+
+const isIdLiteral = (node) => node.type === 'Literal' && isCueId(node.value);
 
 const isCueCall = (node) =>
   node.type === 'CallExpression' &&
@@ -9,7 +12,8 @@ const isCueCall = (node) =>
   !node.callee.computed &&
   node.callee.property.name === 'c' &&
   node.arguments.length >= 1 &&
-  node.arguments.length <= 3;
+  node.arguments.length <= 3 &&
+  !isIdLiteral(node.arguments.at(-1));
 
 const literal = (value) => ({ type: 'Literal', value, raw: typeof value === 'string' ? `'${value}'` : String(value) });
 
@@ -29,7 +33,7 @@ const cueTranspilerPlugin = {
         if (!isMinting || !isCueCall(node)) return;
 
         const id = cueRun.mint(taken);
-        const added = [...DEFAULT_ARGS.slice(node.arguments.length - 1), id].map(literal);
+        const added = [...(node.arguments.length === 1 ? [DEFAULT_EASE] : []), id].map(literal);
         context.cueMints ??= [];
         context.cueMints.push({
           id,

@@ -16,21 +16,21 @@ The hardware controls (`IN`/`BTN`/`RADIO` on `Deck`) keep their own value log, b
 
 ```js
 $bass: note("c2 eb2")
-  .lpf("800".c("2000"))                           // switch on the next cycle
-  .gain("0.6".c("0.9", 2))                         // next multiple of 2 cycles
+  .lpf("800".c("2000"))                           // ease over 1 cycle, starting right away
+  .gain("0.6".c("0.9", 0, 2))                      // hard switch on the next multiple of 2 cycles
   .room(sine.range(0, .2).c(sine.range(.2, .6), 4, 4))  // next multiple of 4 cycles, then ease over 4
 
 $drums: s("bd*4, hh*8").c(s("bd*8, hh*16"))        // whole patterns too
 ```
 
-- Signature: `OLD.c(NEW, align = 1, ease = 0, id?)`, all positional. `align` is the boundary in cycles. `ease` is the ramp length in cycles, 0 for a hard switch.
+- Signature: `OLD.c(NEW, ease = 1, align = 0, id?)`, all positional, with the id after whichever of `ease` and `align` are written. `ease` is the ramp length in cycles, 0 for a hard switch. `align` is the boundary in cycles, 0 to start as soon as the scheduler can play it (about 0.1 s after evaluation).
 - Easing interpolates numeric values per event: `lerp(OLD(t), NEW(t), progress)`. Non-numeric values (notes, `s`) switch at the boundary regardless of `ease`.
 - Outside the editor (`@strudel/web`, scripts) no id can be minted, so `.c()` just plays NEW.
 - The name `c` is unused in Strudel. `cue` already means sample cues.
 
 ### Id token
 
-- The first evaluation of a `.c()` call without an id appends one: `"800".c("2000", 1, 0, '#k3x9')`. Ids are `#` plus 4 random base-36 characters (about 1.7 million possible), with no meaning of their own and not meant to be edited by hand. The `#` makes them easy for the editor to find.
+- The first evaluation of a `.c()` call without an id appends one, filling in the default `ease` to show it but leaving the default `align` of 0 implicit: `"800".c("2000",1,'#k3x9')`. Ids are `#` plus 4 random base-36 characters (about 1.7 million possible), with no meaning of their own and not meant to be edited by hand. The `#` makes them easy for the editor to find.
 - The transpiler mints ids, but only when an editor is attached (`cueRun.isMinting`). The editor writes them into the code after a successful evaluation; if the code was edited while the evaluation ran, it writes nothing and logs a warning, and the next evaluation mints again. Inserting one is the only rewrite this feature makes during playback, and it happens at eval time, when you expect the code to change.
 - A new id must not match any id minted earlier in the same run, or any id already in the document. Ids from earlier runs, other sketches or the undo history have no entry, so they can't pick up someone else's timing.
 
@@ -61,7 +61,7 @@ $drums: s("bd*4, hh*8").c(s("bd*8, hh*16"))        // whole patterns too
 ### Code
 
 - `packages/core/cue.mjs`: `CueRun`, the `.c()` method and the switch/ease pattern.
-- `packages/transpiler/plugin-cues.mjs`: mints ids and fills in default `align`/`ease`. Since only the runtime knows whether the receiver is a pattern, it routes `X.c(…)` through `cueWithId(X, id, …)`. Only a pattern receiver uses the id, and the editor writes only ids that were used, so other objects' `c` methods are left alone. NEW can be any value.
+- `packages/transpiler/plugin-cues.mjs`: mints ids and fills in the default `ease`. Since only the runtime knows whether the receiver is a pattern, it routes `X.c(…)` through `cueWithId(X, id, …)`. Only a pattern receiver uses the id, and the editor writes only ids that were used, so other objects' `c` methods are left alone. NEW can be any value.
 - `packages/codemirror/cues.mjs`: writes minted ids after evaluation, and the arc widget.
 
 ## Later
@@ -77,9 +77,9 @@ $drums: s("bd*4, hh*8").c(s("bd*8, hh*16"))        // whole patterns too
 
 ## Acceptance testing
 
-1. Play `$: s("bd*4").gain("0.3")`, then change it to `$: s("bd*4").gain("0.3".c("1", 2))` and evaluate. An id appears in the call, drawn as an arc that fills up, and the kick gets louder exactly on the next even cycle.
+1. Play `$: s("bd*4").gain("0.3")`, then change it to `$: s("bd*4").gain("0.3".c("1", 0, 2))` and evaluate. An id appears in the call, drawn as an arc that fills up, and the kick gets louder exactly on the next even cycle.
 2. Evaluate again without changes: nothing re-cues and the ring stays dim.
-3. Use `.c("1", 2, 4)` on a fresh call: the gain ramps up over 4 cycles after the boundary, with the arc tracking the ramp.
+3. Use `.c("1", 4, 2)` on a fresh call: the gain ramps up over 4 cycles after the boundary, with the arc tracking the ramp.
 4. Cue a change, then stop before the boundary and start again: NEW plays right away.
 5. Undo the id insertion and evaluate: a new id is minted and the change is cued again.
 6. Evaluate a `.c()` block with block-based evaluation enabled: the id lands in the right call.
@@ -97,9 +97,9 @@ $drums: s("bd*4, hh*8").c(s("bd*8, hh*16"))        // whole patterns too
 
 ## Acceptance testing
 
-1. Play `$: s("bd*4").gain("0.3")`, then change it to `$: s("bd*4").gain("0.3".c("1", 2))` and evaluate. An id appears in the call, drawn as an arc that fills up, and the kick gets louder exactly on the next even cycle.
+1. Play `$: s("bd*4").gain("0.3")`, then change it to `$: s("bd*4").gain("0.3".c("1", 0, 2))` and evaluate. An id appears in the call, drawn as an arc that fills up, and the kick gets louder exactly on the next even cycle.
 2. Evaluate again without changes: nothing re-cues and the ring stays dim.
-3. Use `.c("1", 2, 4)` on a fresh call: the gain ramps up over 4 cycles after the boundary, with the arc tracking the ramp.
+3. Use `.c("1", 4, 2)` on a fresh call: the gain ramps up over 4 cycles after the boundary, with the arc tracking the ramp.
 4. Cue a change, then stop before the boundary and start again: NEW plays right away.
 5. Undo the id insertion and evaluate: a new id is minted and the change is cued again.
 6. Evaluate a `.c()` block with block-based evaluation enabled: the id lands in the right call.

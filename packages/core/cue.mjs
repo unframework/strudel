@@ -13,8 +13,9 @@ export function isCueId(value) {
   return typeof value === 'string' && idRegex.test(value);
 }
 
+/** With align 0 the change is due as soon as the scheduler can play it. */
 export function nextBoundary(cycle, align) {
-  return Math.ceil(cycle / align) * align;
+  return align > 0 ? Math.ceil(cycle / align) * align : cycle;
 }
 
 /** Share of NEW heard at a cycle: 0 before the boundary, ramping to 1 over `ease` cycles. */
@@ -30,7 +31,7 @@ export function cueMix(cue, cycle) {
  */
 export function cuePhase(cue, cycle) {
   if (cycle < cue.at) {
-    return { kind: 'waiting', progress: (cycle - cue.armedAt) / (cue.at - cue.armedAt) };
+    return { kind: 'waiting', progress: Math.max(0, (cycle - cue.armedAt) / (cue.at - cue.armedAt)) };
   }
   if (cycle < cue.at + cue.ease) {
     return { kind: 'easing', progress: cueMix(cue, cycle) };
@@ -74,7 +75,7 @@ export class CueRun {
     return this._minted.has(id) && !this._fresh.has(id);
   }
 
-  arm(id, align, ease) {
+  arm(id, ease, align) {
     if (!this._fresh.delete(id)) {
       return;
     }
@@ -155,34 +156,37 @@ function assertCycles(name, value, isValid) {
 }
 
 /**
- * Cues a change from this pattern to `next`, heard from the next multiple of `align` cycles after
- * evaluation, optionally easing numeric values over `ease` cycles. The editor writes an id into the
- * call on first evaluation to remember the change across evaluations; without one, `next` plays.
+ * Cues a change from this pattern to `next`, easing numeric values over `ease` cycles. The change
+ * starts right away, or on the next multiple of `align` cycles after evaluation. The editor writes
+ * an id into the call on first evaluation to remember the change across evaluations; without one,
+ * `next` plays.
  *
  * @name c
  * @memberof Pattern
  * @tags temporal
  * @param {Pattern} next pattern to switch to
- * @param {number} align cycles to align the switch to, e.g. 4 for the next 4-cycle boundary
- * @param {number} ease cycles to ramp numeric values over after the switch, 0 for a hard switch
- * @param {string} id written by the editor
+ * @param {number} ease cycles to ramp numeric values over, 0 for a hard switch
+ * @param {number} align cycles to align the start to, e.g. 4 for the next 4-cycle boundary, 0 to start right away
+ * @param {string} id written by the editor, after whichever of `ease` and `align` are given
  * @returns Pattern
  * @example
  * note("c2 eb2").s("sawtooth").lpf("800".c("2000", 2))
  */
-Pattern.prototype.c = function (next, align = 1, ease = 0, id) {
+Pattern.prototype.c = function (next, ...rest) {
   if (next === undefined) {
     throw new Error('.c() needs the pattern to change to, like "800".c("2000")');
   }
-  assertCycles('align', align, (v) => v > 0);
+  const id = typeof rest.at(-1) === 'string' ? rest.pop() : undefined;
+  const [ease = 1, align = 0] = rest;
   assertCycles('ease', ease, (v) => v >= 0);
+  assertCycles('align', align, (v) => v >= 0);
   if (id === undefined) {
     return reify(next);
   }
   if (!isCueId(id)) {
     throw new Error(`.c() id must look like '#k3x9', got ${id}`);
   }
-  cueRun.arm(id, align, ease);
+  cueRun.arm(id, ease, align);
   return cuePattern(cueRun, id, this, reify(next));
 };
 
@@ -190,6 +194,5 @@ export function cueWithId(target, id, ...args) {
   if (!isPattern(target)) {
     return target.c(...args);
   }
-  const [next, align = 1, ease = 0] = args;
-  return target.c(next, align, ease, id);
+  return target.c(...args, id);
 }

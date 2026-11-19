@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   CueRun,
   SETTLED,
@@ -34,9 +34,9 @@ describe('CueRun', () => {
     const { run, clock } = createRun();
     const id = run.mint(new Set());
 
-    run.arm(id, 4, 0);
+    run.arm(id, 0, 4);
     clock.cycle = 11;
-    run.arm(id, 1, 0);
+    run.arm(id, 0, 1);
 
     expect(run.get(id)).toEqual({ armedAt: 10.5, at: 12, ease: 0 });
   });
@@ -74,6 +74,10 @@ describe('nextBoundary', () => {
     expect(nextBoundary(12, 4)).toBe(12);
     expect(nextBoundary(0.3, 0.5)).toBe(0.5);
   });
+
+  it('starts right away with align 0', () => {
+    expect(nextBoundary(10.5, 0)).toBe(10.5);
+  });
 });
 
 describe('cuePhase', () => {
@@ -84,6 +88,10 @@ describe('cuePhase', () => {
     expect(cuePhase(cue, 12.5)).toEqual({ kind: 'easing', progress: 0.25 });
     expect(cuePhase(cue, 14)).toEqual({ kind: 'settled' });
     expect(cuePhase(SETTLED, 0)).toEqual({ kind: 'settled' });
+  });
+
+  it('waits with an empty arc until an unaligned change starts', () => {
+    expect(cuePhase({ armedAt: 12, at: 12, ease: 2 }, 11.9)).toEqual({ kind: 'waiting', progress: 0 });
   });
 });
 
@@ -122,13 +130,22 @@ describe('Pattern.c', () => {
 
   it('rejects malformed arguments', () => {
     expect(() => pure(1).c()).toThrow(/needs the pattern/);
-    expect(() => pure(1).c(2, 0)).toThrow(/align/);
-    expect(() => pure(1).c(2, 1, -1)).toThrow(/ease/);
+    expect(() => pure(1).c(2, -1)).toThrow(/ease/);
+    expect(() => pure(1).c(2, 1, -1)).toThrow(/align/);
     expect(() => pure(1).c(2, 1, 0, 'nope')).toThrow(/id/);
+    expect(() => pure(1).c(2, 'nope')).toThrow(/id/);
   });
 });
 
 describe('cueWithId', () => {
+  it('passes ease and align on in that order', () => {
+    const id = cueRun.mint(new Set());
+    const arm = vi.spyOn(cueRun, 'arm');
+    cueWithId(pure(1), id, 2, 3);
+    expect(arm).toHaveBeenCalledWith(id, 3, 0);
+    arm.mockRestore();
+  });
+
   it('claims the id when called on a pattern, with NEW as any value', () => {
     const id = cueRun.mint(new Set());
     const pat = cueWithId(pure(1), id, 2);
