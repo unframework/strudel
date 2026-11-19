@@ -34,7 +34,7 @@ const cueTranspilerPlugin = {
         context.cueMints.push({
           id,
           at: node.arguments.at(-1).end + nodeOffset,
-          insert: added.map((arg) => `, ${arg.raw}`).join(''),
+          insert: added.map((arg) => `,${arg.raw}`).join(''),
         });
         node.arguments = [node.callee.object, literal(id), ...node.arguments];
         node.callee = { type: 'Identifier', name: 'cueWithId' };

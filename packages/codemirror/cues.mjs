@@ -16,10 +16,11 @@ function svgElement(name, attributes) {
   return el;
 }
 
-function renderArc(arc, phase) {
-  const filled = phase.kind === 'settled' ? 1 : phase.progress;
-  arc.setAttribute('stroke-dasharray', `${filled * CIRCUMFERENCE} ${CIRCUMFERENCE}`);
+function renderPhase(arc, check, phase) {
+  const settled = phase.kind === 'settled';
+  arc.setAttribute('stroke-dasharray', `${settled ? CIRCUMFERENCE : phase.progress * CIRCUMFERENCE} ${CIRCUMFERENCE}`);
   arc.style.opacity = { waiting: 1, easing: 0.7, settled: 0.3 }[phase.kind];
+  check.style.display = settled ? '' : 'none';
 }
 
 class CueWidget extends WidgetType {
@@ -41,6 +42,8 @@ class CueWidget extends WidgetType {
       viewBox: `${-size / 2} ${-size / 2} ${size} ${size}`,
       'aria-label': `cue ${this.id}`,
     });
+    // Tailwind preflight makes svg display: block, which would wrap the widget onto its own visual line
+    svg.style.display = 'inline-block';
     svg.style.verticalAlign = '-0.1em';
     const arc = svgElement('circle', {
       r: RADIUS,
@@ -50,13 +53,22 @@ class CueWidget extends WidgetType {
       transform: 'rotate(-90)',
     });
     svg.appendChild(svgElement('circle', { r: RADIUS, fill: 'none', stroke: 'currentColor', opacity: 0.15 }));
+    const check = svgElement('path', {
+      d: 'M -2.5 0 L -0.8 1.8 L 2.6 -1.8',
+      fill: 'none',
+      stroke: 'currentColor',
+      'stroke-width': 1.5,
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round',
+    });
     svg.appendChild(arc);
+    svg.appendChild(check);
 
     let wasConnected = false;
     const tick = () => {
       wasConnected ||= svg.isConnected;
       const phase = currentPhase(this.id);
-      renderArc(arc, phase);
+      renderPhase(arc, check, phase);
       if (phase.kind !== 'settled' && !(wasConnected && !svg.isConnected)) {
         requestAnimationFrame(tick);
       }

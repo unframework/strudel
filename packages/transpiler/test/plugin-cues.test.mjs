@@ -16,14 +16,14 @@ describe('cue plugin', () => {
     const { output, cueMints } = transpiler(code, options);
     const [{ id, insert }] = cueMints;
 
-    expect(insert).toBe(`, 1, 0, '${id}'`);
-    expect(applyMints(code, cueMints)).toBe(`x.c(2, 1, 0, '${id}')`);
+    expect(insert).toBe(`,1,0,'${id}'`);
+    expect(applyMints(code, cueMints)).toBe(`x.c(2,1,0,'${id}')`);
     expect(output).toBe(`cueWithId(x, '${id}', 2);`);
   });
 
   it('keeps the arguments that are already written', () => {
     const { cueMints } = transpiler('x.c(2, 4)\ny.c(3, 2, 8)', options);
-    expect(cueMints.map((mint) => mint.insert.split(', ').length)).toEqual([3, 2]);
+    expect(cueMints.map((mint) => mint.insert.split(',').length)).toEqual([3, 2]);
   });
 
   it('leaves calls with an id or without arguments alone', () => {
