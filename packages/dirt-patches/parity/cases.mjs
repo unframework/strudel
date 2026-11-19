@@ -7,6 +7,7 @@ export const cases = [
   { name: 'fm-square-modulator', code: `note("c3").s("sine").fm(3).fmwave("square")` },
   { name: 'fm-envelope', code: `note("c3*2").s("sine").fm(6).fmdecay(.3).fmsustain(0)` },
   { name: 'pluck', code: `note("c3 e3 g3 c4").s("sawtooth").decay(.15).sustain(0)` },
+  { name: 'adsr-partial', code: `note("c3 e3 g3 c4").s("sawtooth").adsr(".01:.15")` },
   { name: 'lpf-resonance', code: `note("c2").s("sawtooth").lpf(600).resonance(12)` },
   { name: 'lpf-envelope', code: `note("c2*4").s("sawtooth").lpf(300).lpenv(4).lpdecay(.2)` },
   { name: 'vibrato', code: `note("a3").s("triangle").vib(6).vibmod(.5)` },
