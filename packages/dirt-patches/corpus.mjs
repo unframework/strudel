@@ -15,13 +15,13 @@ import { registerControl } from '@strudel/core';
 export const { cr } = registerControl('cr');
 
 /**
- * Corpus resonator body: `string` (default), `tube` (odd harmonics), `beam` (free bar), `membrane` (drum head), or their index 0–3.
+ * Corpus resonator body: `string` (default), `tube` (odd harmonics), `beam` (free bar), `membrane` (drum head), `rod` (bar clamped at one end, like a waterphone tine), or their index 0–4.
  *
  * @name crmodel
  * @tags dirt-patches, resonator
  * @param {string | number | Pattern} model resonator body
  * @example
- * note("c3*4").s("white").decay(.01).sustain(0).cr(1).crmodel("<string tube beam membrane>")
+ * note("c3*4").s("white").decay(.01).sustain(0).cr(1).crmodel("<string tube beam membrane rod>")
  */
 export const { crmodel } = registerControl('crmodel');
 
