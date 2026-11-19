@@ -211,3 +211,24 @@ export function plot(arg) {
   }
   return (pat) => pat.plot(arg);
 }
+
+/**
+ * Like `plot`, but with the value axis fixed to 0..1, which suits unipolar signals like `sine`, `saw` or `perlin`. Other options can still be given, including `min` and `max` to override the bounds.
+ *
+ * @name plot1
+ * @tags visualization
+ * @param {Object} options same options as `plot`
+ * @example
+ * s("hh*16").gain(perlin)
+ * ._plot1()
+ */
+Pattern.prototype.plot1 = function (options = {}) {
+  return this.plot({ min: 0, max: 1, ...options });
+};
+
+export function plot1(arg) {
+  if (isPattern(arg)) {
+    return arg.plot1();
+  }
+  return (pat) => pat.plot1(arg);
+}

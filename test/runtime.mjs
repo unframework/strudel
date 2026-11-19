@@ -95,6 +95,8 @@ const toneHelpersMocked = {
   '_scope',
   '_plot',
   'plot',
+  '_plot1',
+  'plot1',
   '_spiral',
   '_pitchwheel',
   '_pianoroll',
