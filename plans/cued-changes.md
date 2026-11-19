@@ -24,7 +24,7 @@ $drums: s("bd*4, hh*8").c(s("bd*8, hh*16"))        // whole patterns too
 ```
 
 - Signature: `OLD.c(NEW, ease = 1, align = 0, id?)`, all positional, with the id after whichever of `ease` and `align` are written. `ease` is the ramp length in cycles, 0 for a hard switch. `align` is the boundary in cycles, 0 to start as soon as the scheduler can play it (about 0.1 s after evaluation).
-- Easing interpolates numeric values per event: `lerp(OLD(t), NEW(t), progress)`. Non-numeric values (notes, `s`) switch at the boundary regardless of `ease`.
+- Easing interpolates numeric values at the time each value is asked for: `lerp(OLD(t), NEW(t), progress)`, where `t` is the start of the queried span. A cycle-long value like `"800".c("2000")` used as a control therefore ramps per note, and `_plot()` shows a smooth ramp. Queries are split at the cue start, so OLD events that start before it play whole and NEW events that started earlier are not played. Non-numeric values (note names, `s`) switch at the cue start regardless of `ease`; in control objects, numeric fields ease and the rest switch.
 - Outside the editor (`@strudel/web`, scripts) no id can be minted, so `.c()` just plays NEW.
 - The name `c` is unused in Strudel. `cue` already means sample cues.
 

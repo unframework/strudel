@@ -108,6 +108,31 @@ describe('cuePattern', () => {
     expect(values(pat, 0, 1)).toEqual(['a', 'c']);
   });
 
+  it('plays each event once, keeping OLD for events that start before the boundary', () => {
+    const pat = cuePattern(cueAt({ armedAt: 0, at: 0.5, ease: 0 }), '#0000', pure('a').fast(2.5), pure('b').fast(2.5));
+    const played = pat.queryArc(0, 2).filter((hap) => hap.hasOnset());
+    expect(played.map((hap) => [Number(hap.whole.begin), hap.value])).toEqual([
+      [0, 'a'],
+      [0.4, 'a'],
+      [0.8, 'b'],
+      [1.2, 'b'],
+      [1.6, 'b'],
+    ]);
+  });
+
+  it('eases a cycle-long value per note when used as a control', () => {
+    const cue = { armedAt: 0, at: 0.5, ease: 1 };
+    const pat = s('bd')
+      .fast(4)
+      .lpf(cuePattern(cueAt(cue), '#0000', pure(0), pure(100)));
+    expect(values(pat, 0, 2).map((value) => value.cutoff)).toEqual([0, 0, 0, 25, 50, 75, 100, 100]);
+  });
+
+  it('eases smoothly when sampled finely', () => {
+    const pat = cuePattern(cueAt({ armedAt: 0, at: 0, ease: 1 }), '#0000', pure(0), pure(100));
+    expect([0.1, 0.2, 0.3].map((t) => values(pat, t, t + 0.01)[0])).toEqual([10, 20, 30]);
+  });
+
   it('eases numbers and numeric controls, switching everything else at the boundary', () => {
     const cue = { armedAt: 0, at: 1, ease: 2 };
     const numbers = cuePattern(cueAt(cue), '#0000', pure(0), pure(100));

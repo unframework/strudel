@@ -1,5 +1,6 @@
 import { Pattern, isPattern, reify } from './pattern.mjs';
 import { getCps, getIsStarted, getTime } from './schedulerState.mjs';
+import { TimeSpan } from './timespan.mjs';
 
 const LOOKAHEAD_SECONDS = 0.1;
 const ID_LENGTH = 4;
@@ -128,23 +129,29 @@ function blend(from, to, mix) {
   return blended;
 }
 
-const onsetOf = (hap) => Number(hap.wholeOrPart().begin);
+function blendFrom(older, state, hap, mix) {
+  if (mix === 1) {
+    return hap;
+  }
+  const from = older.query(state.setSpan(hap.part))[0];
+  return from ? hap.withValue((to) => blend(from.value, to, mix)) : hap;
+}
 
+// Queries are split at the cue start and eased where the query lands, not where events began, so a
+// cycle-long value used as a control ramps per note. Events that start before the cue stay whole,
+// since only fragments with an onset are played.
 export function cuePattern(run, id, older, newer) {
   return new Pattern((state) => {
     const cue = run.get(id);
-    const before = older.query(state).filter((hap) => cueMix(cue, onsetOf(hap)) === 0);
-    const after = newer.query(state).flatMap((hap) => {
-      const mix = cueMix(cue, onsetOf(hap));
-      if (mix === 0) {
-        return [];
-      }
-      if (mix === 1) {
-        return [hap];
-      }
-      const from = older.query(state.setSpan(hap.wholeOrPart()))[0];
-      return [from ? hap.withValue((to) => blend(from.value, to, mix)) : hap];
-    });
+    const { begin, end } = state.span;
+    if (Number(end) <= cue.at) {
+      return older.query(state);
+    }
+    const isSplit = Number(begin) < cue.at;
+    const before = isSplit ? older.query(state.setSpan(new TimeSpan(begin, cue.at))) : [];
+    const after = newer
+      .query(isSplit ? state.setSpan(new TimeSpan(cue.at, end)) : state)
+      .map((hap) => blendFrom(older, state, hap, cueMix(cue, Number(hap.part.begin))));
     return before.concat(after);
   });
 }
