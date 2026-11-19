@@ -4,10 +4,10 @@ import { CUE_ID_SOURCE, cuePhase, cueRun, getIsStarted, getTime, logger } from '
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const RADIUS = 5;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+const BLINK_CYCLES = 1 / 4;
 
-function currentPhase(id) {
-  const cue = cueRun.get(id);
-  return getIsStarted() ? cuePhase(cue, getTime()) : { kind: 'settled' };
+function waitingOpacity(cycle) {
+  return (cycle / BLINK_CYCLES) % 1 < 0.5 ? 0.6 : 0.3;
 }
 
 function svgElement(name, attributes) {
@@ -16,10 +16,12 @@ function svgElement(name, attributes) {
   return el;
 }
 
-function renderPhase(arc, check, phase) {
+function renderPhase(arc, check, phase, cycle) {
   const settled = phase.kind === 'settled';
   arc.setAttribute('stroke-dasharray', `${settled ? CIRCUMFERENCE : phase.progress * CIRCUMFERENCE} ${CIRCUMFERENCE}`);
-  arc.style.opacity = { waiting: 1, easing: 0.7, settled: 0.3 }[phase.kind];
+  arc.style.opacity = phase.kind === 'waiting' ? waitingOpacity(cycle) : { easing: 1, settled: 0.3 }[phase.kind];
+  // Both arcs start at 12 o'clock, the wait filling clockwise and the ease counterclockwise
+  arc.setAttribute('transform', phase.kind === 'easing' ? 'rotate(-90) scale(1 -1)' : 'rotate(-90)');
   check.style.display = settled ? '' : 'none';
 }
 
@@ -50,7 +52,6 @@ class CueWidget extends WidgetType {
       fill: 'none',
       stroke: 'currentColor',
       'stroke-width': 2,
-      transform: 'rotate(-90)',
     });
     svg.appendChild(svgElement('circle', { r: RADIUS, fill: 'none', stroke: 'currentColor', opacity: 0.15 }));
     const check = svgElement('path', {
@@ -67,8 +68,9 @@ class CueWidget extends WidgetType {
     let wasConnected = false;
     const tick = () => {
       wasConnected ||= svg.isConnected;
-      const phase = currentPhase(this.id);
-      renderPhase(arc, check, phase);
+      const cycle = getIsStarted() ? getTime() : null;
+      const phase = cycle === null ? { kind: 'settled' } : cuePhase(cueRun.get(this.id), cycle);
+      renderPhase(arc, check, phase, cycle);
       if (phase.kind !== 'settled' && !(wasConnected && !svg.isConnected)) {
         requestAnimationFrame(tick);
       }
