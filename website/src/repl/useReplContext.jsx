@@ -21,7 +21,7 @@ import { setVersionDefaultsFrom } from './util.mjs';
 import { StrudelMirror, defaultSettings } from '@strudel/codemirror';
 import { clearHydra } from '@strudel/hydra';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { parseBoolean, settingsMap, useSettings } from '../settings.mjs';
+import { $settings, parseBoolean, settingsMap, useSettings } from '../settings.mjs';
 import {
   setActivePattern,
   setLatestCode,
@@ -34,6 +34,7 @@ import {
   loadAllPatterns,
 } from '../user_pattern_utils.mjs';
 import { superdirtOutput } from '@strudel/osc/superdirtoutput';
+import { DEFAULT_OSC_URL, setOscUrl } from '@strudel/osc';
 import { audioEngineTargets } from '../settings.mjs';
 import { useStore } from '@nanostores/react';
 import { prebake } from './prebake.mjs';
@@ -52,6 +53,9 @@ if (typeof window !== 'undefined') {
     audioDeviceName,
     multiChannelOrbits: parseBoolean(multiChannelOrbits),
   });
+  $settings.subscribe(({ isCustomOscUrlEnabled, customOscUrl }) =>
+    setOscUrl((isCustomOscUrlEnabled && customOscUrl.trim()) || DEFAULT_OSC_URL),
+  );
   modulesLoading = loadModules();
   presets = prebake();
   drawContext = getDrawContext();

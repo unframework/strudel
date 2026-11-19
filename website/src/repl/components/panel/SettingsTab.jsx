@@ -9,7 +9,8 @@ import { confirmDialog } from '../../util.mjs';
 import { DEFAULT_MAX_POLYPHONY, setMaxPolyphony, setMultiChannelOrbits } from '@strudel/webaudio';
 import { ActionButton } from '../button/action-button.jsx';
 import { exportScript, ImportPrebakeScriptButton } from './ImportPrebakeScriptButton.jsx';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { DEFAULT_OSC_URL } from '@strudel/osc';
 import cx from '@src/cx.mjs';
 
 const inputClass =
@@ -121,6 +122,27 @@ const fontFamilyOptions = {
   galactico: 'galactico',
 };
 
+function OscUrlInput({ isEnabled, url }) {
+  const [draft, setDraft] = useState(url);
+  return (
+    <>
+      <Checkbox
+        label="Use custom URL"
+        value={isEnabled}
+        onChange={(e) => settingsMap.setKey('isCustomOscUrlEnabled', e.target.checked)}
+      />
+      <Textbox
+        className={cx(!isEnabled && 'opacity-50')}
+        placeholder={DEFAULT_OSC_URL}
+        value={draft}
+        onChange={setDraft}
+        onBlur={() => settingsMap.setKey('customOscUrl', draft.trim())}
+        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+      />
+    </>
+  );
+}
+
 function MainSettingsContent({ started }) {
   const {
     theme,
@@ -144,6 +166,8 @@ function MainSettingsContent({ started }) {
     audioEngineTarget,
     maxPolyphony,
     multiChannelOrbits,
+    isCustomOscUrlEnabled,
+    customOscUrl,
     isTabIndentationEnabled,
     isMultiCursorEnabled,
     patternAutoStart,
@@ -175,6 +199,9 @@ function MainSettingsContent({ started }) {
             });
           }}
         />
+      </FormItem>
+      <FormItem label="OSC Bridge URL">
+        <OscUrlInput isEnabled={isCustomOscUrlEnabled} url={customOscUrl} />
       </FormItem>
 
       <FormItem label="Maximum Polyphony">

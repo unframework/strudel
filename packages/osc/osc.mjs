@@ -18,29 +18,44 @@ export function decayToDirtSize(seconds) {
   return clamp(Math.log(depth / 0.01) / Math.log(98), 0, DIRT_REVERB_MAX_SIZE);
 }
 
+export const DEFAULT_OSC_URL = 'ws://localhost:8080';
+let oscUrl = DEFAULT_OSC_URL;
+
 let connection; // Promise<OSC>
 function connect() {
   if (!connection) {
-    // make sure this runs only once
-    connection = new Promise((resolve, reject) => {
-      const ws = new WebSocket('ws://localhost:8080');
+    const url = oscUrl;
+    const pending = new Promise((resolve, reject) => {
+      const ws = new WebSocket(url);
       ws.addEventListener('open', (event) => {
-        logger(`[osc] websocket connected`);
+        logger(`[osc] websocket connected to ${url}`);
         resolve(ws);
       });
       ws.addEventListener('close', (event) => {
         logger(`[osc] websocket closed`);
-        connection = undefined; // allows new connection afterwards
+        connection === pending && (connection = undefined); // allows new connection afterwards
         console.log('[osc] disconnected');
         reject('OSC connection closed');
       });
       ws.addEventListener('error', (err) => reject(err));
     }).catch((err) => {
-      connection = undefined;
-      throw new Error('Could not connect to OSC server. Is it running?');
+      connection === pending && (connection = undefined);
+      throw new Error(`Could not connect to OSC server at ${url}. Is it running?`);
     });
+    connection = pending;
   }
   return connection;
+}
+
+export function setOscUrl(url) {
+  if (url === oscUrl) return;
+  oscUrl = url;
+  const stale = connection;
+  connection = undefined;
+  stale?.then(
+    (ws) => ws.close(),
+    () => {},
+  );
 }
 
 export function parseControlsFromHap(hap, cps) {

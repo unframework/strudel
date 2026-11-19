@@ -70,6 +70,8 @@ export const defaultSettings = {
   includePrebakeScriptInShare: true,
   settingsTab: 'settings',
   midiClockInput: '',
+  isCustomOscUrlEnabled: false,
+  customOscUrl: '',
 };
 
 let search = null;
@@ -113,6 +115,7 @@ export const $settings = computed(settingsMap, (state) => {
     isPanelOpen: parseBoolean(state.isPanelOpen),
     userPatterns: userPatterns,
     multiChannelOrbits: parseBoolean(state.multiChannelOrbits),
+    isCustomOscUrlEnabled: parseBoolean(state.isCustomOscUrlEnabled),
     includePrebakeScriptInShare: parseBoolean(state.includePrebakeScriptInShare),
     patternAutoStart: isUdels()
       ? false
