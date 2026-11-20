@@ -35,7 +35,14 @@ import {
 } from '../user_pattern_utils.mjs';
 import { superdirtOutput } from '@strudel/osc/superdirtoutput';
 import { DEFAULT_OSC_URL, setOscUrl } from '@strudel/osc';
-import { DEFAULT_VIS_TARGET, parseVisTarget, publishVisEval, setVisTarget, withVisTrigger } from '@strudel/osc/vis.mjs';
+import {
+  DEFAULT_VIS_TARGET,
+  parseVisTarget,
+  publishVisEval,
+  setVisSourceFeed,
+  setVisTarget,
+  withVisTrigger,
+} from '@strudel/osc/vis.mjs';
 import { audioEngineTargets } from '../settings.mjs';
 import { useStore } from '@nanostores/react';
 import { prebake } from './prebake.mjs';
@@ -58,13 +65,13 @@ if (typeof window !== 'undefined') {
   $settings.subscribe(({ isCustomOscUrlEnabled, customOscUrl }) =>
     setOscUrl((isCustomOscUrlEnabled && customOscUrl.trim()) || DEFAULT_OSC_URL),
   );
-  $settings.subscribe(({ isVisEnabled, visTarget }) => {
+  $settings.subscribe(({ isCustomVisTargetEnabled, customVisTarget, isVisSourceFeedEnabled }) => {
     try {
-      setVisTarget(isVisEnabled ? parseVisTarget(visTarget.trim() || DEFAULT_VIS_TARGET) : null);
+      setVisTarget(parseVisTarget((isCustomVisTargetEnabled && customVisTarget.trim()) || DEFAULT_VIS_TARGET));
     } catch (err) {
       logger(err.message, 'error');
-      setVisTarget(null);
     }
+    setVisSourceFeed(isVisSourceFeedEnabled);
   });
   modulesLoading = loadModules();
   presets = prebake();

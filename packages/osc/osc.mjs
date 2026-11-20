@@ -23,26 +23,29 @@ export function decayToDirtSize(seconds) {
 export const DEFAULT_OSC_URL = 'ws://localhost:8080';
 let oscUrl = DEFAULT_OSC_URL;
 
-let connection; // Promise<OSC>
+const RETRY_MS = 1000;
+
+let connection; // Promise<WebSocket>
+let retryAt = 0;
+let isOutageLogged = false;
+
 function connect() {
   if (!connection) {
     const url = oscUrl;
     const pending = new Promise((resolve, reject) => {
       const ws = new WebSocket(url);
-      ws.addEventListener('open', (event) => {
+      let isOpen = false;
+      ws.addEventListener('open', () => {
+        isOpen = true;
+        isOutageLogged = false;
         logger(`[osc] websocket connected to ${url}`);
         resolve(ws);
       });
-      ws.addEventListener('close', (event) => {
-        logger(`[osc] websocket closed`);
-        connection === pending && (connection = undefined); // allows new connection afterwards
-        console.log('[osc] disconnected');
-        reject('OSC connection closed');
+      ws.addEventListener('close', () => {
+        connection === pending && (connection = undefined);
+        isOpen && logger(`[osc] websocket closed`);
+        reject(new Error(`Could not connect to OSC server at ${url}. Is it running?`));
       });
-      ws.addEventListener('error', (err) => reject(err));
-    }).catch((err) => {
-      connection === pending && (connection = undefined);
-      throw new Error(`Could not connect to OSC server at ${url}. Is it running?`);
     });
     connection = pending;
   }
@@ -52,6 +55,8 @@ function connect() {
 export function setOscUrl(url) {
   if (url === oscUrl) return;
   oscUrl = url;
+  retryAt = 0;
+  isOutageLogged = false;
   const stale = connection;
   connection = undefined;
   stale?.then(
@@ -106,8 +111,16 @@ const collator = new ClockCollator({});
 export const oscTimestamp = (currentTime, targetTime) => collator.calculateTimestamp(currentTime, targetTime) * 1000;
 
 export async function sendOscFrame(frame) {
-  const ws = await connect();
-  ws.send(JSON.stringify(frame));
+  if (performance.now() < retryAt) return;
+  try {
+    const ws = await connect();
+    ws.send(JSON.stringify(frame));
+  } catch (err) {
+    retryAt = performance.now() + RETRY_MS;
+    if (isOutageLogged) return;
+    isOutageLogged = true;
+    logger(`${err.message} Dropping OSC messages until it connects.`, 'error');
+  }
 }
 
 export async function oscTrigger(hap, currentTime, cps = 1, targetTime) {

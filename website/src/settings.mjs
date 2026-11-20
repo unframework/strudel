@@ -72,8 +72,9 @@ export const defaultSettings = {
   midiClockInput: '',
   isCustomOscUrlEnabled: false,
   customOscUrl: '',
-  isVisEnabled: false,
-  visTarget: '',
+  isCustomVisTargetEnabled: false,
+  customVisTarget: '',
+  isVisSourceFeedEnabled: false,
 };
 
 let search = null;
@@ -118,7 +119,8 @@ export const $settings = computed(settingsMap, (state) => {
     userPatterns: userPatterns,
     multiChannelOrbits: parseBoolean(state.multiChannelOrbits),
     isCustomOscUrlEnabled: parseBoolean(state.isCustomOscUrlEnabled),
-    isVisEnabled: parseBoolean(state.isVisEnabled),
+    isCustomVisTargetEnabled: parseBoolean(state.isCustomVisTargetEnabled),
+    isVisSourceFeedEnabled: parseBoolean(state.isVisSourceFeedEnabled),
     includePrebakeScriptInShare: parseBoolean(state.includePrebakeScriptInShare),
     patternAutoStart: isUdels()
       ? false

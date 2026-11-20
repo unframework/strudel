@@ -169,6 +169,7 @@ function MainSettingsContent({ started }) {
     isMultiCursorEnabled,
     patternAutoStart,
     isBlockBasedEvalEnabled,
+    isVisSourceFeedEnabled,
   } = useSettings();
   const shouldAlwaysSync = isUdels();
   const canChangeAudioDevice = AudioContext.prototype.setSinkId != null;
@@ -207,10 +208,15 @@ function MainSettingsContent({ started }) {
       </FormItem>
       <FormItem label="Visualizer (host:port, as seen from the OSC bridge)">
         <ToggledTextSetting
-          label="Send source and highlights"
-          enabledKey="isVisEnabled"
-          valueKey="visTarget"
+          label="Use custom address"
+          enabledKey="isCustomVisTargetEnabled"
+          valueKey="customVisTarget"
           placeholder={DEFAULT_VIS_TARGET}
+        />
+        <Checkbox
+          label="Send source and highlights"
+          value={isVisSourceFeedEnabled}
+          onChange={(e) => settingsMap.setKey('isVisSourceFeedEnabled', e.target.checked)}
         />
       </FormItem>
 

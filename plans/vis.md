@@ -64,7 +64,7 @@ Bandwidth isn't a concern on a LAN. Even sending everything as JSON stays near 1
 
 Likely either TouchDesigner receiving OSC (easy to hand plain `/vis/` feeds to someone else's rig, but it has no Linux build and its project files are binary), or a custom Godot visualizer (text-based scenes and scripts, so it can be developed both agentically and in the editor; a Pi needs the Compatibility renderer).
 
-A bare-bones reference visualizer tests the source and highlight feeds without either: `pnpm vis-tty` (`packages/osc/vis-tty.mjs`, port from `VIS_PORT`, default 57140) listens on UDP and draws the source in the terminal with ANSI highlights, so it needs no browser and no second bridge. Turn on "Visualizer" in the REPL settings and give its address as seen from the bridge.
+A bare-bones reference visualizer tests the source and highlight feeds without either: `pnpm vis-tty` (`packages/osc/vis-tty.mjs`, port from `VIS_PORT`, default 57140) listens on UDP and draws the source in the terminal with ANSI highlights, so it needs no browser and no second bridge. In the REPL settings, the Visualizer address works like the OSC bridge URL (default, or a custom `host:port` as seen from the bridge), and a separate checkbox turns on the source and highlight feed. Sketch-driven feeds will go to the same address whenever a sketch uses them, regardless of that checkbox.
 
 ### Built
 

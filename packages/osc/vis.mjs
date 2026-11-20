@@ -1,4 +1,3 @@
-import { logger } from '@strudel/core';
 import { oscTimestamp, sendOscFrame } from './osc.mjs';
 import { DEFAULT_VIS_PORT, evalMessages, highlightMessage } from './vis-protocol.mjs';
 
@@ -6,7 +5,8 @@ const RESEND_SECONDS = 30;
 
 export const DEFAULT_VIS_TARGET = `127.0.0.1:${DEFAULT_VIS_PORT}`;
 
-let target = null; // { host, port } of the visualizer, as seen from the bridge
+let target = parseVisTarget(DEFAULT_VIS_TARGET); // as seen from the bridge
+let isSourceFeedEnabled = false;
 let published = null;
 let resendTimer;
 
@@ -37,19 +37,21 @@ export const hapLocationIndices = (visEval, hap) => [
 const toTarget = (message) => ({ ...message, ...target });
 
 async function sendPublished() {
-  if (!target || !published) return;
-  try {
-    for (const message of evalMessages(published)) {
-      await sendOscFrame(toTarget(message));
-    }
-  } catch (err) {
-    logger(`[vis] could not send source: ${err.message}`, 'warning');
+  if (!isSourceFeedEnabled || !published) return;
+  for (const message of evalMessages(published)) {
+    await sendOscFrame(toTarget(message));
   }
 }
 
 export function setVisTarget(next) {
-  if (next?.host === target?.host && next?.port === target?.port) return;
+  if (next.host === target.host && next.port === target.port) return;
   target = next;
+  sendPublished();
+}
+
+export function setVisSourceFeed(isEnabled) {
+  if (isEnabled === isSourceFeedEnabled) return;
+  isSourceFeedEnabled = isEnabled;
   sendPublished();
 }
 
@@ -60,7 +62,7 @@ export function publishVisEval(source, miniLocations) {
 }
 
 export async function visTrigger(hap, currentTime, cps, targetTime) {
-  if (!target || !published) return;
+  if (!isSourceFeedEnabled || !published) return;
   const indices = hapLocationIndices(published, hap);
   if (!indices.length) return;
   const message = highlightMessage(published.evalId, hap.duration.valueOf() / cps, indices);
