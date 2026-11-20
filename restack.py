@@ -45,10 +45,29 @@ REPLAY = [
     ("rebase", "nm/snippets"),
 
     # nm/linectrl builds on the midi branches and wires itself into packages/render.
-    # nm/restack (the restack.py tooling) sits at the very top of the stack.
     ("forward",),
     ("rebase", "nm/linectrl"),
+
+    ("forward",),
+    ("rebase", "nm/midi-clock-follow"),
+    ("rebase", "nm/deploy-tweaks"),
+    ("rebase", "nm/plot"),
+
+    # nm/restack (the restack.py tooling) tops what main points at.
+    ("forward",),
     ("rebase", "nm/restack"),
+
+    # Pending, not yet in main.
+    ("forward",),
+    ("rebase", "nm/osc-bridge"),
+    ("rebase", "nm/cues"),
+
+    ("forward",),
+    ("rebase", "nm/dirt-patches"),
+
+    ("forward",),
+    ("rebase", "nm/sample-cues"),
+    ("rebase", "nm/linectrl-controls"),
 ]
 
 PUSH_BRANCHES = [s[1] for s in REPLAY if s[0] == "rebase"]
