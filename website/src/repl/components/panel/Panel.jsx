@@ -9,6 +9,7 @@ import ExportTab from './ExportTab';
 import { FilesTab } from './FilesTab';
 import { PatternsTab } from './PatternsTab';
 import { Reference } from './Reference';
+import { SnippetsTab } from './SnippetsTab';
 import { SettingsTab } from './SettingsTab';
 import { SoundsTab } from './SoundsTab';
 import { WelcomeTab } from './WelcomeTab';
@@ -236,8 +237,8 @@ export function RightPanel({ context }) {
 }
 
 const tabNames = {
-  welcome: 'intro',
   patterns: 'patterns',
+  snippets: 'snippets',
   sounds: 'sounds',
   reference: 'reference',
   export: 'export',
@@ -271,6 +272,8 @@ function PanelContent({ context, tab }) {
   switch (tab) {
     case tabNames.patterns:
       return <PatternsTab context={context} />;
+    case tabNames.snippets:
+      return <SnippetsTab context={context} />;
     case tabNames.console:
       return <ConsoleTab />;
     case tabNames.sounds:
