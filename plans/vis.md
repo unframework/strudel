@@ -63,3 +63,12 @@ Candidates, not yet designed:
 - Cue state: pending and easing `.c()` changes and their progress
 - Engine status from drone-server's `/status/watch`
 - Audio analysis (levels, spectrum) from the engine output, computed on the engine box so no audio has to travel
+
+## Output: stage lights over sACN / Art-Net
+
+The visualizer can also drive DMX stage lights. It already has the timed feeds and the shared clock, so lighting becomes another thing it renders, next to the screen. Strudel doesn't send DMX itself. This keeps lighting logic (fixture profiles, channel maps, fades, the mapping from hap values to colour and intensity) out of the REPL and the audio path, and lets one machine own the lighting rig.
+
+- **Protocol:** sACN (E1.31) or Art-Net over UDP to an Ethernet DMX node (e.g. DMXKing eDMX1 Pro, or an ESP32 node), which outputs RS-485 DMX to the fixtures. Both are simple enough to send from a small library or by hand: one 512-channel universe per packet, refreshed continuously at about 30–44 Hz, since many fixtures black out if frames stop.
+- **USB fallback:** a USB interface using the Enttec Pro protocol (e.g. DMXKing ultraDMX Micro) plugged into the visualizer box. That's a serial device sending framed packets, so the visualizer would need a second output backend. OLA could hide the difference, at the cost of running another daemon.
+- **Timing:** lights have to land on the beat, so the visualizer renders DMX frames against the shared clock the same way it schedules highlights, not when messages arrive. Latency through the node and the fixtures (often 10–30 ms, and more for moving heads and some LED dimming curves) needs a per-rig offset, like the audio latency setting.
+- **Open:** where the fixture patch (addresses, channel layouts) lives and how it's edited. Whether sketches can address lights directly (e.g. a `light` control on haps that passes through to the visualizer) or only through mappings defined in the visualizer. Behaviour on disconnect: hold the last frame, fade to a default look, or black out.

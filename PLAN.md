@@ -16,7 +16,7 @@
 
 - MIDI controller bespoke surface
 - [bar-cued changes](plans/cued-changes.md): edit a value or pattern as `OLD.c(NEW)` and it switches on the next aligned cycle boundary, optionally eased; state is an id in code plus in-memory timing for the current run
-- [visualizer data feeds](plans/vis.md): push source, highlight activations and other live data to a separate visualizer over one timestamped websocket; highlights measured at a few KB/s
+- [visualizer data feeds](plans/vis.md): push source, highlight activations and other live data to a separate visualizer over one timestamped websocket; highlights measured at a few KB/s; the visualizer may also drive stage lights over sACN/Art-Net
 - Continuation mode: after a tab refresh or an accidental stop, resume evaluation at the right moment by preserving clock time instead of restarting from cycle 0
 
 ## TBD
