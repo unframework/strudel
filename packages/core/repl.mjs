@@ -3,11 +3,14 @@ import { Cyclist } from './cyclist.mjs';
 import { evaluate as _evaluate } from './evaluate.mjs';
 import { errorLogger, logger } from './logger.mjs';
 import {
+  setClockSourceFunc,
   setCpsFunc,
   setIsStarted,
   setPattern as exposeSchedulerPattern,
   setTime,
+  setTransportFuncs,
   setTriggerFunc,
+  setWakeFunc,
 } from './schedulerState.mjs';
 import { evalScope } from './evaluate.mjs';
 import { register, Pattern, isPattern, silence, stack } from './pattern.mjs';
@@ -75,6 +78,12 @@ export function repl({
     sync && typeof SharedWorker != 'undefined' ? new NeoCyclist(schedulerOptions) : new Cyclist(schedulerOptions);
   setTriggerFunc(schedulerOptions.onTrigger);
   setCpsFunc(() => scheduler.cps);
+  setClockSourceFunc((source) => scheduler.setClockSource?.(source));
+  setWakeFunc(() => scheduler.wake?.());
+  setTransportFuncs({
+    start: () => scheduler.pattern && scheduler.start(),
+    pause: () => scheduler.pause(),
+  });
   let pPatterns = {};
   let anonymousIndex = 0;
   let allTransform;

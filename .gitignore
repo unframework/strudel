@@ -145,3 +145,5 @@ fabric.properties
 samples/*
 !samples/README.md
 .idea/
+
+.claude/worktrees/
