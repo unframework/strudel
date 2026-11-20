@@ -49,7 +49,7 @@ export function LogoButton({ context, isEmbedded }) {
 export function MainPanel({ context, isEmbedded = false, className }) {
   const { isZen, isButtonRowHidden, fontFamily } = useSettings();
   let loc = window.location;
-  let ver = 'unofficial';
+  let ver = 'linectrl';
   let hot = false;
   let b = loc.hostname.match(/^(.+)\.(strudel)/);
   if (/(strudel.cc$)/.test(loc.hostname)) {
