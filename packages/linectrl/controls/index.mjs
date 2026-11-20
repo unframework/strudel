@@ -1,18 +1,14 @@
 import { signal } from '@strudel/core';
 import { deck } from './rig.mjs';
 
-function assertMidiNumber(num) {
+function controlPattern(kind, num, align) {
   if (!Number.isInteger(num) || num < 0 || num > 127) {
     throw new Error(`[linectrl] expected a MIDI number 0-127, got ${num}`);
   }
-}
-
-function controlPattern(kind, addr, align) {
-  addr.forEach(assertMidiNumber);
   if (!(align >= 0)) {
     throw new Error(`[linectrl] expected alignment in cycles >= 0, got ${align}`);
   }
-  const read = deck.control(kind, addr, align);
+  const read = deck.reader(kind, num, align);
   return signal((t) => read(Number(t)));
 }
 
@@ -25,7 +21,7 @@ function controlPattern(kind, addr, align) {
  * @param {number} align cycles to align changes to, e.g. 0.5 for the next half-bar; 0 for immediate
  * @returns Pattern
  */
-export const IN = (cc, align = 0) => controlPattern('in', [cc], align);
+export const IN = (cc, align = 0) => controlPattern('cc', cc, align);
 
 /**
  * Controller toggle button, 0 or 1. Its light pulses on the beat while a change is pending.
@@ -36,29 +32,4 @@ export const IN = (cc, align = 0) => controlPattern('in', [cc], align);
  * @param {number} align cycles to align changes to, e.g. 1 for the next bar; 0 for immediate
  * @returns Pattern
  */
-export const BTN = (note, align = 0) => controlPattern('btn', [note], align);
-
-/**
- * Controller momentary button: 1 while held, 0 when released.
- *
- * @name PUSH
- * @tags external_io, midi
- * @param {number} note MIDI note number of the button
- * @param {number} align cycles to align changes to; 0 for immediate
- * @returns Pattern
- */
-export const PUSH = (note, align = 0) => controlPattern('push', [note], align);
-
-/**
- * Controller button group where one button is selected at a time; the value is the selected
- * button's index. Pass an array of notes to add an alignment: `RADIO([12, 13, 14], 1)`.
- *
- * @name RADIO
- * @tags external_io, midi
- * @param {...number} notes MIDI note numbers of the buttons
- * @returns Pattern
- */
-export function RADIO(...args) {
-  const [notes, align] = Array.isArray(args[0]) ? [args[0], args[1] ?? 0] : [args, 0];
-  return controlPattern('radio', notes, align);
-}
+export const BTN = (note, align = 0) => controlPattern('note', note, align);

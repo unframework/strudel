@@ -3,18 +3,11 @@ import { lightFor } from './lights.mjs';
 
 const LIT_VELOCITY = 127;
 const REFRESH_MS = 20;
-
-// Next value of a control for an incoming message, or undefined when the message is not for it.
-const reducers = {
-  in: ([cc], log, type, num, value) => (type === 'cc' && num === cc ? value / 127 : undefined),
-  btn: ([note], log, type, num) => (type === 'noteon' && num === note ? 1 - log.value : undefined),
-  push: ([note], log, type, num) => (num === note ? { noteon: 1, noteoff: 0 }[type] : undefined),
-  radio: (notes, log, type, num) => (type === 'noteon' && notes.includes(num) ? notes.indexOf(num) : undefined),
-};
+const READER_IDLE_CYCLES = 1;
 
 /**
- * Controller state shared by every sketch: one log per control (`in:12`, `btn:1`, `radio:12,13,14`),
- * persisted to storage, plus button lights rendered from those logs.
+ * Mirror of the device shared by every sketch: each CC's latest value (`cc:12`) and a toggle per
+ * button (`note:36`), persisted to storage, plus button lights rendered from those toggles.
  */
 export class Deck {
   /**
@@ -28,52 +21,41 @@ export class Deck {
     this._channel = channel;
 
     this._controls = new Map();
-    this._lights = new Map(); // note → { control, member, align }, last registration wins
     this._sentVelocities = new Map();
     this._output = null;
     this._refreshTimer = null;
     this._wasStarted = false;
 
     for (const [key, value] of Object.entries(storage.load())) {
-      const [kind, addrText] = key.split(':');
-      if (kind in reducers) {
-        this._controls.set(key, createControl(kind, addrText.split(',').map(Number), value));
+      const [kind, num] = key.split(':');
+      if (kind === 'cc' || kind === 'note') {
+        this._ensureControl(kind, Number(num)).log.reset(value);
       }
     }
   }
 
   /**
-   * Register a control for reading and return its reader.
-   * @param {'in' | 'btn' | 'push' | 'radio'} kind
-   * @param {number[]} addr CC number, or note numbers
+   * @param {'cc' | 'note'} kind
+   * @param {number} num CC or note number
    * @param {number} align cycles to align changes to, 0 for immediate
    * @returns {function(number): number} cycle → value
    */
-  control(kind, addr, align) {
-    const control = this._ensureControl(kind, addr);
-    control.maxAlign = Math.max(control.maxAlign, align);
-
-    if (kind !== 'in') {
-      addr.forEach((note, index) => {
-        this._lights.set(note, { control, member: kind === 'radio' ? index : null, align });
-      });
-    }
-
+  reader(kind, num, align) {
+    const control = this._ensureControl(kind, num);
     return (cycle) => {
       this._syncTransport();
+      control.readCycles.set(align, Math.max(control.readCycles.get(align) ?? cycle, cycle));
       return control.log.valueAt(cycle, align);
     };
   }
 
   /**
-   * Track a control so it follows incoming messages, without claiming its lights.
-   * @param {'in' | 'btn' | 'push' | 'radio'} kind
-   * @param {number[]} addr
-   * @returns {function(): number} latest value
+   * @param {'cc' | 'note'} kind
+   * @param {number} num
+   * @returns {number} latest value, 0 for an untouched control
    */
-  watch(kind, addr) {
-    const control = this._ensureControl(kind, addr);
-    return () => control.log.value;
+  value(kind, num) {
+    return this._controls.get(controlKey(kind, num))?.log.value ?? 0;
   }
 
   /**
@@ -84,28 +66,23 @@ export class Deck {
   receive(type, num, value) {
     const now = this._syncTransport();
 
-    let isChanged = false;
-    for (const control of this._controls.values()) {
-      const next = reducers[control.kind](control.addr, control.log, type, num, value);
-      if (next === undefined || next === control.log.value) {
-        continue;
-      }
-      if (now === null) {
-        control.log.reset(next);
-      } else {
-        control.log.record(now, next);
-      }
-      isChanged = true;
-    }
-
     // Hardware darkens the button on release
     if (type === 'noteoff') {
       this._sentVelocities.delete(num);
+      return;
     }
 
-    if (isChanged) {
-      this._save();
+    const { log } = this._ensureControl(type === 'cc' ? 'cc' : 'note', num);
+    const next = type === 'cc' ? value / 127 : 1 - log.value;
+    if (next === log.value) {
+      return;
     }
+    if (now === null) {
+      log.reset(next);
+    } else {
+      log.record(now, next);
+    }
+    this._save();
   }
 
   /**
@@ -116,9 +93,9 @@ export class Deck {
     this.detach();
     this._output = output;
 
-    for (const control of this._controls.values()) {
-      if (control.kind === 'in') {
-        output.sendCC(control.addr[0], Math.round(control.log.value * 127), this._channel);
+    for (const { kind, num, log } of this._controls.values()) {
+      if (kind === 'cc') {
+        output.sendCC(num, Math.round(log.value * 127), this._channel);
       }
     }
 
@@ -135,29 +112,31 @@ export class Deck {
   refresh() {
     const now = this._syncTransport();
 
-    if (now !== null) {
-      for (const control of this._controls.values()) {
-        control.log.prune(now - control.maxAlign - 1);
+    for (const control of this._controls.values()) {
+      const { kind, num, log, readCycles } = control;
+      if (now !== null) {
+        readCycles.forEach((cycle, align) => cycle < now - READER_IDLE_CYCLES && readCycles.delete(align));
+        log.prune(now - Math.max(0, ...readCycles.keys()) - 1);
       }
-    }
-
-    for (const [note, { control, member, align }] of this._lights) {
-      const isLit = (value) => (member === null ? value > 0 : value === member);
-      const raw = isLit(control.log.value);
-      const settled = now === null ? raw : isLit(control.log.valueAt(now, align));
-      const velocity = lightFor(raw, settled, now) ? LIT_VELOCITY : 0;
-
-      if (this._sentVelocities.get(note) !== velocity) {
-        this._output?.sendNote(note, velocity, this._channel);
-        this._sentVelocities.set(note, velocity);
+      if (kind === 'note') {
+        const isLit = log.value > 0;
+        const isPending = now !== null && [...readCycles.keys()].some((align) => log.valueAt(now, align) !== log.value);
+        this._sendLight(num, lightFor(isLit, isPending, now) ? LIT_VELOCITY : 0);
       }
     }
   }
 
-  _ensureControl(kind, addr) {
-    const key = `${kind}:${addr.join(',')}`;
+  _sendLight(note, velocity) {
+    if (this._sentVelocities.get(note) !== velocity) {
+      this._output?.sendNote(note, velocity, this._channel);
+      this._sentVelocities.set(note, velocity);
+    }
+  }
+
+  _ensureControl(kind, num) {
+    const key = controlKey(kind, num);
     if (!this._controls.has(key)) {
-      this._controls.set(key, createControl(kind, addr, 0));
+      this._controls.set(key, { kind, num, log: new ControlLog(0), readCycles: new Map() });
     }
     return this._controls.get(key);
   }
@@ -167,7 +146,10 @@ export class Deck {
     const now = this._clock.now();
     const isStarted = now !== null;
     if (isStarted !== this._wasStarted) {
-      this._controls.forEach((control) => control.log.collapse());
+      this._controls.forEach(({ log, readCycles }) => {
+        log.collapse();
+        readCycles.clear();
+      });
       this._wasStarted = isStarted;
     }
     return now;
@@ -175,13 +157,13 @@ export class Deck {
 
   _save() {
     const values = {};
-    for (const [key, control] of this._controls) {
-      values[key] = control.log.value;
+    for (const [key, { log }] of this._controls) {
+      values[key] = log.value;
     }
     this._storage.save(values);
   }
 }
 
-function createControl(kind, addr, value) {
-  return { kind, addr, log: new ControlLog(value), maxAlign: 0 };
+function controlKey(kind, num) {
+  return `${kind}:${num}`;
 }

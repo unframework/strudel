@@ -1,6 +1,6 @@
 # Live MIDI inputs
 
-Branch: `nm/linectrl-controls` (based on `nm/dirt-patches`). Status: ambient controls, the top-bar status widgets and in-editor MIDI learn are implemented.
+Branch: `nm/linectrl-controls` (based on `nm/dirt-patches`). Status: ambient controls, the top-bar status widgets and in-editor MIDI learn are implemented, and control state is simplified to a deck mirroring the device.
 
 ## Intent
 
@@ -15,15 +15,13 @@ Seeing and fixing the controller's state should not need the console: whether it
 ```js
 $: s("bd*4").gain(IN(12))                  // knob/fader CC 12, 0..1
 $: s("hh*8").mask(BTN(36, 1))              // toggle, switches on the next bar
-$: s("cp").struct("x*4").mask(PUSH(40))    // 1 only while held
-$: note(RADIO([16, 17, 18], 1).pick(["c", "e", "g"]))  // one of a group, on the next bar
 ```
 
-- `IN(cc, align)`, `BTN(note, align)`, `PUSH(note, align)`, `RADIO(...notes)` or `RADIO([notes], align)` are globals from `@strudel/linectrl`. `align` is in cycles, 0 for immediate.
-- `Deck` (`linectrl/controls/deck.mjs`) is one shared object for the whole page, created in `linectrl/controls/rig.mjs` together with the controller session. It holds one `ControlLog` per control key (`in:12`, `btn:36`, `radio:16,17,18`), and saves each log's latest value to localStorage (`linectrl-controls`).
+- `IN(cc, align)` and `BTN(note, align)` are globals from `@strudel/linectrl`. `align` is in cycles, 0 for immediate.
+- `Deck` (`linectrl/controls/deck.mjs`) is one shared object for the whole page, created in `linectrl/controls/rig.mjs` together with the controller session. It mirrors the device regardless of code: each incoming CC records its value under `cc:12`, each note-on flips a toggle under `note:36`. It holds one `ControlLog` per key and saves each log's latest value to localStorage (`linectrl-controls`), so nothing needs registering before a control follows the device.
 - `ControlLog` records value changes stamped in cycles and applies alignment when read, so the same knob can be heard immediately by one reader and on the next half-bar by another. Old events are pruned into the base value.
 - Changes made while the transport is stopped apply immediately. Starting or stopping the transport makes pending changes take effect at once, since cycle numbers restart.
-- LEDs: steady while settled, pulsing on the beat while a change is pending (`lights.mjs`). `refresh()` runs every 20 ms while attached and only sends note messages when a velocity changes.
+- LEDs: every note toggle on the channel is lit from its latest value, including ones no sketch reads. While the transport runs, a light pulses on the beat as long as any reader still has the change pending (`lights.mjs`). Readers count as in use while the sketch keeps querying them (within the last cycle), so removing `BTN(36, 4)` from the code drops its alignment without an evaluation hook. `refresh()` runs every 20 ms while attached and only sends note messages when a velocity changes.
 - On connect, `attach(input)` sends the stored knob and fader positions to the device (for encoders and motorized faders) and starts the light refresh. `detach()` stops it.
 - The device comes from the website's `controllerInput` setting (see below). The channel is a constant in `rig.mjs` (`CHANNEL = 1`).
 
@@ -80,30 +78,25 @@ The controller popover shows the last 50 incoming messages (channel, cc/note on/
 
 ## MIDI learn in the editor (done)
 
-Each `IN(…)`, `BTN(…)`, `PUSH(…)` and `RADIO(…)` call gets a small inline widget right after it, showing the control's current value (`0.43`, `on`/`off`, the RADIO index) and a learn dot.
+Each `IN(…)` and `BTN(…)` call gets a small inline widget right after it, showing the control's current value (`0.43`, `on`/`off`) and a learn dot.
 
-- Clicking the dot arms it (it blinks red), and the next CC (for `IN`) or note-on (for the buttons) from the controller is written into the call: it replaces or fills the first argument, and for `RADIO` it is appended to the note list (`RADIO(16, 17)` → `RADIO(16, 17, 18)`, `RADIO([16], 1)` → `RADIO([16, 17], 1)`), skipping a note already there. Clicking again or pressing Escape in the editor cancels.
+- Clicking the dot arms it (it blinks red), and the next CC (for `IN`) or note-on (for `BTN`) from the controller is written into the call, replacing or filling the first argument. Clicking again or pressing Escape in the editor cancels.
 - One learner at a time: arming another widget disarms the previous one. The learned message still reaches the deck.
 - The code is edited but not evaluated, like any other edit.
 - Widgets come from the syntax tree as you type, not from evaluation, so `IN()` can be learned before it ever ran. Calls whose addresses are not number literals (`IN(cc)`) get no widget.
 - `linectrl/controls/calls.mjs` reads control calls from the syntax tree and builds the learned edit; `linectrl/controls/editor.mjs` has the widget and view plugin (`controlWidgets`), which the website adds to the main REPL editor with `StateEffect.appendConfig`.
-- `ControllerSession.learn(type, onLearned)` returns a learner handle with `isArmed` and `cancel()`. `Deck.watch(kind, addr)` tracks a control for the widget without claiming its lights, so a freshly learned control follows the device before the sketch is evaluated.
+- `ControllerSession.learn(type, onLearned)` returns a learner handle with `isArmed` and `cancel()`. The widget reads `Deck.value(kind, num)`, so a freshly learned control follows the device before the sketch is evaluated.
 
-## Simplifying control state (open, undecided)
+## Simplifying control state (done)
 
-Most of the deck's complexity comes from controls whose meaning depends on the sketch: RADIO groups and PUSH buttons need to be registered before the deck knows how to apply a message and which lights they own, and registrations come from evaluation only (with `Deck.watch` as a stopgap for the editor widget). Two directions are on the table.
+The deck used to need sketch-specific registrations: RADIO groups and PUSH buttons had to be registered by evaluation before the deck knew how to apply a message and which lights they owned. Option A was chosen: the deck mirrors the device, with only `IN` (CC value) and `BTN` (note toggle) as primitives.
 
-### Option A: deck mirrors the device
+- RADIO and PUSH are gone, along with `Deck.watch` and the light registry. Exclusive groups and momentary holds have no replacement yet; PUSH could come back as a read of whether a note is held.
+- Stored keys moved from `in:`/`btn:` to `cc:`/`note:` without migration, so old values are dropped on first save.
+- The editor widget could later show its own reader's pending state or countdown from its literal alignment.
 
-Keep only `IN` (CC value) and `BTN` (note toggle) as primitives, and drop RADIO and PUSH.
+### Option B: state lives in the editor text (not taken)
 
-- The deck logs every incoming message regardless of code: each CC records its value under `cc:12`, each note-on flips a toggle under `note:36`. That is what is persisted, so no registration, `watch()` or light registry is needed.
-- Readers stay as they are: `IN(12, align)` and `BTN(36, align)` read the shared log at their own alignment, so two readers with different alignments each hear the change when they asked to.
-- LED: steady from the toggle's latest value. While the transport runs, it pulses as long as any reader still has the change pending, i.e. until the longest alignment in use has passed. Readers count as in use while the playing sketch keeps querying them, so removing `BTN(36, 4)` from the code drops its alignment within a moment, with no evaluation hook and no code scan.
-- The editor widget reads the number directly, and could show its own reader's pending state or countdown from its literal alignment.
-- Costs: exclusive groups are gone (no direct replacement for `RADIO(…).pick(…)`), momentary holds are gone (PUSH could come back as a read of whether a note is held, but its LED would toggle), every button on the channel becomes a lit toggle including ones no sketch reads, and stored keys migrate (`in:` → `cc:`, `btn:` → `note:`, `radio:`/`push:` dropped).
-
-### Option B: state lives in the editor text
 
 Like the `.c()` cue ids, the state is written into the code itself: `IN(12, 0.43)`, `BTN(36, 1)`, `RADIO([16, 17, 18], 2)`, with no hidden storage.
 
@@ -122,7 +115,7 @@ Like the `.c()` cue ids, the state is written into the code itself: `IN(12, 0.43
 
 ## Later
 
-- A live list of registered controls in the controller popover (`in:12 = 0.43`, a pending BTN change and when it lands), from a `Deck.getControls()` snapshot.
+- A live list of controls in the controller popover (`cc:12 = 0.43`, a pending BTN change and when it lands), from a `Deck.getControls()` snapshot.
 - Configurable MIDI channel, and more than one controller.
 
 ## Acceptance testing
@@ -133,4 +126,5 @@ Like the `.c()` cue ids, the state is written into the code itself: `IN(12, 0.43
 4. Press a button while stopped: the change applies immediately.
 5. The controller chip shows waiting/connected as the device is unplugged and plugged in. Resync restores the faders after they were moved with the page closed.
 6. Switching the controller device in the popover detaches the old one with no duplicate messages.
-7. Type `IN()`, click its learn dot and move a fader: its CC number is written in and the widget follows the fader. `RADIO()` learns one note per click.
+7. Type `IN()`, click its learn dot and move a fader: its CC number is written in and the widget follows the fader.
+8. With `BTN(36, 4)` playing, press the button: its LED pulses until the 4-cycle boundary. Remove the call, re-evaluate and press again: the LED switches steadily within a cycle.

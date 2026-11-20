@@ -7,33 +7,29 @@ import { controller, deck } from './rig.mjs';
 const BLINK_MS = 250;
 
 const formats = {
-  in: (value) => value.toFixed(2),
-  btn: (value) => (value ? 'on' : 'off'),
-  push: (value) => (value ? 'on' : 'off'),
-  radio: (value) => String(value),
+  cc: (value) => value.toFixed(2),
+  note: (value) => (value ? 'on' : 'off'),
 };
 
 const valueBoxes = {
-  in: { width: '4ch', top: '1px' },
-  btn: { width: '3ch', top: '-1px' },
-  push: { width: '3ch', top: '-1px' },
-  radio: { width: '2ch', top: '1px' },
+  cc: { width: '4ch', top: '1px' },
+  note: { width: '3ch', top: '-1px' },
 };
 
 function writeLearned(view, dom, num) {
-  const change = controlCallEndingAt(view.state, view.posAtDOM(dom))?.edit(num);
-  change && view.dispatch({ changes: change });
+  const call = controlCallEndingAt(view.state, view.posAtDOM(dom));
+  call && view.dispatch({ changes: call.edit(num) });
 }
 
 class ControlWidget extends WidgetType {
-  constructor(kind, addr) {
+  constructor(kind, num) {
     super();
     this.kind = kind;
-    this.addr = addr;
+    this.num = num;
   }
 
   eq(other) {
-    return other.kind === this.kind && other.addr.join() === this.addr.join();
+    return other.kind === this.kind && other.num === this.num;
   }
 
   toDOM(view) {
@@ -45,7 +41,7 @@ class ControlWidget extends WidgetType {
     const button = wrap.appendChild(document.createElement('button'));
     button.className = 'cm-linectrl-learn';
     button.textContent = '●';
-    button.title = this.kind === 'in' ? 'Learn the next CC' : 'Learn the next note';
+    button.title = this.kind === 'cc' ? 'Learn the next CC' : 'Learn the next note';
 
     let learner = { isArmed: false, cancel: () => {} };
     button.addEventListener('mousedown', (e) => e.preventDefault());
@@ -58,10 +54,9 @@ class ControlWidget extends WidgetType {
       }
     });
 
-    const isSwitch = this.kind === 'btn' || this.kind === 'push';
-    const read = this.addr.length ? deck.watch(this.kind, this.addr) : () => null;
+    const isSwitch = this.kind === 'note';
     const render = () => {
-      const current = read();
+      const current = this.num === null ? null : deck.value(this.kind, this.num);
       const text = current === null ? '–' : formats[this.kind](current);
       if (value.textContent !== text) {
         value.textContent = text;
@@ -93,7 +88,7 @@ function buildDecorations(view) {
   const widgets = new Map();
   for (const { from, to } of view.visibleRanges) {
     for (const call of findControlCalls(view.state, from, to)) {
-      widgets.set(call.to, Decoration.widget({ widget: new ControlWidget(call.kind, call.addr), side: 1 }));
+      widgets.set(call.to, Decoration.widget({ widget: new ControlWidget(call.kind, call.num), side: 1 }));
     }
   }
   return Decoration.set(
@@ -141,7 +136,7 @@ const theme = EditorView.baseTheme({
 });
 
 /**
- * Inline widgets after `IN(…)`, `BTN(…)`, `PUSH(…)` and `RADIO(…)` calls: the control's current value
+ * Inline widgets after `IN(…)` and `BTN(…)` calls: the control's current value
  * and a learn button that writes the next CC or note number from the controller into the call. Escape disarms it.
  */
 export const controlWidgets = [

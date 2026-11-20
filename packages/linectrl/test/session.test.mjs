@@ -48,8 +48,7 @@ function createSession(stored = {}) {
 
 describe('ControllerSession', () => {
   it('waits for the device and attaches the deck on connect', async () => {
-    const { session, deck, inputs, phases } = createSession({ 'in:12': 1 });
-    deck.control('in', [12], 0);
+    const { session, deck, inputs, phases } = createSession({ 'cc:12': 1 });
     await session.setDevice('X-TOUCH');
     expect(session.getStatus()).toEqual({ phase: 'waiting', device: 'X-TOUCH' });
 
@@ -64,7 +63,7 @@ describe('ControllerSession', () => {
 
   it('feeds incoming messages to the deck', async () => {
     const { session, deck, inputs } = createSession();
-    const read = deck.control('btn', [36], 0);
+    const read = deck.reader('note', 36, 0);
     await session.setDevice('X-TOUCH');
     inputs[0].press(36);
     expect(read(0)).toBe(1);
@@ -89,7 +88,7 @@ describe('ControllerSession', () => {
 
   it('learns the next message of a type and still feeds it to the deck', async () => {
     const { session, deck, inputs } = createSession();
-    const read = deck.control('btn', [36], 0);
+    const read = deck.reader('note', 36, 0);
     await session.setDevice('X-TOUCH');
     const learned = [];
     const learner = session.learn('noteon', (num) => learned.push(num));
@@ -128,7 +127,7 @@ describe('ControllerSession', () => {
 
   it('closes the old input when switching devices', async () => {
     const { session, deck, inputs } = createSession();
-    const read = deck.control('btn', [36], 0);
+    const read = deck.reader('note', 36, 0);
     await session.setDevice('A');
     inputs[0].setConnected(true);
     await session.setDevice('B');
@@ -156,9 +155,7 @@ describe('ControllerSession', () => {
   });
 
   it('resyncs faders and repaints every light', async () => {
-    const { session, deck, inputs } = createSession({ 'in:12': 0, 'btn:36': 1 });
-    deck.control('in', [12], 0);
-    deck.control('btn', [36], 0);
+    const { session, deck, inputs } = createSession({ 'cc:12': 0, 'note:36': 1 });
     await session.setDevice('X-TOUCH');
     inputs[0].setConnected(true);
     deck.refresh();

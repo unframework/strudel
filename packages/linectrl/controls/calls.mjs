@@ -1,20 +1,18 @@
 import { syntaxTree } from '@codemirror/language';
 
-const KINDS = { IN: 'in', BTN: 'btn', PUSH: 'push', RADIO: 'radio' };
+const KINDS = { IN: 'cc', BTN: 'note' };
 
-export const LEARN_TYPES = { in: 'cc', btn: 'noteon', push: 'noteon', radio: 'noteon' };
+export const LEARN_TYPES = { cc: 'cc', note: 'noteon' };
 
-const PUNCTUATION = new Set(['(', ')', '[', ']', ',', 'LineComment', 'BlockComment']);
+const PUNCTUATION = new Set(['(', ')', ',', 'LineComment', 'BlockComment']);
 
 /**
- * A control call in the code whose addresses are number literals, e.g. `IN(12)`, `BTN()`,
- * `RADIO([16, 17], 1)`.
+ * A control call in the code whose number is a literal or not written yet, e.g. `IN(12)`, `BTN()`.
  * @typedef {Object} ControlCall
- * @property {'in' | 'btn' | 'push' | 'radio'} kind
- * @property {number[]} addr CC or note numbers written so far, empty for `IN()`
+ * @property {'cc' | 'note'} kind
+ * @property {number | null} num CC or note number, null for `IN()`
  * @property {number} to end of the call
- * @property {function(number): (Object | null)} edit learned number → change that writes it,
- *   null when RADIO already has it
+ * @property {function(number): Object} edit learned number → change that writes it
  */
 
 /**
@@ -58,47 +56,17 @@ function readControlCall(state, node) {
     return null;
   }
   const args = childNodes(argList);
-  if (args.some((arg) => arg.type.isError)) {
-    return null;
-  }
-
-  const list = kind === 'radio' ? readRadioList(argList, args) : readSingle(argList, args);
-  const addr = list?.items.map((item) => Number(state.sliceDoc(item.from, item.to)));
-  if (!addr?.every((num) => Number.isInteger(num))) {
-    return null;
-  }
-  return { kind, addr, to: node.to, edit: (num) => list.edit(num, addr) };
-}
-
-function readSingle(argList, args) {
   const [first] = args;
-  if (first && first.name !== 'Number') {
+  if (args.some((arg) => arg.type.isError) || (first && first.name !== 'Number')) {
+    return null;
+  }
+
+  const num = first ? Number(state.sliceDoc(first.from, first.to)) : null;
+  if (num !== null && !Number.isInteger(num)) {
     return null;
   }
   const at = first ?? { from: argList.firstChild.to, to: argList.firstChild.to };
-  return {
-    items: first ? [first] : [],
-    edit: (num) => ({ from: at.from, to: at.to, insert: String(num) }),
-  };
-}
-
-function readRadioList(argList, args) {
-  const isArrayForm = args[0]?.name === 'ArrayExpression';
-  const items = isArrayForm ? childNodes(args[0]) : args;
-  const open = (isArrayForm ? args[0] : argList).firstChild.to;
-  if (!items.every((item) => item.name === 'Number')) {
-    return null;
-  }
-  return {
-    items,
-    edit: (num, addr) => {
-      if (addr.includes(num)) {
-        return null;
-      }
-      const last = items.at(-1);
-      return last ? { from: last.to, insert: `, ${num}` } : { from: open, insert: String(num) };
-    },
-  };
+  return { kind, num, to: node.to, edit: (learned) => ({ from: at.from, to: at.to, insert: String(learned) }) };
 }
 
 function childNodes(node) {
