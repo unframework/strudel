@@ -89,6 +89,37 @@ Each `IN(…)`, `BTN(…)`, `PUSH(…)` and `RADIO(…)` call gets a small inlin
 - `linectrl/controls/calls.mjs` reads control calls from the syntax tree and builds the learned edit; `linectrl/controls/editor.mjs` has the widget and view plugin (`controlWidgets`), which the website adds to the main REPL editor with `StateEffect.appendConfig`.
 - `ControllerSession.learn(type, onLearned)` returns a learner handle with `isArmed` and `cancel()`. `Deck.watch(kind, addr)` tracks a control for the widget without claiming its lights, so a freshly learned control follows the device before the sketch is evaluated.
 
+## Simplifying control state (open, undecided)
+
+Most of the deck's complexity comes from controls whose meaning depends on the sketch: RADIO groups and PUSH buttons need to be registered before the deck knows how to apply a message and which lights they own, and registrations come from evaluation only (with `Deck.watch` as a stopgap for the editor widget). Two directions are on the table.
+
+### Option A: deck mirrors the device
+
+Keep only `IN` (CC value) and `BTN` (note toggle) as primitives, and drop RADIO and PUSH.
+
+- The deck logs every incoming message regardless of code: each CC records its value under `cc:12`, each note-on flips a toggle under `note:36`. That is what is persisted, so no registration, `watch()` or light registry is needed.
+- Readers stay as they are: `IN(12, align)` and `BTN(36, align)` read the shared log at their own alignment, so two readers with different alignments each hear the change when they asked to.
+- LED: steady from the toggle's latest value. While the transport runs, it pulses as long as any reader still has the change pending, i.e. until the longest alignment in use has passed. Readers count as in use while the playing sketch keeps querying them, so removing `BTN(36, 4)` from the code drops its alignment within a moment, with no evaluation hook and no code scan.
+- The editor widget reads the number directly, and could show its own reader's pending state or countdown from its literal alignment.
+- Costs: exclusive groups are gone (no direct replacement for `RADIO(…).pick(…)`), momentary holds are gone (PUSH could come back as a read of whether a note is held, but its LED would toggle), every button on the channel becomes a lit toggle including ones no sketch reads, and stored keys migrate (`in:` → `cc:`, `btn:` → `note:`, `radio:`/`push:` dropped).
+
+### Option B: state lives in the editor text
+
+Like the `.c()` cue ids, the state is written into the code itself: `IN(12, 0.43)`, `BTN(36, 1)`, `RADIO([16, 17, 18], 2)`, with no hidden storage.
+
+- Addresses and state must be literals, so everything is known from the syntax tree without evaluation. Variables are not supported, which covers nearly all real use and keeps it simple.
+- Incoming MIDI updates the literal in the text; at runtime the sketch reads a live in-memory value seeded from the literal at evaluation, the same split as the existing `slider()` (`sliderWithID`: code → state at eval, state at query time, the widget writes the text).
+- RADIO and toggles keep working, since their shape is visible in the code. PUSH needs no stored state at all: held notes can be tracked by the MIDI input, the widget just shows it.
+- Alignment and pending LEDs stay runtime-only on top of the control log; the text holds the latest intended value.
+- Each sketch carries its own control values. That reverses the current intent that controller state belongs to the rig and is shared across sketches, though loading a sketch could then move motorized faders to its values via resync.
+- Risks to settle:
+  - A fader sends a stream of CCs, so text edits must be throttled and kept out of undo history (`addToHistory: false`), or undo becomes unusable.
+  - The REPL marks the code dirty whenever text differs from the evaluated code (`isDirty` in `core/repl.mjs`), so every knob move would look like an unevaluated edit unless control literals are excluded from that comparison.
+  - MIDI edits land while the user is typing, possibly on the same line: selection mapping handles positions, but a literal under the cursor could fight the keyboard, and vim/emacs modes need checking.
+  - Evaluating mid-stream reads the text as it was, so the live value must win over a stale literal at eval when they differ.
+  - Two calls with the same number (`BTN(36)` twice) both have to be updated on a press.
+  - Saved and shared sketches (URL hash, database) carry control values, which may or may not be wanted.
+
 ## Later
 
 - A live list of registered controls in the controller popover (`in:12 = 0.43`, a pending BTN change and when it lands), from a `Deck.getControls()` snapshot.
