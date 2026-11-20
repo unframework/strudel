@@ -12,6 +12,14 @@ Live coding patterns on the web
 - 2 Years of Strudel Blog Post: <https://strudel.cc/blog/#year-2>
 
 
+## Offline Rendering
+
+Render a sketch to a looping WAV + video with animated code highlights:
+
+```bash
+python packages/render/loop.py -i my-sketch.js --cycles 8
+```
+
 ## Running Locally
 
 After cloning the project, you can run the REPL locally:
