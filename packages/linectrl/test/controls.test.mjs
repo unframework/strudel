@@ -126,6 +126,17 @@ describe('Deck', () => {
     expect(read(0.5)).toBe(1);
   });
 
+  it('follows a watched control without lighting its button', () => {
+    const { deck, output, sent } = createDeck();
+    deck.attach(output);
+    const read = deck.watch('btn', [36]);
+    deck.receive('noteon', 36, 127);
+    deck.refresh();
+    expect(read()).toBe(1);
+    expect(sent).toEqual([]);
+    deck.detach();
+  });
+
   it('restores and persists values', () => {
     const { deck, clock, storage } = createDeck({ 'in:12': 0.5, 'radio:3,4': 1 });
     expect(deck.control('in', [12], 0)(0)).toBe(0.5);

@@ -87,7 +87,7 @@ Each `IN(…)`, `BTN(…)`, `PUSH(…)` and `RADIO(…)` call gets a small inlin
 - The code is edited but not evaluated, like any other edit.
 - Widgets come from the syntax tree as you type, not from evaluation, so `IN()` can be learned before it ever ran. Calls whose addresses are not number literals (`IN(cc)`) get no widget.
 - `linectrl/controls/calls.mjs` reads control calls from the syntax tree and builds the learned edit; `linectrl/controls/editor.mjs` has the widget and view plugin (`controlWidgets`), which the website adds to the main REPL editor with `StateEffect.appendConfig`.
-- `ControllerSession.learn(type, onLearned)` returns a learner handle with `isArmed` and `cancel()`. `Deck.peek(kind, addr)` reads a value without registering the control.
+- `ControllerSession.learn(type, onLearned)` returns a learner handle with `isArmed` and `cancel()`. `Deck.watch(kind, addr)` tracks a control for the widget without claiming its lights, so a freshly learned control follows the device before the sketch is evaluated.
 
 ## Later
 

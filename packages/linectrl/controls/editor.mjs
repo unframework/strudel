@@ -59,8 +59,9 @@ class ControlWidget extends WidgetType {
     });
 
     const isSwitch = this.kind === 'btn' || this.kind === 'push';
+    const read = this.addr.length ? deck.watch(this.kind, this.addr) : () => null;
     const render = () => {
-      const current = this.addr.length ? deck.peek(this.kind, this.addr) : null;
+      const current = read();
       const text = current === null ? '–' : formats[this.kind](current);
       if (value.textContent !== text) {
         value.textContent = text;

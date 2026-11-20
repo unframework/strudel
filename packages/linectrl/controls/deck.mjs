@@ -50,11 +50,7 @@ export class Deck {
    * @returns {function(number): number} cycle → value
    */
   control(kind, addr, align) {
-    const key = `${kind}:${addr.join(',')}`;
-    if (!this._controls.has(key)) {
-      this._controls.set(key, createControl(kind, addr, 0));
-    }
-    const control = this._controls.get(key);
+    const control = this._ensureControl(kind, addr);
     control.maxAlign = Math.max(control.maxAlign, align);
 
     if (kind !== 'in') {
@@ -70,13 +66,14 @@ export class Deck {
   }
 
   /**
-   * Latest value of a control, without registering it for reading.
+   * Track a control so it follows incoming messages, without claiming its lights.
    * @param {'in' | 'btn' | 'push' | 'radio'} kind
    * @param {number[]} addr
-   * @returns {number}
+   * @returns {function(): number} latest value
    */
-  peek(kind, addr) {
-    return this._controls.get(`${kind}:${addr.join(',')}`)?.log.value ?? 0;
+  watch(kind, addr) {
+    const control = this._ensureControl(kind, addr);
+    return () => control.log.value;
   }
 
   /**
@@ -155,6 +152,14 @@ export class Deck {
         this._sentVelocities.set(note, velocity);
       }
     }
+  }
+
+  _ensureControl(kind, addr) {
+    const key = `${kind}:${addr.join(',')}`;
+    if (!this._controls.has(key)) {
+      this._controls.set(key, createControl(kind, addr, 0));
+    }
+    return this._controls.get(key);
   }
 
   // Cycle position restarts with the transport, so pending changes settle on every start/stop
