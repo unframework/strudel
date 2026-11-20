@@ -70,6 +70,16 @@ export class Deck {
   }
 
   /**
+   * Latest value of a control, without registering it for reading.
+   * @param {'in' | 'btn' | 'push' | 'radio'} kind
+   * @param {number[]} addr
+   * @returns {number}
+   */
+  peek(kind, addr) {
+    return this._controls.get(`${kind}:${addr.join(',')}`)?.log.value ?? 0;
+  }
+
+  /**
    * @param {'cc' | 'noteon' | 'noteoff'} type
    * @param {number} num CC or note number
    * @param {number} value raw 0-127

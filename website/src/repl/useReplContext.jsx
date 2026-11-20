@@ -19,6 +19,8 @@ import {
 } from '@strudel/webaudio';
 import { setVersionDefaultsFrom } from './util.mjs';
 import { StrudelMirror, defaultSettings } from '@strudel/codemirror';
+import { controlWidgets } from '@strudel/linectrl/controls/editor.mjs';
+import { StateEffect } from '@codemirror/state';
 import { clearHydra } from '@strudel/hydra';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { $settings, parseBoolean, settingsMap, useSettings } from '../settings.mjs';
@@ -132,6 +134,7 @@ export function useReplContext() {
       },
       bgFill: false,
     });
+    editor.editor.dispatch({ effects: StateEffect.appendConfig.of(controlWidgets) });
     window.strudelMirror = editor;
     window.debugAudiograph = debugAudiograph;
 

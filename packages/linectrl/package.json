@@ -8,10 +8,14 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@codemirror/language": "catalog:",
+    "@codemirror/state": "catalog:",
+    "@codemirror/view": "catalog:",
     "@strudel/core": "workspace:*",
     "@strudel/midi": "workspace:*"
   },
   "devDependencies": {
+    "@codemirror/lang-javascript": "catalog:",
     "vitest": "^3.0.4"
   },
   "engines": {

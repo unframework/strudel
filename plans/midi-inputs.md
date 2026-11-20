@@ -1,6 +1,6 @@
 # Live MIDI inputs
 
-Branch: `nm/linectrl-controls` (based on `nm/dirt-patches`). Status: ambient controls and the top-bar status widgets are implemented.
+Branch: `nm/linectrl-controls` (based on `nm/dirt-patches`). Status: ambient controls, the top-bar status widgets and in-editor MIDI learn are implemented.
 
 ## Intent
 
@@ -78,11 +78,21 @@ The controller popover shows the last 50 incoming messages (channel, cc/note on/
 - `ControllerSession` keeps the buffer: `getRecentMessages()` returns an immutable snapshot and `subscribeMessages(listener)` notifies on each message, separate from status so the chip does not re-render on fader moves.
 - The buffer is cleared on device switch.
 
+## MIDI learn in the editor (done)
+
+Each `IN(…)`, `BTN(…)`, `PUSH(…)` and `RADIO(…)` call gets a small inline widget right after it, showing the control's current value (`0.43`, `on`/`off`, the RADIO index) and a learn dot.
+
+- Clicking the dot arms it (it blinks red), and the next CC (for `IN`) or note-on (for the buttons) from the controller is written into the call: it replaces or fills the first argument, and for `RADIO` it is appended to the note list (`RADIO(16, 17)` → `RADIO(16, 17, 18)`, `RADIO([16], 1)` → `RADIO([16, 17], 1)`), skipping a note already there. Clicking again or pressing Escape in the editor cancels.
+- One learner at a time: arming another widget disarms the previous one. The learned message still reaches the deck.
+- The code is edited but not evaluated, like any other edit.
+- Widgets come from the syntax tree as you type, not from evaluation, so `IN()` can be learned before it ever ran. Calls whose addresses are not number literals (`IN(cc)`) get no widget.
+- `linectrl/controls/calls.mjs` reads control calls from the syntax tree and builds the learned edit; `linectrl/controls/editor.mjs` has the widget and view plugin (`controlWidgets`), which the website adds to the main REPL editor with `StateEffect.appendConfig`.
+- `ControllerSession.learn(type, onLearned)` returns a learner handle with `isArmed` and `cancel()`. `Deck.peek(kind, addr)` reads a value without registering the control.
+
 ## Later
 
 - A live list of registered controls in the controller popover (`in:12 = 0.43`, a pending BTN change and when it lands), from a `Deck.getControls()` snapshot.
 - Configurable MIDI channel, and more than one controller.
-- MIDI learn in the editor: an inline widget on an `IN(…)`/`BTN(…)`/`PUSH(…)`/`RADIO(…)` call that, when armed, takes the next incoming CC or note number from the controller and writes it into the code in place.
 
 ## Acceptance testing
 
@@ -92,3 +102,4 @@ The controller popover shows the last 50 incoming messages (channel, cc/note on/
 4. Press a button while stopped: the change applies immediately.
 5. The controller chip shows waiting/connected as the device is unplugged and plugged in. Resync restores the faders after they were moved with the page closed.
 6. Switching the controller device in the popover detaches the old one with no duplicate messages.
+7. Type `IN()`, click its learn dot and move a fader: its CC number is written in and the widget follows the fader. `RADIO()` learns one note per click.

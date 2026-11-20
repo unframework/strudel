@@ -87,6 +87,45 @@ describe('ControllerSession', () => {
     expect(session.getRecentMessages()).toEqual([]);
   });
 
+  it('learns the next message of a type and still feeds it to the deck', async () => {
+    const { session, deck, inputs } = createSession();
+    const read = deck.control('btn', [36], 0);
+    await session.setDevice('X-TOUCH');
+    const learned = [];
+    const learner = session.learn('noteon', (num) => learned.push(num));
+
+    inputs[0].turn(12, 64);
+    expect(learner.isArmed).toBe(true);
+    inputs[0].press(36);
+    inputs[0].press(37);
+
+    expect(learned).toEqual([36]);
+    expect(learner.isArmed).toBe(false);
+    expect(read(0)).toBe(1);
+  });
+
+  it('disarms the previous learner when arming another', () => {
+    const { session } = createSession();
+    const first = session.learn('cc', () => {});
+    const second = session.learn('noteon', () => {});
+    expect(first.isArmed).toBe(false);
+
+    first.cancel();
+    expect(second.isArmed).toBe(true);
+    second.cancel();
+    expect(second.isArmed).toBe(false);
+  });
+
+  it('stops whichever learner is armed', () => {
+    const { session } = createSession();
+    const learner = session.learn('cc', () => {});
+    expect(session.isLearning()).toBe(true);
+
+    session.stopLearning();
+    expect(learner.isArmed).toBe(false);
+    expect(session.isLearning()).toBe(false);
+  });
+
   it('closes the old input when switching devices', async () => {
     const { session, deck, inputs } = createSession();
     const read = deck.control('btn', [36], 0);

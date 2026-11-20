@@ -406,6 +406,15 @@ importers:
 
   packages/linectrl:
     dependencies:
+      '@codemirror/language':
+        specifier: 'catalog:'
+        version: 6.10.8
+      '@codemirror/state':
+        specifier: 'catalog:'
+        version: 6.5.1
+      '@codemirror/view':
+        specifier: 'catalog:'
+        version: 6.36.2
       '@strudel/core':
         specifier: workspace:*
         version: link:../core
@@ -413,6 +422,9 @@ importers:
         specifier: workspace:*
         version: link:../midi
     devDependencies:
+      '@codemirror/lang-javascript':
+        specifier: 'catalog:'
+        version: 6.2.2
       vitest:
         specifier: ^3.0.4
         version: 3.0.4(@types/debug@4.1.12)(@types/node@22.10.10)(@vitest/ui@3.0.4)(jiti@2.4.2)(lightningcss@1.29.1)(supports-color@7.2.0)(terser@5.37.0)(yaml@2.7.0)

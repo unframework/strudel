@@ -27,6 +27,7 @@ export class ControllerSession {
     this._recentMessages = [];
     this._messageListeners = new Set();
     this._messageSeq = 0;
+    this._learner = null;
   }
 
   getStatus() {
@@ -57,6 +58,33 @@ export class ControllerSession {
   subscribeMessages(listener) {
     this._messageListeners.add(listener);
     return () => this._messageListeners.delete(listener);
+  }
+
+  /**
+   * Hand the number of the next incoming message of a type to `onLearned`. Arming a new learner
+   * disarms the previous one. The message still reaches the deck.
+   * @param {'cc' | 'noteon'} type
+   * @param {function(number): void} onLearned called with the CC or note number
+   * @returns {{ isArmed: boolean, cancel: function(): void }}
+   */
+  learn(type, onLearned) {
+    this._disarm();
+    const learner = {
+      type,
+      onLearned,
+      isArmed: true,
+      cancel: () => this._learner === learner && this._disarm(),
+    };
+    this._learner = learner;
+    return learner;
+  }
+
+  isLearning() {
+    return this._learner !== null;
+  }
+
+  stopLearning() {
+    this._disarm();
   }
 
   /**
@@ -99,6 +127,11 @@ export class ControllerSession {
     input.onMessage((type, channel, num, value) => {
       this._deck.receive(type, num, value);
       this._recordMessage({ type, channel, num, value });
+      if (this._learner?.type === type) {
+        const { onLearned } = this._learner;
+        this._disarm();
+        onLearned(num);
+      }
     });
     input.onConnectionChange(onConnectionChange);
     if (input.isConnected) {
@@ -121,6 +154,13 @@ export class ControllerSession {
       this._input.close();
       this._deck.detach();
       this._input = null;
+    }
+  }
+
+  _disarm() {
+    if (this._learner) {
+      this._learner.isArmed = false;
+      this._learner = null;
     }
   }
 
