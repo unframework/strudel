@@ -4,15 +4,18 @@ Branch: TBD. Status: exploration. The highlight stream has been measured, nothin
 
 ## Intent
 
-A dedicated visualizer runs separately from the REPL, likely on another machine (the engine box, or a GPU box) and possibly not a browser at all. It gets a live feed of what the sketch is doing and draws its own picture. The REPL pushes data to it and never waits on it, so the visuals can't hold up the audio.
+A dedicated visualizer runs separately from the REPL, likely on another machine (the engine box, or a GPU box) and possibly not a browser at all. The engine and the visualizer are separate processes, so they can share a box or not: a Pi running only the engine, a GPU box running both, or three separate boxes. It gets a live feed of what the sketch is doing and draws its own picture. The REPL pushes data to it and never waits on it, so the visuals can't hold up the audio.
 
-This plan covers the feeds the visualizer needs. Each feed is a separate use case with its own message types, but they all share one transport, one clock and one way of connecting. The first feed is the source code and its highlights. Others will be added below.
+This plan covers the feeds the visualizer needs. Each feed is a separate use case with its own message types, but they all share one transport and one clock. The first feed is the source code and its highlights. Others will be added below.
 
 ## Shared transport
 
-- One websocket from the REPL, or from the OSC bridge fanning out what it already receives, to the visualizer. Small, rare messages, as well as messages too big for one UDP datagram, go over it as JSON. If a feed ever gets dense enough to matter, it can switch to packed binary frames.
-- Timed messages carry their audio time and are sent ahead of it, the same way OSC bundles are. The visualizer schedules them against a shared clock rather than drawing them when they arrive. TBD: which clock (the bridge's, NTP between boxes, or an offset handshake on connect).
-- Every message is tagged with its feed, so the visualizer can ignore feeds it doesn't draw.
+- Everything is OSC, sent from the REPL through the existing bridge websocket. Each bridge frame already carries its own `host`/`port` (`packages/osc/osc.mjs`, `server.js`, and drone-server's `strudel.ts`), so visualizer messages just target the visualizer's address while engine messages target the engine. This works with the stock `@strudel/osc` bridge, so a WebAudio-only rig needs nothing custom besides the visualizer, and any OSC tool can receive the feeds.
+- The REPL does all fan-out, since only it knows which data is for whom. The bridges stay stock and are not changed to duplicate engine traffic, which wouldn't carry the visualizer's data anyway.
+- Timed messages go out as OSC bundles, timetagged like the engine's and sent ahead by the scheduler's lookahead. The visualizer schedules them against the timetag rather than drawing them on arrival, with the boxes NTP-synced, the same requirement as the engine.
+- Every address is under `/vis/`, with a sub-path per feed, so receivers can ignore feeds they don't draw.
+- Bridges send every number as an OSC float. That's fine for indices and offsets below 2^24, but receivers shouldn't expect ints.
+- Open: many OSC tools ignore bundle timetags and act on arrival, which would make them run early by the lookahead. Test with TouchDesigner. Fixes could be a per-target just-in-time send mode, or a latency offset on the receiver.
 
 ## Feed: source code and highlights
 
@@ -26,10 +29,13 @@ The visualizer shows the whole sketch, zoomed out and independent of the editor'
 
 ### Messages
 
-1. **On evaluation:** `{ evalId, source, locations: [[start, end], …] }`. This is rare and only a few KB, but a 1.7 KB sketch already exceeds a single UDP MTU, which is why it goes over the websocket.
-2. **Per event:** `{ evalId, time, duration, locIdx: [i, …] }`, indices into the eval's location table. Hap values can come along on another feed, or here if a visual wants them (note, gain, orbit). The OSC send path already has the hap in hand, so the bridge is a natural place to emit this.
+1. **Source:** `/vis/src evalId index count chunk`, the source split into chunks of about 1 KB. A sketch is typically 2–10 KB, which would fit one datagram on localhost, but across a LAN (especially Wi-Fi) a large datagram is split into IP fragments and losing any one loses the whole message. The visualizer reassembles the chunks by `evalId`.
+2. **Locations:** `/vis/locs evalId start end start end …`, the eval's location table, chunked the same way if it gets long.
+3. **Per event:** `/vis/hl evalId duration idx idx …` in a timetagged bundle, with indices into the eval's location table. Hap values can come along on another feed, or here if a visual wants them (note, gain, orbit).
 
-The visualizer keeps the source and table for each `evalId`. It lights a range from `time` for `duration`, merging overlapping events the way the editor dedupes by range.
+The REPL sends source and locations on every eval and resends them every 30 s or so, so a visualizer that restarts recovers by itself without a back-channel. A manual resend button covers the impatient case. The visualizer keeps the last source it received across reconnects, and draws nothing for an `evalId` it has no table for yet.
+
+The visualizer keeps the source and table for each `evalId`. It lights a range from the bundle's time for `duration`, merging overlapping events the way the editor dedupes by range.
 
 ### Bandwidth
 
@@ -54,9 +60,15 @@ Bandwidth isn't a concern on a LAN. Even sending everything as JSON stays near 1
 - **Edits between evals:** the editor maps decorations through edits, but the visualizer only knows the evaluated source. That's probably right (it shows what is playing, not what is being typed), but decide whether it should also mirror unevaluated edits.
 - **Non-mini highlights:** signal-driven values (`perlin`, `sine`) never light up. Decide whether the visualizer wants their call sites highlighted with a continuous intensity, which would be a separate feed sampling the signals.
 
+## Visualizer host
+
+Likely either TouchDesigner receiving OSC (easy to hand plain `/vis/` feeds to someone else's rig, but it has no Linux build and its project files are binary), or a custom Godot visualizer (text-based scenes and scripts, so it can be developed both agentically and in the editor; a Pi needs the Compatibility renderer).
+
+A bare-bones reference visualizer is useful for testing the source and highlight feeds without either. It could be a Node script that listens on UDP and draws the source in the terminal with ANSI highlights, which needs no browser and no second bridge. The old TTY mirror (`codemirror/tty.mjs`) is prior art for the rendering.
+
 ## Other feeds
 
-Candidates, not yet designed:
+Candidates, not yet designed. The source and highlight feed needs low-level wiring into evaluation and hap triggers, but sketch-driven feeds like these would go through a separate pattern helper that sends chosen values to a `/vis/` address.
 
 - Hap values for driving visuals directly from notes, gain and orbit
 - Controller values from the linectrl deck
