@@ -16,13 +16,25 @@ export function signalSampler(pat, step) {
     return pat.queryArc(t, t.add(eps)).map((hap) => hap.value);
   };
 
-  return (from, to) => {
+  return (from, to, now) => {
     const first = Math.floor(from / stepSize);
     const last = Math.ceil(to / stepSize);
     for (const k of cache.keys()) {
       if (k < first || k > last) {
         cache.delete(k);
       }
+    }
+
+    // Upcoming samples go stale when external input (e.g. MIDI) changes, back to where it took effect
+    for (let k = last; k >= Math.ceil(now / stepSize); k--) {
+      if (!cache.has(k)) {
+        continue;
+      }
+      const values = valuesAt(k);
+      if (isSameValues(values, cache.get(k))) {
+        break;
+      }
+      cache.set(k, values);
     }
 
     const times = [];
@@ -45,6 +57,19 @@ export function signalSampler(pat, step) {
     return { times, series };
   };
 }
+
+function isSameValue(a, b) {
+  if (a === b) {
+    return true;
+  }
+  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') {
+    return false;
+  }
+  const keys = Object.keys(a);
+  return keys.length === Object.keys(b).length && keys.every((key) => a[key] === b[key]);
+}
+
+const isSameValues = (a, b) => a.length === b.length && a.every((value, i) => isSameValue(value, b[i]));
 
 function finite(v) {
   if (typeof v === 'boolean') {
@@ -115,7 +140,7 @@ export function __plot({
   const from = time - cycles * playhead;
   const to = time + cycles * (1 - playhead);
 
-  const { times, series } = sample(from, to);
+  const { times, series } = sample(from, to, time);
   const lines = series.map((raw) => raw.map((v) => plotValue(v, key)));
   const [lo, hi] = valueRange(lines, min, max);
   const x = (t) => ((t - from) / (to - from)) * w;

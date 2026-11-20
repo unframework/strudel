@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { saw, sine, stack, silence, sequence, pure, signal, Fraction } from '@strudel/core';
 import { signalSampler, plotValue } from '../plot.mjs';
 
-const sampleSignal = (pat, from, to, samples) => signalSampler(pat, Fraction(to - from).div(samples))(from, to);
+const sampleSignal = (pat, from, to, samples) => signalSampler(pat, Fraction(to - from).div(samples))(from, to, from);
 
 describe('sampleSignal', () => {
   it('samples saw rising twice over two cycles', () => {
@@ -34,21 +34,43 @@ describe('sampleSignal', () => {
 
   it('aligns sample times to the step grid', () => {
     const sample = signalSampler(saw, Fraction(0.25));
-    expect(sample(0, 1).times).toEqual([0, 0.25, 0.5, 0.75, 1]);
-    expect(sample(0.1, 1.1).times).toEqual([0, 0.25, 0.5, 0.75, 1, 1.25]);
+    expect(sample(0, 1, 0).times).toEqual([0, 0.25, 0.5, 0.75, 1]);
+    expect(sample(0.1, 1.1, 0.1).times).toEqual([0, 0.25, 0.5, 0.75, 1, 1.25]);
   });
 
-  it('only queries samples that scrolled into view', () => {
+  it('queries samples that scrolled into view, plus one upcoming sample to check for staleness', () => {
     let queries = 0;
     const counted = signal((t) => {
       queries++;
       return t;
     });
     const sample = signalSampler(counted, Fraction(0.25));
-    sample(0, 1);
+    sample(0, 1, 0);
     expect(queries).toBe(5);
-    sample(0.5, 1.5);
-    expect(queries).toBe(7);
+    sample(0.5, 1.5, 1);
+    expect(queries).toBe(8);
+  });
+
+  it('requeries upcoming samples back to where an external change took effect', () => {
+    let input = 0;
+    const sample = signalSampler(
+      signal((t) => (t < 0.5 ? 0 : input)),
+      Fraction(0.25),
+    );
+    sample(0, 1, 0);
+    input = 1;
+    expect(sample(0, 1, 0).series[0]).toEqual([0, 0, 1, 1, 1]);
+  });
+
+  it('keeps past samples', () => {
+    let input = 0;
+    const sample = signalSampler(
+      signal(() => input),
+      Fraction(0.25),
+    );
+    sample(0, 1, 0);
+    input = 1;
+    expect(sample(0, 1, 0.5).series[0]).toEqual([0, 0, 1, 1, 1]);
   });
 });
 
