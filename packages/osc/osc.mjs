@@ -103,12 +103,17 @@ function dropUnencodable(controls) {
 
 const collator = new ClockCollator({});
 
-export async function oscTrigger(hap, currentTime, cps = 1, targetTime) {
+export const oscTimestamp = (currentTime, targetTime) => collator.calculateTimestamp(currentTime, targetTime) * 1000;
+
+export async function sendOscFrame(frame) {
   const ws = await connect();
+  ws.send(JSON.stringify(frame));
+}
+
+export async function oscTrigger(hap, currentTime, cps = 1, targetTime) {
   const controls = parseControlsFromHap(hap, cps);
   const keyvals = Object.entries(controls).flat();
-  const ts = collator.calculateTimestamp(currentTime, targetTime) * 1000;
-  const msg = { address: '/dirt/play', args: keyvals, timestamp: ts };
+  const msg = { address: '/dirt/play', args: keyvals, timestamp: oscTimestamp(currentTime, targetTime) };
 
   if ('oschost' in hap.value) {
     msg['host'] = hap.value['oschost'];
@@ -116,7 +121,7 @@ export async function oscTrigger(hap, currentTime, cps = 1, targetTime) {
   if ('oscport' in hap.value) {
     msg['port'] = hap.value['oscport'];
   }
-  ws.send(JSON.stringify(msg));
+  await sendOscFrame(msg);
 }
 
 /**

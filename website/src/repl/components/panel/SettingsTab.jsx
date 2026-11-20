@@ -11,6 +11,7 @@ import { ActionButton } from '../button/action-button.jsx';
 import { exportScript, ImportPrebakeScriptButton } from './ImportPrebakeScriptButton.jsx';
 import { useEffect, useRef, useState } from 'react';
 import { DEFAULT_OSC_URL } from '@strudel/osc';
+import { DEFAULT_VIS_TARGET } from '@strudel/osc/vis.mjs';
 import cx from '@src/cx.mjs';
 
 const inputClass =
@@ -122,21 +123,19 @@ const fontFamilyOptions = {
   galactico: 'galactico',
 };
 
-function OscUrlInput({ isEnabled, url }) {
-  const [draft, setDraft] = useState(url);
+function ToggledTextSetting({ label, enabledKey, valueKey, placeholder }) {
+  const settings = useSettings();
+  const isEnabled = settings[enabledKey];
+  const [draft, setDraft] = useState(settings[valueKey]);
   return (
     <>
-      <Checkbox
-        label="Use custom URL"
-        value={isEnabled}
-        onChange={(e) => settingsMap.setKey('isCustomOscUrlEnabled', e.target.checked)}
-      />
+      <Checkbox label={label} value={isEnabled} onChange={(e) => settingsMap.setKey(enabledKey, e.target.checked)} />
       <Textbox
         className={cx(!isEnabled && 'opacity-50')}
-        placeholder={DEFAULT_OSC_URL}
+        placeholder={placeholder}
         value={draft}
         onChange={setDraft}
-        onBlur={() => settingsMap.setKey('customOscUrl', draft.trim())}
+        onBlur={() => settingsMap.setKey(valueKey, draft.trim())}
         onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
       />
     </>
@@ -166,8 +165,6 @@ function MainSettingsContent({ started }) {
     audioEngineTarget,
     maxPolyphony,
     multiChannelOrbits,
-    isCustomOscUrlEnabled,
-    customOscUrl,
     isTabIndentationEnabled,
     isMultiCursorEnabled,
     patternAutoStart,
@@ -201,7 +198,20 @@ function MainSettingsContent({ started }) {
         />
       </FormItem>
       <FormItem label="OSC Bridge URL">
-        <OscUrlInput isEnabled={isCustomOscUrlEnabled} url={customOscUrl} />
+        <ToggledTextSetting
+          label="Use custom URL"
+          enabledKey="isCustomOscUrlEnabled"
+          valueKey="customOscUrl"
+          placeholder={DEFAULT_OSC_URL}
+        />
+      </FormItem>
+      <FormItem label="Visualizer (host:port, as seen from the OSC bridge)">
+        <ToggledTextSetting
+          label="Send source and highlights"
+          enabledKey="isVisEnabled"
+          valueKey="visTarget"
+          placeholder={DEFAULT_VIS_TARGET}
+        />
       </FormItem>
 
       <FormItem label="Maximum Polyphony">

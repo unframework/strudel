@@ -35,6 +35,7 @@ import {
 } from '../user_pattern_utils.mjs';
 import { superdirtOutput } from '@strudel/osc/superdirtoutput';
 import { DEFAULT_OSC_URL, setOscUrl } from '@strudel/osc';
+import { DEFAULT_VIS_TARGET, parseVisTarget, publishVisEval, setVisTarget, withVisTrigger } from '@strudel/osc/vis.mjs';
 import { audioEngineTargets } from '../settings.mjs';
 import { useStore } from '@nanostores/react';
 import { prebake } from './prebake.mjs';
@@ -57,6 +58,14 @@ if (typeof window !== 'undefined') {
   $settings.subscribe(({ isCustomOscUrlEnabled, customOscUrl }) =>
     setOscUrl((isCustomOscUrlEnabled && customOscUrl.trim()) || DEFAULT_OSC_URL),
   );
+  $settings.subscribe(({ isVisEnabled, visTarget }) => {
+    try {
+      setVisTarget(isVisEnabled ? parseVisTarget(visTarget.trim() || DEFAULT_VIS_TARGET) : null);
+    } catch (err) {
+      logger(err.message, 'error');
+      setVisTarget(null);
+    }
+  });
   modulesLoading = loadModules();
   presets = prebake();
   drawContext = getDrawContext();
@@ -110,14 +119,16 @@ export function useReplContext() {
         }
       },
       beforeEval: () => audioReady,
+      editPattern: withVisTrigger,
       afterEval: (all) => {
-        const { code } = all;
+        const { code, meta } = all;
         //post to iframe parent (like Udels) if it exists...
         window.parent?.postMessage(code);
 
         // Get the full buffer content from the editor instead of just the evaluated block
         const fullBufferCode = editorRef.current?.code || code;
         setLatestCode(fullBufferCode);
+        publishVisEval(fullBufferCode, meta?.miniLocations ?? []);
 
         try {
           window.location.hash = '#' + code2hash(fullBufferCode);

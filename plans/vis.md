@@ -1,6 +1,6 @@
 # Visualizer data feeds
 
-Branch: TBD. Status: exploration. The highlight stream has been measured, nothing is built.
+Branch: `nm/vis`. Status: the source and highlight feed and a terminal reference visualizer are built. Other feeds and a real visualizer host are not started.
 
 ## Intent
 
@@ -25,7 +25,7 @@ The visualizer shows the whole sketch, zoomed out and independent of the editor'
 
 - Locations are fixed at evaluation. The transpiler wraps each mini-notation atom, and each plain argument such as `.lpf(800)`, with `withLoc(start, end)` (`core/pattern.mjs`). The full list ends up in `meta.miniLocations`.
 - When patterns combine (`appLeft`, `appBoth`, patternified args), their contexts are merged and their `locations` lists are concatenated (`core/hap.mjs`, `core/pattern.mjs`). A single hap therefore carries one location per contributing atom, precursor patterns included. One `raingrains.js` note carries `"4000"`, `"8"`, `"3000"`, `"sine"`, `"db6"`, `"harmonic"`, `"minor"` and several degree atoms. Continuous signals like `perlin` or `sine` have no location, so they never highlight.
-- The editor queries haps every frame, lights every `start:end` of the active ones, and dedupes by range (`codemirror/highlight.mjs`). The old TTY mirror (`codemirror/tty.mjs` with `terminal.mjs`, pushing JSON through a serial websocket server) does the same thing for its visible terminal window, so it's a working example of sending highlights off the page.
+- The editor queries haps every frame, lights every `start:end` of the active ones, and dedupes by range (`codemirror/highlight.mjs`).
 
 ### Messages
 
@@ -64,7 +64,13 @@ Bandwidth isn't a concern on a LAN. Even sending everything as JSON stays near 1
 
 Likely either TouchDesigner receiving OSC (easy to hand plain `/vis/` feeds to someone else's rig, but it has no Linux build and its project files are binary), or a custom Godot visualizer (text-based scenes and scripts, so it can be developed both agentically and in the editor; a Pi needs the Compatibility renderer).
 
-A bare-bones reference visualizer is useful for testing the source and highlight feeds without either. It could be a Node script that listens on UDP and draws the source in the terminal with ANSI highlights, which needs no browser and no second bridge. The old TTY mirror (`codemirror/tty.mjs`) is prior art for the rendering.
+A bare-bones reference visualizer tests the source and highlight feeds without either: `pnpm vis-tty` (`packages/osc/vis-tty.mjs`, port from `VIS_PORT`, default 57140) listens on UDP and draws the source in the terminal with ANSI highlights, so it needs no browser and no second bridge. Turn on "Visualizer" in the REPL settings and give its address as seen from the bridge.
+
+### Built
+
+- `packages/osc/vis-protocol.mjs`: addresses, chunking and reassembly, shared by sender and receivers.
+- `packages/osc/vis.mjs`: the REPL side. The website publishes each eval's full buffer and `miniLocations` from `afterEval`, and installs a non-dominant `onTrigger` on every pattern through the REPL's `editPattern` option, so haps are seen whichever output plays them. Frames go out through the same bridge connection as `.osc()`, with the visualizer's `host`/`port` and the same timetag clock.
+- `packages/osc/vis-scene.mjs`: receiver state (current eval, timed highlights), separate from the terminal rendering in `vis-tty.mjs`.
 
 ## Other feeds
 
