@@ -71,10 +71,18 @@ website/src/repl/components/topbar/
 - The clock widget polls the follower on `useFrame` and only re-renders when the device, BPM or running state changes; its dot blinks on the beat by direct DOM writes.
 - The clock input picker moved into the popover, leaving the BPM chip in the bar.
 
+### Message log (done)
+
+The controller popover shows the last 50 incoming messages (channel, cc/note on/note off, number, value) in a small scrolling list, newest first, so pressing buttons and moving faders reveals their CC and note numbers.
+
+- `ControllerSession` keeps the buffer: `getRecentMessages()` returns an immutable snapshot and `subscribeMessages(listener)` notifies on each message, separate from status so the chip does not re-render on fader moves.
+- The buffer is cleared on device switch.
+
 ## Later
 
 - A live list of registered controls in the controller popover (`in:12 = 0.43`, a pending BTN change and when it lands), from a `Deck.getControls()` snapshot.
 - Configurable MIDI channel, and more than one controller.
+- MIDI learn in the editor: an inline widget on an `IN(…)`/`BTN(…)`/`PUSH(…)`/`RADIO(…)` call that, when armed, takes the next incoming CC or note number from the controller and writes it into the code in place.
 
 ## Acceptance testing
 

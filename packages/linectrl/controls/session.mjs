@@ -1,6 +1,7 @@
 import { logger } from '@strudel/core';
 
 const IDLE = { phase: 'idle' };
+const RECENT_MESSAGE_COUNT = 50;
 
 /**
  * Which controller drives the deck, and whether it is connected.
@@ -22,6 +23,10 @@ export class ControllerSession {
     this._listeners = new Set();
     this._input = null;
     this._attempt = null;
+
+    this._recentMessages = [];
+    this._messageListeners = new Set();
+    this._messageSeq = 0;
   }
 
   getStatus() {
@@ -38,12 +43,30 @@ export class ControllerSession {
   }
 
   /**
+   * @returns {Array<{ seq: number, type: 'cc' | 'noteon' | 'noteoff', channel: number, num: number, value: number }>}
+   *   the latest messages from the current device, newest first
+   */
+  getRecentMessages() {
+    return this._recentMessages;
+  }
+
+  /**
+   * @param {function(): void} listener called after every incoming message
+   * @returns {function(): void} unsubscribe
+   */
+  subscribeMessages(listener) {
+    this._messageListeners.add(listener);
+    return () => this._messageListeners.delete(listener);
+  }
+
+  /**
    * Switch to another device, closing the current one.
    * @param {string} device MIDI input name, or '' for none
    */
   async setDevice(device) {
     const attempt = (this._attempt = {});
     this._closeInput();
+    this._setRecentMessages([]);
 
     if (device === '') {
       this._setStatus(IDLE);
@@ -73,7 +96,10 @@ export class ControllerSession {
     };
 
     this._input = input;
-    input.onMessage((type, _chan, num, value) => this._deck.receive(type, num, value));
+    input.onMessage((type, channel, num, value) => {
+      this._deck.receive(type, num, value);
+      this._recordMessage({ type, channel, num, value });
+    });
     input.onConnectionChange(onConnectionChange);
     if (input.isConnected) {
       onConnectionChange(true);
@@ -96,6 +122,16 @@ export class ControllerSession {
       this._deck.detach();
       this._input = null;
     }
+  }
+
+  _recordMessage(message) {
+    const recent = [{ seq: this._messageSeq++, ...message }, ...this._recentMessages];
+    this._setRecentMessages(recent.slice(0, RECENT_MESSAGE_COUNT));
+  }
+
+  _setRecentMessages(messages) {
+    this._recentMessages = messages;
+    this._messageListeners.forEach((listener) => listener());
   }
 
   _setStatus(status) {

@@ -24,6 +24,7 @@ function createFakeInput(device) {
       input.connectionListeners.forEach((listener) => listener(isConnected));
     },
     press: (note) => input.messageListeners.forEach((listener) => listener('noteon', 1, note, 127)),
+    turn: (cc, value) => input.messageListeners.forEach((listener) => listener('cc', 2, cc, value)),
   };
   return input;
 }
@@ -67,6 +68,23 @@ describe('ControllerSession', () => {
     await session.setDevice('X-TOUCH');
     inputs[0].press(36);
     expect(read(0)).toBe(1);
+  });
+
+  it('keeps the latest messages newest first, cleared on device switch', async () => {
+    const { session, inputs } = createSession();
+    await session.setDevice('X-TOUCH');
+    inputs[0].press(36);
+    for (let value = 0; value < 50; value++) {
+      inputs[0].turn(12, value);
+    }
+
+    const recent = session.getRecentMessages();
+    expect(recent).toHaveLength(50);
+    expect(recent[0]).toEqual({ seq: 50, type: 'cc', channel: 2, num: 12, value: 49 });
+    expect(recent.at(-1)).toMatchObject({ type: 'cc', value: 0 });
+
+    await session.setDevice('B');
+    expect(session.getRecentMessages()).toEqual([]);
   });
 
   it('closes the old input when switching devices', async () => {
