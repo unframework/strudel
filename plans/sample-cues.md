@@ -60,6 +60,24 @@ $: s("voice").beatsync().cue("accent")
   - **warped:** plays the server render of the current markers and redraws them on the grid.
   - **custom bpm:** the warp target. Unticked, it uses the REPL tempo.
 
+## Possible direction: `d` steered sample voice
+
+An idea to explore, not a decision. Play samples in SuperDirt through a long-lived voice with a playhead, the way drone voices work: one synth per `(orbit, voice)` holds the buffer, and each event steers the playhead instead of starting a new sound. Working name `s("d")`, as a sound name (the `d` control is already a `decay` alias).
+
+- Each event sends the source position at its start and at its end, and the playhead moves linearly between them over the event's duration. Drones glide with `VarLag`, but a playhead has to land exactly, and since the warp map is linear between markers, one event per beat or per marker reproduces it exactly. Each event resets the position, so nothing drifts.
+- Warping happens live: Strudel computes the playhead positions from the markers and the current tempo, so it follows `setcpm` and MIDI clock follow mid-sample, which fixed-tempo offline renders can't.
+- Jumps such as splicing, random access, stutters and reversing move one playhead, and the voice crossfades over a short window at each one, rather than each being a separate trigger with its own clicks and seams.
+- The marker maths stays in patterns (for example a `beatsync` variant that emits one event per beat), and the engine only reads audio.
+
+Open questions:
+
+- Stretch quality: SuperCollider's built-in pitch-preserving readers (`Warp1`, `TGrains`, `PV_*`) sound noticeably worse on voice than offline rubberband. Options are a UGen around librubberband's realtime mode (as with DaVerb), or a hybrid where the playhead reads the nearest cached render, so it only stretches by a small ratio.
+- Browser parity: superdough has no equivalent, so the inline editor preview and browser playback would differ. The fallback could be plain resampling per event.
+- Overlaps: a voice plays one sound at a time, so a `cue` pre-roll that overlaps the next hit needs a second voice or alternating voice ids.
+- Needs SuperDirt to load buffers from the sample server, which is wanted anyway.
+
+First spike: `d` with `Warp1` as the reader, to check the scheduling before the sound quality, plus a `beatsync` variant that emits per-beat start and end positions from the markers. Compare it against rubberband renders on real voice samples.
+
 ## Known limitations
 
 - Renders lag by about 5 ms (stretcher latency). Spacing between markers is exact.
