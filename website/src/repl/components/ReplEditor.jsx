@@ -1,6 +1,7 @@
 import { Code } from '@src/repl/components/Code';
 import Loader from '@src/repl/components/Loader';
-import { BottomPanel, MainPanel, RightPanel } from '@src/repl/components/panel/Panel';
+import { BottomPanel, RightPanel } from '@src/repl/components/panel/Panel';
+import { TopBar } from '@src/repl/components/topbar/TopBar';
 import UserFacingErrorMessage from '@src/repl/components/UserFacingErrorMessage';
 import { useSettings } from '@src/settings.mjs';
 
@@ -19,8 +20,7 @@ export default function ReplEditor(Props) {
     <div className="h-full flex flex-col relative" {...editorProps}>
       <Loader active={pending} />
       <div className="flex flex-col grow overflow-hidden">
-        {/* <MainPanel context={context} isEmbedded={isEmbedded} className="hidden sm:block" /> */}
-        <MainPanel context={context} isEmbedded={isEmbedded} />
+        <TopBar context={context} isEmbedded={isEmbedded} />
         <div className="flex overflow-hidden h-full">
           <Code containerRef={containerRef} editorRef={editorRef} init={init} />
           {!isZen && panelPosition === 'right' && <RightPanel context={context} />}
@@ -28,7 +28,6 @@ export default function ReplEditor(Props) {
       </div>
       <UserFacingErrorMessage error={error} />
       {!isZen && panelPosition === 'bottom' && <BottomPanel context={context} />}
-      {/* <MainPanel context={context} isEmbedded={isEmbedded} className="block sm:hidden" /> */}
     </div>
   );
 }

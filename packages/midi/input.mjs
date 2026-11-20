@@ -10,8 +10,8 @@ import { getDevice } from './util.mjs';
 
 /**
  * MIDI input device wrapper that manages connection and reconnection, tracks
- * persisted CC states, and exposes raw message I/O. These instances are long-lived
- * and are maintained as singletons (keyed globally by input string/number).
+ * persisted CC states, and exposes raw message I/O. Each instance is a single-use
+ * handle: it reconnects until `close()`.
  */
 export class MidiInput {
   /**
@@ -27,6 +27,7 @@ export class MidiInput {
     this._refsByChan = {};
     this._messageListeners = new Set();
     this._connectionListeners = new Set();
+    this._lifetime = new AbortController();
 
     this._loadAllStates();
 
@@ -92,6 +93,15 @@ export class MidiInput {
     }
   }
 
+  /**
+   * Stop reconnecting and release the device. Listeners are dropped without a final disconnect call.
+   */
+  close() {
+    this._messageListeners.clear();
+    this._connectionListeners.clear();
+    this._lifetime.abort();
+  }
+
   _output() {
     const device = this._currentDevice;
     return device ? WebMidi.outputs.find((o) => o.name === device.name) : undefined;
@@ -99,42 +109,43 @@ export class MidiInput {
 
   _startDeviceListener() {
     const initialDevice = getDevice(this.input, WebMidi.inputs);
-
-    // Background connection loop
-    (async () => {
-      const midiListener = this._onMidiMessage.bind(this);
-      let device = initialDevice;
-
-      while (true) {
-        if (!device) {
-          device = await this._waitForDevice();
-        }
-
-        // Wait a bit for device to be ready to receive last state
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
-        this._currentDevice = device;
-        try {
-          // Still continue if sending did not work
-          this._sendAllStates();
-        } catch (err) {
-          console.error('midiin: failed to send last state on connect:', device.name, err);
-        }
-
-        device.addListener('midimessage', midiListener);
-        this._setConnected(true);
-
-        await this._waitForDeviceDisconnect(device);
-
-        this._currentDevice = null;
-        device.removeListener('midimessage', midiListener);
-        device = null; // Clear var to trigger wait for connection
-
-        this._setConnected(false);
-      }
-    })();
-
+    this._runConnectionLoop(initialDevice);
     return initialDevice;
+  }
+
+  async _runConnectionLoop(initialDevice) {
+    const { signal } = this._lifetime;
+    const midiListener = this._onMidiMessage.bind(this);
+    let device = initialDevice;
+
+    while (!signal.aborted) {
+      device ??= await this._waitForDevice();
+
+      // Wait a bit for device to be ready to receive last state
+      await abortableDelay(2000, signal);
+      if (signal.aborted) {
+        break;
+      }
+
+      this._currentDevice = device;
+      try {
+        // Still continue if sending did not work
+        this._sendAllStates();
+      } catch (err) {
+        console.error('midiin: failed to send last state on connect:', device.name, err);
+      }
+
+      device.addListener('midimessage', midiListener);
+      this._setConnected(true);
+
+      await this._waitForDeviceDisconnect(device);
+
+      this._currentDevice = null;
+      device.removeListener('midimessage', midiListener);
+      device = null; // Clear var to trigger wait for connection
+
+      this._setConnected(false);
+    }
   }
 
   _setConnected(isConnected) {
@@ -148,36 +159,21 @@ export class MidiInput {
     }
   }
 
-  // Returns a promise that resolves when the specified device is connected
+  // Resolves with the device once it is connected, or with null on close
   _waitForDevice() {
-    return new Promise((resolve) => {
-      const connListener = () => {
-        const device = getDevice(this.input, WebMidi.inputs);
-        if (device) {
-          logger(`[midi] device reconnected: ${device.name}`);
-
-          WebMidi.removeListener('connected', connListener);
-          resolve(device);
-        }
-      };
-
-      WebMidi.addListener('connected', connListener);
+    return waitForEvent(WebMidi, 'connected', this._lifetime.signal, () => {
+      const device = getDevice(this.input, WebMidi.inputs);
+      device && logger(`[midi] device reconnected: ${device.name}`);
+      return device;
     });
   }
 
-  // Returns a promise that resolves when the specified device is disconnected
+  // Resolves once the device is disconnected, or on close
   _waitForDeviceDisconnect(device) {
-    return new Promise((resolve) => {
-      const disconnListener = (e) => {
-        if (e.port.name === device.name) {
-          logger(`[midi] device disconnected: ${device.name}`);
-
-          WebMidi.removeListener('disconnected', disconnListener);
-          resolve();
-        }
-      };
-
-      WebMidi.addListener('disconnected', disconnListener);
+    return waitForEvent(WebMidi, 'disconnected', this._lifetime.signal, (e) => {
+      const isGone = e.port.name === device.name;
+      isGone && logger(`[midi] device disconnected: ${device.name}`);
+      return isGone;
     });
   }
 
@@ -274,4 +270,39 @@ export class MidiInput {
       }
     }
   }
+}
+
+function abortableDelay(ms, signal) {
+  return new Promise((resolve) => {
+    const finish = () => {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', finish);
+      resolve();
+    };
+    const timer = setTimeout(finish, ms);
+    signal.aborted ? finish() : signal.addEventListener('abort', finish);
+  });
+}
+
+// Resolves with the first truthy `match(event)` result, or null once the signal aborts
+function waitForEvent(target, eventName, signal, match) {
+  return new Promise((resolve) => {
+    const finish = (result) => {
+      target.removeListener(eventName, listener);
+      signal.removeEventListener('abort', onAbort);
+      resolve(result);
+    };
+    const listener = (e) => {
+      const result = match(e);
+      result && finish(result);
+    };
+    const onAbort = () => finish(null);
+
+    if (signal.aborted) {
+      resolve(null);
+      return;
+    }
+    target.addListener(eventName, listener);
+    signal.addEventListener('abort', onAbort);
+  });
 }

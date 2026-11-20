@@ -70,6 +70,7 @@ export const defaultSettings = {
   includePrebakeScriptInShare: true,
   settingsTab: 'settings',
   midiClockInput: '',
+  controllerInput: '',
   isCustomOscUrlEnabled: false,
   customOscUrl: '',
 };

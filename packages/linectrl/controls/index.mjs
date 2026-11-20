@@ -1,46 +1,5 @@
-import { getIsStarted, getTime, logger, signal } from '@strudel/core';
-import { Deck } from './deck.mjs';
-
-const DEVICE = 'X-TOUCH COMPACT';
-const CHANNEL = 1;
-const STORAGE_KEY = 'linectrl-controls';
-
-const clock = { now: () => (getIsStarted() ? getTime() : null) };
-
-let deck;
-
-function getDeck() {
-  if (!deck) {
-    deck = new Deck(createStorage(), clock, CHANNEL);
-    connect(deck);
-  }
-  return deck;
-}
-
-function createStorage() {
-  if (typeof localStorage === 'undefined') {
-    let values = {};
-    return { load: () => values, save: (next) => (values = next) };
-  }
-  return {
-    load: () => JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}'),
-    save: (values) => localStorage.setItem(STORAGE_KEY, JSON.stringify(values)),
-  };
-}
-
-async function connect(deck) {
-  try {
-    const { enableWebMidi } = await import('@strudel/midi');
-    const { MidiInput } = await import('@strudel/midi/input.mjs');
-    await enableWebMidi();
-
-    const input = new MidiInput(DEVICE);
-    input.onMessage((type, _chan, num, value) => deck.receive(type, num, value));
-    input.onConnectionChange((isConnected) => (isConnected ? deck.attach(input) : deck.detach()));
-  } catch (err) {
-    logger(`[linectrl] ${DEVICE} unavailable, controls play stored values: ${err.message}`, 'warning');
-  }
-}
+import { signal } from '@strudel/core';
+import { deck } from './rig.mjs';
 
 function assertMidiNumber(num) {
   if (!Number.isInteger(num) || num < 0 || num > 127) {
@@ -53,7 +12,7 @@ function controlPattern(kind, addr, align) {
   if (!(align >= 0)) {
     throw new Error(`[linectrl] expected alignment in cycles >= 0, got ${align}`);
   }
-  const read = getDeck().control(kind, addr, align);
+  const read = deck.control(kind, addr, align);
   return signal((t) => read(Number(t)));
 }
 
