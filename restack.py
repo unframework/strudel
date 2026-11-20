@@ -3,10 +3,15 @@
 
 Usage:
     python3 restack.py              # fresh restack (creates tmp/YYYYMMDD/)
+    python3 restack.py --base <ref> # fresh restack onto a pinned upstream commit
     python3 restack.py <prefix>     # resume after conflict
     python3 restack.py <prefix> --apply  # reset real branches and force-push
+
+Branches already sitting on their replay base, and merges whose parents
+already exist on origin, are reused as-is so unchanged layers keep their SHAs.
 """
 
+import argparse
 import atexit
 import subprocess
 import sys
@@ -175,7 +180,7 @@ atexit.register(cleanup_worktree)
 # Core operations
 # ---------------------------------------------------------------------------
 
-def find_fork_info(branch):
+def find_fork_info(branch, root_sha):
     """Auto-detect the fork point for a branch by scanning its history.
 
     Walks up to 50 commits back from origin/<branch> looking for:
@@ -208,6 +213,7 @@ def find_fork_info(branch):
         )
         if r.returncode == 0:
             tips[r.stdout.strip()] = "main"
+    tips[root_sha] = "main"
 
     # Walk the branch log
     log_output = git("log", "--format=%H %P", "-50", f"origin/{branch}")
@@ -235,10 +241,7 @@ def find_fork_info(branch):
         if len(parent_shas) > 1:
             return None, commit_sha
 
-    # Fallback: merge-base with upstream
-    upstream_ref = f"{UPSTREAM_REMOTE}/{UPSTREAM_BRANCH}"
-    mb = git("merge-base", f"origin/{branch}", upstream_ref)
-    return "main", mb
+    return "main", git("merge-base", f"origin/{branch}", root_sha)
 
 
 def get_unique_commits(branch, fork_sha):
@@ -280,12 +283,26 @@ def do_cherry_pick(wt, branch, commits, base_sha, prefix):
     return result_sha
 
 
-def do_merge(wt, merge_sha, head_sha, message):
+def existing_merges():
+    """Map (first parent, second parent) -> merge SHA for merges on origin."""
+    out = git("rev-list", "--merges", "--parents", "--remotes=origin")
+    merges = {}
+    for line in out.split("\n"):
+        sha, *parents = line.split()
+        merges[tuple(parents)] = sha
+    return merges
+
+
+def do_merge(wt, merge_sha, head_sha, message, merges):
     """Merge merge_sha into head_sha, return new head."""
     if mb := git("merge-base", head_sha, merge_sha):
         if mb == merge_sha:
             # Already contained, nothing to do
             return head_sha
+
+    if reused := merges.get((head_sha, merge_sha)):
+        print(f"  MERGE REUSED: {short_sha(reused)}")
+        return reused
 
     # Real merge
     git_wt(wt, "checkout", "--detach", head_sha)
@@ -337,13 +354,16 @@ def apply_branches(prefix):
 
 
 def main():
-    # Parse args
-    apply_mode = "--apply" in sys.argv
-    args = [a for a in sys.argv[1:] if a != "--apply"]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("prefix", nargs="?")
+    parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--base", default=f"{UPSTREAM_REMOTE}/{UPSTREAM_BRANCH}")
+    args = parser.parse_args()
+    apply_mode = args.apply
 
     resuming = False
-    if args:
-        prefix = args[0]
+    if args.prefix:
+        prefix = args.prefix
         resuming = True
         if apply_mode:
             print(f"Applying restacked branches from {prefix}\n")
@@ -366,10 +386,13 @@ def main():
     print()
     preflight(resuming=resuming)
 
-    # Store upstream/main snapshot
-    upstream_sha = resolve(f"{UPSTREAM_REMOTE}/{UPSTREAM_BRANCH}")
-    git("branch", "-f", f"{prefix}/main", upstream_sha)
-    print(f"upstream/main: {short_sha(upstream_sha)}")
+    if resuming and ref_exists(f"{prefix}/main"):
+        upstream_sha = resolve(f"{prefix}/main")
+    else:
+        upstream_sha = resolve(args.base)
+        git("branch", "-f", f"{prefix}/main", upstream_sha)
+    print(f"base: {short_sha(upstream_sha)}")
+    merges = existing_merges()
 
     # Setup worktree
     wt = setup_worktree(upstream_sha)
@@ -413,10 +436,14 @@ def main():
                 continue
 
             ref_name = f"{prefix}/{branch}"
-            if not ref_exists(ref_name):
-
-                # Auto-detect fork point by scanning branch history
-                parent_branch, fork_sha = find_fork_info(branch)
+            parent_branch, fork_sha = find_fork_info(branch, upstream_sha)
+            if ref_exists(ref_name):
+                print(f"\n>> {branch} (skipping rebase, {ref_name} already mergeable)")
+                result_sha = resolve(ref_name)
+            elif fork_sha == base_sha:
+                print(f"\n>> {branch} (already on base @ {short_sha(base_sha)})")
+                result_sha = resolve(f"origin/{branch}")
+            else:
                 fork_desc = parent_branch or "merge"
                 print(f"\n>> {branch} (fork: {fork_desc} @ {short_sha(fork_sha)})")
 
@@ -427,12 +454,9 @@ def main():
                 result_sha = do_cherry_pick(wt, branch, commits, base_sha, prefix)
                 if result_sha is None:
                     fail_conflict(branch, fork_sha, base_ref())
-            else:
-                print(f"\n>> {branch} (skipping rebase, {ref_name} already mergeable)")
-                result_sha = resolve(ref_name)
 
             # Merge into running head
-            head_sha = do_merge(wt, result_sha, head_sha, f"restack: merge {branch}")
+            head_sha = do_merge(wt, result_sha, head_sha, f"restack: merge {branch}", merges)
             if head_sha is None:
                 fail_conflict(branch, fork_sha, base_ref())
 
