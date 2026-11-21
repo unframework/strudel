@@ -5,6 +5,7 @@ import { VisScene } from './vis-scene.mjs';
 
 const PORT = Number(process.env.VIS_PORT ?? DEFAULT_VIS_PORT);
 const FRAME_MS = 33;
+const TRAFFIC_WINDOW_MS = 1000;
 const TAB = '  ';
 
 const ansi = {
@@ -18,9 +19,29 @@ const ansi = {
   reset: '\x1b[0m',
 };
 
+class TrafficMeter {
+  #datagrams = [];
+  #peakBytesPerSecond = 0;
+
+  add(bytes, timeMs) {
+    this.#datagrams.push({ bytes, timeMs });
+  }
+
+  read(timeMs) {
+    this.#datagrams = this.#datagrams.filter((datagram) => datagram.timeMs > timeMs - TRAFFIC_WINDOW_MS);
+    const bytesPerSecond = this.#datagrams.reduce((sum, { bytes }) => sum + bytes, 0);
+    this.#peakBytesPerSecond = Math.max(this.#peakBytesPerSecond, bytesPerSecond);
+    return { datagramsPerSecond: this.#datagrams.length, bytesPerSecond, peakBytesPerSecond: this.#peakBytesPerSecond };
+  }
+}
+
+const kb = (bytes) => `${(bytes / 1024).toFixed(1)} KB/s`;
+
 const scene = new VisScene();
+const traffic = new TrafficMeter();
 
 const udp = new osc.UDPPort({ localAddress: '0.0.0.0', localPort: PORT, metadata: false });
+udp.on('raw', (data) => traffic.add(data.length, Date.now()));
 udp.on('message', (message, timeTag) => scene.receive(message.address, message.args, timeTag?.native ?? Date.now()));
 udp.on('error', (err) => process.stderr.write(`vis-tty: ${err.message}\n`));
 udp.open();
@@ -65,9 +86,11 @@ let lastFrame = '';
 function draw() {
   const { columns, rows } = process.stdout;
   const current = scene.current;
+  const { datagramsPerSecond, bytesPerSecond, peakBytesPerSecond } = traffic.read(Date.now());
+  const rates = `${datagramsPerSecond} msg/s · ${kb(bytesPerSecond)} · peak ${kb(peakBytesPerSecond)}`;
   const status = current
-    ? `vis-tty :${PORT} · eval ${current.evalId} · ${current.locations.length} locations`
-    : `vis-tty :${PORT} · waiting for source`;
+    ? `vis-tty :${PORT} · eval ${current.evalId} · ${current.locations.length} locations · ${rates}`
+    : `vis-tty :${PORT} · waiting for source · ${rates}`;
   const body = current
     ? renderSource(current.source, litMask(current.source.length, scene.activeRanges(Date.now())), columns, rows - 1)
     : [];
