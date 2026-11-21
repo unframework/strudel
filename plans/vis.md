@@ -51,7 +51,9 @@ Measured by evaluating each sketch headlessly and querying 32 cycles of haps (on
 | locations as an OSC int list | 0.9 KB/s | 2.4 KB/s |
 | locations as packed binary (u16 indices) | 0.5 KB/s | 1.3 KB/s |
 
-Bandwidth isn't a concern on a LAN. Even sending everything as JSON stays near 10 KB/s, against 100 Mbit/s ≈ 12 MB/s. It only matters on a serial link like the TTY one, where 115200 baud is about 11.5 KB/s and JSON locations at peak would saturate it. Indices fit easily there.
+Bandwidth isn't a concern on a LAN. Even sending everything as JSON stays near 10 KB/s, against 100 Mbit/s ≈ 12 MB/s.
+
+Measured live with the built feed (`vis-tty` status line, OSC payload bytes): typical sketches send 1–2 KB/s. A busy one sends 80–90 events/s at about 9 KB/s, peaking near 15 KB/s when the source is sent on eval. That's about 100 bytes per event, well above the int-list estimate, because each event is its own bundle with a timetag, the `/vis/hl` address, a string `evalId` and float args. Stacking several busy sketches for a show is still a few tens of KB/s and a few hundred packets/s, which is fine. If it ever matters, batch each scheduler tick's events into one bundle and shorten the `evalId`.
 
 ### Open problems
 
