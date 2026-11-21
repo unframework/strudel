@@ -47,3 +47,13 @@ all(osc)
 [open in repl](https://strudel.cc/#JDogcygiYmQqNCIpCgphbGwob3NjKQ%3D%3D)
 
 You can read more about [how to use Superdirt with Strudel](https://strudel.cc/learn/input-output/#oscsuperdirtstrudeldirt) in  the tutorial.
+
+## Visualizer feed
+
+The REPL can send the sketch source and the code ranges that are currently sounding to a visualizer, as OSC through the same bridge. To try it with the terminal reference visualizer:
+
+```sh
+pnpm vis-tty # listens on UDP 57140, or set VIS_PORT
+```
+
+Then in the REPL settings, under Visualizer, check "Send source and highlights". The address defaults to `127.0.0.1:57140`; a custom `host:port` is resolved by the bridge, so give the visualizer's address as seen from the bridge's machine.
