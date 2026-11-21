@@ -511,6 +511,30 @@ importers:
         specifier: ^8.18.3
         version: 8.18.3
     devDependencies:
+      '@strudel/dirt-patches':
+        specifier: workspace:*
+        version: link:../dirt-patches
+      '@strudel/draw':
+        specifier: workspace:*
+        version: link:../draw
+      '@strudel/edo':
+        specifier: workspace:*
+        version: link:../edo
+      '@strudel/linectrl':
+        specifier: workspace:*
+        version: link:../linectrl
+      '@strudel/mini':
+        specifier: workspace:*
+        version: link:../mini
+      '@strudel/tonal':
+        specifier: workspace:*
+        version: link:../tonal
+      '@strudel/transpiler':
+        specifier: workspace:*
+        version: link:../transpiler
+      '@strudel/xen':
+        specifier: workspace:*
+        version: link:../xen
       pkg:
         specifier: ^5.8.1
         version: 5.8.1(encoding@0.1.13)(supports-color@7.2.0)

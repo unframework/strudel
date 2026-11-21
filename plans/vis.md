@@ -1,6 +1,6 @@
 # Visualizer data feeds
 
-Branch: `nm/vis`. Status: the source and highlight feed and a terminal reference visualizer are built. Other feeds and a real visualizer host are not started.
+Branch: `nm/vis`. Status: the source and highlight feed, a terminal reference visualizer and a headless feed generator are built. Other feeds and a real visualizer host are not started.
 
 ## Intent
 
@@ -74,9 +74,8 @@ A bare-bones reference visualizer tests the source and highlight feeds without e
 - `packages/osc/vis.mjs`: the REPL side. The website publishes each eval's full buffer and `miniLocations` from `afterEval`, and installs a non-dominant `onTrigger` on every pattern through the REPL's `editPattern` option, so haps are seen whichever output plays them. Frames go out through the same bridge connection as `.osc()`, with the visualizer's `host`/`port` and the same timetag clock.
 - `packages/osc/vis-scene.mjs`: receiver state (current eval, timed highlights), separate from the terminal rendering in `vis-tty.mjs`.
 
-### Next: headless feed generator
-
-A `pnpm vis-feed sketch.js [host:port]` command would evaluate a sketch headlessly and query its haps on a simulated clock, the same way the bandwidth figures were measured. It would then send the real feed through `vis-protocol.mjs` and `hapLocationIndices`, with no browser, bridge or engine involved. This gives visualizer development a feed that runs indefinitely, has real per-hap locations, and keeps up with protocol changes. Recording and replaying a live feed (as a relay that rewrites bundle timetags on replay) would complement it for capturing real sessions.
+- `packages/osc/vis-feed.mjs`: headless feed generator. `pnpm vis-feed sketch.js [host:port]` runs the sketch through core's `repl()` and `Cyclist` on Node's clock, with the website's Node-loadable modules in scope and output-only calls stubbed out, and sends the feed over UDP with no browser, bridge or engine involved. It re-evaluates when the file changes, so it also exercises the switch between evals. Heavy sketches skip a few scheduler ticks while starting up and then run on time.
+- Next: record and replay a live feed (a relay that rewrites bundle timetags on replay) to capture real sessions.
 
 ## Other feeds
 

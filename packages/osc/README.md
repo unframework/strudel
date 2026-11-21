@@ -57,3 +57,11 @@ pnpm vis-tty # listens on UDP 57140, or set VIS_PORT
 ```
 
 Then in the REPL settings, under Visualizer, check "Send source and highlights". The address defaults to `127.0.0.1:57140`; a custom `host:port` is resolved by the bridge, so give the visualizer's address as seen from the bridge's machine.
+
+To get a feed without a browser or bridge, play a sketch headlessly:
+
+```sh
+pnpm vis-feed sketch.js [host:port] # defaults to 127.0.0.1:57140
+```
+
+It evaluates the sketch with the REPL's scheduler in Node, sends the source, locations and timetagged highlights straight over UDP, and re-evaluates whenever the file changes. Audio and drawing calls are no-ops, and packages that only load in a browser (webaudio, soundfonts, hydra, etc.) are not available.

@@ -12,6 +12,7 @@
     "test": "vitest run",
     "server": "node server.js",
     "vis-tty": "node vis-tty.mjs",
+    "vis-feed": "node vis-feed.mjs",
     "tidal-sniffer": "node tidal-sniffer.js",
     "client": "npx serve -p 4321",
     "build-bin": "npx pkg server.js --targets node16-macos-x64,node16-win-x64,node16-linux-x64 --out-path bin",
@@ -44,6 +45,14 @@
     "ws": "^8.18.3"
   },
   "devDependencies": {
+    "@strudel/dirt-patches": "workspace:*",
+    "@strudel/draw": "workspace:*",
+    "@strudel/edo": "workspace:*",
+    "@strudel/linectrl": "workspace:*",
+    "@strudel/mini": "workspace:*",
+    "@strudel/tonal": "workspace:*",
+    "@strudel/transpiler": "workspace:*",
+    "@strudel/xen": "workspace:*",
     "pkg": "^5.8.1",
     "vite": "^6.0.11",
     "vitest": "^3.0.4"

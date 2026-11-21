@@ -1,38 +1,18 @@
 import { oscTimestamp, sendOscFrame } from './osc.mjs';
-import { DEFAULT_VIS_PORT, evalMessages, highlightMessage } from './vis-protocol.mjs';
-
-const RESEND_SECONDS = 30;
-
-export const DEFAULT_VIS_TARGET = `127.0.0.1:${DEFAULT_VIS_PORT}`;
+import {
+  createVisEval,
+  DEFAULT_VIS_TARGET,
+  evalMessages,
+  hapLocationIndices,
+  highlightMessage,
+  parseVisTarget,
+  RESEND_SECONDS,
+} from './vis-protocol.mjs';
 
 let target = parseVisTarget(DEFAULT_VIS_TARGET); // as seen from the bridge
 let isSourceFeedEnabled = false;
 let published = null;
 let resendTimer;
-
-export function parseVisTarget(text) {
-  const [host, port = String(DEFAULT_VIS_PORT)] = text.split(':');
-  if (!host || !/^\d+$/.test(port)) throw new Error(`[vis] expected host:port, got "${text}"`);
-  return { host, port: Number(port) };
-}
-
-export function createVisEval(source, miniLocations) {
-  const locations = miniLocations.map(([start, end]) => [start, end]);
-  return {
-    evalId: Math.random().toString(36).slice(2, 10),
-    source,
-    locations,
-    indexOf: new Map(locations.map(([start, end], index) => [`${start}:${end}`, index])),
-  };
-}
-
-export const hapLocationIndices = (visEval, hap) => [
-  ...new Set(
-    (hap.context.locations ?? [])
-      .map(({ start, end }) => visEval.indexOf.get(`${start}:${end}`))
-      .filter((index) => index !== undefined),
-  ),
-];
 
 const toTarget = (message) => ({ ...message, ...target });
 

@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Hap, TimeSpan } from '@strudel/core';
-import { evalMessages, highlightMessage } from '../vis-protocol.mjs';
+import { createVisEval, evalMessages, hapLocationIndices, highlightMessage, parseVisTarget } from '../vis-protocol.mjs';
 import { VisScene } from '../vis-scene.mjs';
-import { createVisEval, hapLocationIndices, parseVisTarget } from '../vis.mjs';
 
 const source = 'note("c e g").s("sine")\n'.repeat(100);
 const locations = Array.from({ length: 300 }, (_, i) => [i, i + 2]);

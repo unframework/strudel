@@ -11,7 +11,7 @@ import { ActionButton } from '../button/action-button.jsx';
 import { exportScript, ImportPrebakeScriptButton } from './ImportPrebakeScriptButton.jsx';
 import { useEffect, useRef, useState } from 'react';
 import { DEFAULT_OSC_URL } from '@strudel/osc';
-import { DEFAULT_VIS_TARGET } from '@strudel/osc/vis.mjs';
+import { DEFAULT_VIS_TARGET } from '@strudel/osc/vis-protocol.mjs';
 import cx from '@src/cx.mjs';
 
 const inputClass =

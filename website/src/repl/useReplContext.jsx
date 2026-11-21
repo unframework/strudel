@@ -35,14 +35,8 @@ import {
 } from '../user_pattern_utils.mjs';
 import { superdirtOutput } from '@strudel/osc/superdirtoutput';
 import { DEFAULT_OSC_URL, setOscUrl } from '@strudel/osc';
-import {
-  DEFAULT_VIS_TARGET,
-  parseVisTarget,
-  publishVisEval,
-  setVisSourceFeed,
-  setVisTarget,
-  withVisTrigger,
-} from '@strudel/osc/vis.mjs';
+import { publishVisEval, setVisSourceFeed, setVisTarget, withVisTrigger } from '@strudel/osc/vis.mjs';
+import { DEFAULT_VIS_TARGET, parseVisTarget } from '@strudel/osc/vis-protocol.mjs';
 import { audioEngineTargets } from '../settings.mjs';
 import { useStore } from '@nanostores/react';
 import { prebake } from './prebake.mjs';
