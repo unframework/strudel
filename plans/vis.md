@@ -74,6 +74,10 @@ A bare-bones reference visualizer tests the source and highlight feeds without e
 - `packages/osc/vis.mjs`: the REPL side. The website publishes each eval's full buffer and `miniLocations` from `afterEval`, and installs a non-dominant `onTrigger` on every pattern through the REPL's `editPattern` option, so haps are seen whichever output plays them. Frames go out through the same bridge connection as `.osc()`, with the visualizer's `host`/`port` and the same timetag clock.
 - `packages/osc/vis-scene.mjs`: receiver state (current eval, timed highlights), separate from the terminal rendering in `vis-tty.mjs`.
 
+### Next: headless feed generator
+
+A `pnpm vis-feed sketch.js [host:port]` command would evaluate a sketch headlessly and query its haps on a simulated clock, the same way the bandwidth figures were measured. It would then send the real feed through `vis-protocol.mjs` and `hapLocationIndices`, with no browser, bridge or engine involved. This gives visualizer development a feed that runs indefinitely, has real per-hap locations, and keeps up with protocol changes. Recording and replaying a live feed (as a relay that rewrites bundle timetags on replay) would complement it for capturing real sessions.
+
 ## Other feeds
 
 Candidates, not yet designed. The source and highlight feed needs low-level wiring into evaluation and hap triggers, but sketch-driven feeds like these would go through a separate pattern helper that sends chosen values to a `/vis/` address.
