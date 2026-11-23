@@ -1,6 +1,6 @@
 # Visualizer data feeds
 
-Branch: `nm/vis`. Status: the source and highlight feed, a terminal reference visualizer and a headless feed generator are built. Other feeds and a real visualizer host are not started.
+Branch: `nm/vis`. Status: the source and highlight feed, a terminal reference visualizer and a headless feed generator are built. The signal plot feed is designed but not built. Other feeds are not started.
 
 ## Intent
 
@@ -61,6 +61,36 @@ Measured live with the built feed (`vis-tty` status line, OSC payload bytes): ty
 - **Per-block evaluation:** `$:` blocks may be evaluated with a range offset (label-block handling in `core/repl.mjs`). Check that locations stay in full-document coordinates, or send the block offset along with them.
 - **Edits between evals:** the editor maps decorations through edits, but the visualizer only knows the evaluated source. That's probably right (it shows what is playing, not what is being typed), but decide whether it should also mirror unevaluated edits.
 - **Non-mini highlights:** signal-driven values (`perlin`, `sine`) never light up. Decide whether the visualizer wants their call sites highlighted with a continuous intensity, which would be a separate feed sampling the signals.
+
+## Feed: signal plots
+
+The editor's `_plot` and `_plot1` widgets draw a pattern's value over a window of cycles around the playhead (`draw/plot.mjs`). The visualizer shows the same signals as small bar graphs, docked to the screen edges and joined by a callout line to where the source declares them. It only looks back: it draws the samples it has received so far and never extrapolates, so the REPL only has to stream the present value of each plot.
+
+### What gets collected
+
+- Only the inline widgets `_plot` and `_plot1` take part, since they have a place in the source. The background `.plot()` doesn't.
+- The transpiler already records each widget call in `meta.widgets` with its `from`/`to` source span and id, and passes the id into the call. The span covers the whole call chain, so the visualizer anchors at `to`, the end of the `._plot(...)` call on the line that declares it.
+- The options that matter (`min`, `max`, `cycles`, `playhead`, `key`) only exist at runtime, when `plot()` runs. So `plot()` also records `{ id, pattern, options }` in a small registry in `@strudel/draw`, cleared on each eval, and the vis module joins it with `meta.widgets` by id after the eval.
+- The headless `vis-feed` has no editor widgets, so it registers `_plot` and `_plot1` as widget types itself (so the transpiler still passes ids) with DOM-free methods that only record into the registry.
+
+### Sampling
+
+- The vis module samples each recorded plot on its own clock, like the editor's plot does, rather than at hap onsets. That shows the signal between notes too, and works for plots of sub-patterns that aren't played directly (`const lfo = sine.slow(4)._plot()`, used later in `.lpf(...)`).
+- Samples are taken at a fixed step in cycles (e.g. 16 per cycle), and are reduced to one number per series with `plotValue()`, so `key`, note names and booleans behave as in the editor. Stacked patterns give one series each.
+- A sample describes the cycle it was taken at, so it goes out in a timetagged bundle for the time that cycle sounds, like the highlights. That needs a cycle-to-time mapping in the vis module. The scheduler has one internally, and each trigger also carries one (`hap.whole.begin`, `targetTime`, `cps`).
+
+### Messages
+
+1. **Plot table:** `/vis/plots evalId index count [end min max lookback] …`, chunked and sent with the source and locations, and needed before an eval counts as complete. `end` is the widget's `to` offset. `min` and `max` are NaN unless the plot sets them (`_plot1` sets 0 and 1), and then the visualizer fits the range itself. `lookback` is how many cycles to keep, `cycles × playhead`, which is 8 for the editor's defaults.
+2. **Per sample:** `/vis/plot evalId plotIndex cycle value value …` in a timetagged bundle, with one value per series and NaN for a gap. The cycle lets the visualizer draw cycle marks and spot dropped samples.
+
+At 16 samples per cycle and 0.5 cps, a plot sends 8 messages/s, so even several plots add little to the highlight traffic. Samples could be batched per scheduler tick if needed.
+
+### Open problems
+
+- **History across evals:** a re-eval gives every plot a new `evalId` and index. The visualizer should carry a plot's history over when the new plot's expression (or its stanza) matches an old one, rather than emptying every graph on each edit.
+- **Sampling clock:** decide between borrowing the scheduler's own cycle-to-time state and deriving it from triggers. Triggers stop when nothing sounds, while plots should keep going.
+- **External input:** the editor resamples upcoming values when MIDI or other input changes them. Sampling only the present avoids that entirely.
 
 ## Visualizer host
 
