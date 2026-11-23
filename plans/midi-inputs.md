@@ -97,7 +97,6 @@ The deck used to need sketch-specific registrations: RADIO groups and PUSH butto
 
 ### Option B: state lives in the editor text (not taken)
 
-
 Like the `.c()` cue ids, the state is written into the code itself: `IN(12, 0.43)`, `BIN(36, 1)`, `RADIO([16, 17, 18], 2)`, with no hidden storage.
 
 - Addresses and state must be literals, so everything is known from the syntax tree without evaluation. Variables are not supported, which covers nearly all real use and keeps it simple.
@@ -112,6 +111,18 @@ Like the `.c()` cue ids, the state is written into the code itself: `IN(12, 0.43
   - Evaluating mid-stream reads the text as it was, so the live value must win over a stale literal at eval when they differ.
   - Two calls with the same number (`BIN(36)` twice) both have to be updated on a press.
   - Saved and shared sketches (URL hash, database) carry control values, which may or may not be wanted.
+
+## Alignments declared by evaluation
+
+Blinking currently depends on which alignments the playing sketch queried within the last cycle, so a removed `BIN(36, 4)` keeps a button blinking for up to a cycle. Instead, each evaluation declares the alignments it uses.
+
+- Readers stay stateless over the log: any `BIN(1, 4)`, old or freshly evaluated, reads the press stamp with its own alignment, so it returns the old value until the 4-bar boundary. Re-evaluating mid-wait keeps the original boundary, and an identical copy of the call elsewhere behaves the same.
+- `deck.reader(...)` called during an evaluation adds its (note, align) to that evaluation's set, and a successful evaluation replaces the previous set as a whole. Collected at runtime, so computed alignments (`BIN(1, a)`) count too. The set holds while the transport is stopped, until the next evaluation.
+- A button is pending while any declared alignment for it has not yet heard the latest change. Pruning keeps history back to the longest declared alignment, so an alignment that a re-evaluation newly lengthens can find older history gone, which is acceptable.
+- Bookkeeping and rendering split: the deck keeps the logs and the declared set and answers `value` and `isPending(note, now)`, while a lights layer owns the output, the refresh timer, the sent-velocity cache and the beat pulse, and asks the deck for each note's state.
+- Evaluation is the only source; the editor syntax tree does not declare anything. Between evaluations the hardware may behave slightly out of step with the code, which is fine.
+- Block-based evaluation (`evaluateBlock`) re-runs only some blocks, so replacing the whole set would drop the others' alignments. Not used for now; a per-label set fixes it later.
+- RADIO could return later as another evaluation-declared kind, replaced the same way: a rule that turns the group's other toggles off at the press stamp, so aligned readers hear the swap on one boundary, and conflicting groups only ever clear toggles.
 
 ## Later
 
