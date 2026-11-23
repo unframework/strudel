@@ -161,10 +161,14 @@ export default defineConfig({
   ],
   site,
   base,
+  server: {
+    // honour PORT (e.g. from portless); astro doesn't read it on its own
+    port: Number(process.env.PORT) || 4321,
+  },
   vite: {
     plugins: [bundleAudioWorkletPlugin()],
     server: {
-      allowedHosts: ['sandy.tail3cc64b.ts.net'],
+      allowedHosts: ['sandy.tail3cc64b.ts.net', '.dev.unframework.net'],
     },
     ssr: {
       // Example: Force a broken package to skip SSR processing, if needed
