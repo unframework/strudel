@@ -14,14 +14,14 @@ Seeing and fixing the controller's state should not need the console: whether it
 
 ```js
 $: s("bd*4").gain(IN(12))                  // knob/fader CC 12, 0..1
-$: s("hh*8").mask(BTN(36, 1))              // toggle, switches on the next bar
+$: s("hh*8").mask(BIN(36, 1))              // toggle, switches on the next bar
 ```
 
-- `IN(cc, align)` and `BTN(note, align)` are globals from `@strudel/linectrl`. `align` is in cycles, 0 for immediate.
+- `IN(cc, align)` and `BIN(note, align)` are globals from `@strudel/linectrl`. `align` is in cycles, 0 for immediate.
 - `Deck` (`linectrl/controls/deck.mjs`) is one shared object for the whole page, created in `linectrl/controls/rig.mjs` together with the controller session. It mirrors the device regardless of code: each incoming CC records its value under `cc:12`, each note-on flips a toggle under `note:36`. It holds one `ControlLog` per key and saves each log's latest value to localStorage (`linectrl-controls`), so nothing needs registering before a control follows the device.
 - `ControlLog` records value changes stamped in cycles and applies alignment when read, so the same knob can be heard immediately by one reader and on the next half-bar by another. Old events are pruned into the base value.
 - Changes made while the transport is stopped apply immediately. Starting or stopping the transport makes pending changes take effect at once, since cycle numbers restart.
-- LEDs: every note toggle on the channel is lit from its latest value, including ones no sketch reads. While the transport runs, a light pulses on the beat as long as any reader still has the change pending (`lights.mjs`). Readers count as in use while the sketch keeps querying them (within the last cycle), so removing `BTN(36, 4)` from the code drops its alignment without an evaluation hook. `refresh()` runs every 20 ms while attached and only sends note messages when a velocity changes.
+- LEDs: every note toggle on the channel is lit from its latest value, including ones no sketch reads. While the transport runs, a light pulses on the beat as long as any reader still has the change pending (`lights.mjs`). Readers count as in use while the sketch keeps querying them (within the last cycle), so removing `BIN(36, 4)` from the code drops its alignment without an evaluation hook. `refresh()` runs every 20 ms while attached and only sends note messages when a velocity changes.
 - On connect, `attach(input)` sends the stored knob and fader positions to the device (for encoders and motorized faders) and starts the light refresh. `detach()` stops it.
 - The device comes from the website's `controllerInput` setting (see below). The channel is a constant in `rig.mjs` (`CHANNEL = 1`).
 
@@ -78,9 +78,9 @@ The controller popover shows the last 50 incoming messages (channel, cc/note on/
 
 ## MIDI learn in the editor (done)
 
-Each `IN(…)` and `BTN(…)` call gets a small inline widget right after it, showing the control's current value (`0.43`, `on`/`off`) and a learn dot.
+Each `IN(…)` and `BIN(…)` call gets a small inline widget right after it, showing the control's current value (`0.43`, `on`/`off`) and a learn dot.
 
-- Clicking the dot arms it (it blinks red), and the next CC (for `IN`) or note-on (for `BTN`) from the controller is written into the call, replacing or filling the first argument. Clicking again or pressing Escape in the editor cancels.
+- Clicking the dot arms it (it blinks red), and the next CC (for `IN`) or note-on (for `BIN`) from the controller is written into the call, replacing or filling the first argument. Clicking again or pressing Escape in the editor cancels.
 - One learner at a time: arming another widget disarms the previous one. The learned message still reaches the deck.
 - The code is edited but not evaluated, like any other edit.
 - Widgets come from the syntax tree as you type, not from evaluation, so `IN()` can be learned before it ever ran. Calls whose addresses are not number literals (`IN(cc)`) get no widget.
@@ -89,7 +89,7 @@ Each `IN(…)` and `BTN(…)` call gets a small inline widget right after it, sh
 
 ## Simplifying control state (done)
 
-The deck used to need sketch-specific registrations: RADIO groups and PUSH buttons had to be registered by evaluation before the deck knew how to apply a message and which lights they owned. Option A was chosen: the deck mirrors the device, with only `IN` (CC value) and `BTN` (note toggle) as primitives.
+The deck used to need sketch-specific registrations: RADIO groups and PUSH buttons had to be registered by evaluation before the deck knew how to apply a message and which lights they owned. Option A was chosen: the deck mirrors the device, with only `IN` (CC value) and `BIN` (note toggle) as primitives.
 
 - RADIO and PUSH are gone, along with `Deck.watch` and the light registry. Exclusive groups and momentary holds have no replacement yet; PUSH could come back as a read of whether a note is held.
 - Stored keys moved from `in:`/`btn:` to `cc:`/`note:` without migration, so old values are dropped on first save.
@@ -98,7 +98,7 @@ The deck used to need sketch-specific registrations: RADIO groups and PUSH butto
 ### Option B: state lives in the editor text (not taken)
 
 
-Like the `.c()` cue ids, the state is written into the code itself: `IN(12, 0.43)`, `BTN(36, 1)`, `RADIO([16, 17, 18], 2)`, with no hidden storage.
+Like the `.c()` cue ids, the state is written into the code itself: `IN(12, 0.43)`, `BIN(36, 1)`, `RADIO([16, 17, 18], 2)`, with no hidden storage.
 
 - Addresses and state must be literals, so everything is known from the syntax tree without evaluation. Variables are not supported, which covers nearly all real use and keeps it simple.
 - Incoming MIDI updates the literal in the text; at runtime the sketch reads a live in-memory value seeded from the literal at evaluation, the same split as the existing `slider()` (`sliderWithID`: code → state at eval, state at query time, the widget writes the text).
@@ -110,21 +110,21 @@ Like the `.c()` cue ids, the state is written into the code itself: `IN(12, 0.43
   - The REPL marks the code dirty whenever text differs from the evaluated code (`isDirty` in `core/repl.mjs`), so every knob move would look like an unevaluated edit unless control literals are excluded from that comparison.
   - MIDI edits land while the user is typing, possibly on the same line: selection mapping handles positions, but a literal under the cursor could fight the keyboard, and vim/emacs modes need checking.
   - Evaluating mid-stream reads the text as it was, so the live value must win over a stale literal at eval when they differ.
-  - Two calls with the same number (`BTN(36)` twice) both have to be updated on a press.
+  - Two calls with the same number (`BIN(36)` twice) both have to be updated on a press.
   - Saved and shared sketches (URL hash, database) carry control values, which may or may not be wanted.
 
 ## Later
 
-- A live list of controls in the controller popover (`cc:12 = 0.43`, a pending BTN change and when it lands), from a `Deck.getControls()` snapshot.
+- A live list of controls in the controller popover (`cc:12 = 0.43`, a pending BIN change and when it lands), from a `Deck.getControls()` snapshot.
 - Configurable MIDI channel, and more than one controller.
 
 ## Acceptance testing
 
 1. With the device selected in the controller popover and connected, `IN(12)` follows the fader, and the value is kept after a reload.
 2. With the device unplugged, the sketch plays the stored values. Plugging it back in restores the fader positions and lights.
-3. `BTN(36, 1)` while playing: the LED pulses on the beat until the next bar, then stays lit and the change is heard. A second press before the bar cancels it.
+3. `BIN(36, 1)` while playing: the LED pulses on the beat until the next bar, then stays lit and the change is heard. A second press before the bar cancels it.
 4. Press a button while stopped: the change applies immediately.
 5. The controller chip shows waiting/connected as the device is unplugged and plugged in. Resync restores the faders after they were moved with the page closed.
 6. Switching the controller device in the popover detaches the old one with no duplicate messages.
 7. Type `IN()`, click its learn dot and move a fader: its CC number is written in and the widget follows the fader.
-8. With `BTN(36, 4)` playing, press the button: its LED pulses until the 4-cycle boundary. Remove the call, re-evaluate and press again: the LED switches steadily within a cycle.
+8. With `BIN(36, 4)` playing, press the button: its LED pulses until the 4-cycle boundary. Remove the call, re-evaluate and press again: the LED switches steadily within a cycle.

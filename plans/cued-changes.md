@@ -8,7 +8,7 @@ While live editing I want to change a value or a control pattern and have the ch
 
 The code holds only a stable identity for each change. On its first evaluation, a `.c()` call gets a random id written into it, and that id never changes after that. The timing state (which cycle the switch happens on) is kept in memory by the current run of the sketch, under that id. It only matters for that uninterrupted run, and is dropped once the change has happened or the transport stops. Nothing is persisted, so reloads and other tabs can't see or disturb it. The code is therefore never rewritten while it plays, so undo and redo history only ever contains edits you made yourself, plus the one-time insertion of the id.
 
-The hardware controls (`IN`/`BTN`/`RADIO` on `Deck`) keep their own value log, because a knob's position is device state rather than code state. The two features share the idea of aligning changes to boundaries, but nothing else.
+The hardware controls (`IN`/`BIN` on `Deck`) keep their own value log, because a knob's position is device state rather than code state. The two features share the idea of aligning changes to boundaries, but nothing else.
 
 ## Design
 

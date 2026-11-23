@@ -26,10 +26,10 @@ export const IN = (cc, align = 0) => controlPattern('cc', cc, align);
 /**
  * Controller toggle button, 0 or 1. Its light pulses on the beat while a change is pending.
  *
- * @name BTN
+ * @name BIN
  * @tags external_io, midi
  * @param {number} note MIDI note number of the button
  * @param {number} align cycles to align changes to, e.g. 1 for the next bar; 0 for immediate
  * @returns Pattern
  */
-export const BTN = (note, align = 0) => controlPattern('note', note, align);
+export const BIN = (note, align = 0) => controlPattern('note', note, align);

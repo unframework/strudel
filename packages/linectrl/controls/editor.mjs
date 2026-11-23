@@ -136,7 +136,7 @@ const theme = EditorView.baseTheme({
 });
 
 /**
- * Inline widgets after `IN(…)` and `BTN(…)` calls: the control's current value
+ * Inline widgets after `IN(…)` and `BIN(…)` calls: the control's current value
  * and a learn button that writes the next CC or note number from the controller into the call. Escape disarms it.
  */
 export const controlWidgets = [

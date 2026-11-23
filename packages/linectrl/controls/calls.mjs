@@ -1,13 +1,13 @@
 import { syntaxTree } from '@codemirror/language';
 
-const KINDS = { IN: 'cc', BTN: 'note' };
+const KINDS = { IN: 'cc', BIN: 'note' };
 
 export const LEARN_TYPES = { cc: 'cc', note: 'noteon' };
 
 const PUNCTUATION = new Set(['(', ')', ',', 'LineComment', 'BlockComment']);
 
 /**
- * A control call in the code whose number is a literal or not written yet, e.g. `IN(12)`, `BTN()`.
+ * A control call in the code whose number is a literal or not written yet, e.g. `IN(12)`, `BIN()`.
  * @typedef {Object} ControlCall
  * @property {'cc' | 'note'} kind
  * @property {number | null} num CC or note number, null for `IN()`

@@ -23,15 +23,15 @@ function learn(doc, num) {
 
 describe('findControlCalls', () => {
   it('reads control calls with literal numbers', () => {
-    expect(calls('s("bd").gain(IN(12)).mask(BTN(36, 1))')).toEqual([
+    expect(calls('s("bd").gain(IN(12)).mask(BIN(36, 1))')).toEqual([
       { kind: 'cc', num: 12, to: 19 },
       { kind: 'note', num: 36, to: 36 },
     ]);
-    expect(calls('BTN()')).toEqual([{ kind: 'note', num: null, to: 5 }]);
+    expect(calls('BIN()')).toEqual([{ kind: 'note', num: null, to: 5 }]);
   });
 
   it('skips calls with computed numbers or other callees', () => {
-    expect(calls('IN(cc) + BTN(1.5) + RADIO(16) + x.IN(3) + IN(12')).toEqual([]);
+    expect(calls('IN(cc) + BIN(1.5) + RADIO(16) + x.IN(3) + IN(12')).toEqual([]);
   });
 
   it('finds the call ending at a position', () => {
@@ -44,6 +44,6 @@ describe('findControlCalls', () => {
 describe('ControlCall.edit', () => {
   it('replaces or inserts the number', () => {
     expect(learn('IN(12, 0.5)', 7)).toBe('IN(7, 0.5)');
-    expect(learn('BTN()', 36)).toBe('BTN(36)');
+    expect(learn('BIN()', 36)).toBe('BIN(36)');
   });
 });
