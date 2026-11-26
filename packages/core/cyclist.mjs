@@ -84,8 +84,7 @@ export class Cyclist {
 
       haps.forEach((hap) => {
         if (hap.hasOnset()) {
-          const targetTime =
-            (hap.whole.begin - this.num_cycles_at_cps_change) / this.cps + this.seconds_at_cps_change + this.latency;
+          const targetTime = this.timeAt(hap.whole.begin);
           const duration = hap.duration / this.cps;
           // the following line is dumb and only here for backwards compatibility
           // see https://codeberg.org/uzu/strudel/pulls/1004
@@ -150,7 +149,7 @@ export class Cyclist {
         if (!hap.hasOnset()) {
           return;
         }
-        const targetTime = source.timeAt(hap.whole.begin + this.clockOffset) + this.latency;
+        const targetTime = this.timeAt(hap.whole.begin);
         const when = catchUpTime(targetTime, this.getTime(), this.clock.minLatency);
         if (when === undefined) {
           return;
@@ -194,6 +193,12 @@ export class Cyclist {
       return;
     }
     this.clock.tick?.();
+  }
+  timeAt(cycle) {
+    if (this.clockInCharge && this.clockSource) {
+      return this.clockSource.timeAt(cycle + this.clockOffset) + this.latency;
+    }
+    return (cycle - this.num_cycles_at_cps_change) / this.cps + this.seconds_at_cps_change + this.latency;
   }
   now() {
     if (!this.started) {

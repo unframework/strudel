@@ -64,4 +64,6 @@ To get a feed without a browser or bridge, play a sketch headlessly:
 pnpm vis-feed sketch.js [host:port] # defaults to 127.0.0.1:57140
 ```
 
-It evaluates the sketch with the REPL's scheduler in Node, sends the source, locations and timetagged highlights straight over UDP, and re-evaluates whenever the file changes. Audio and drawing calls are no-ops, and packages that only load in a browser (webaudio, soundfonts, hydra, etc.) are not available.
+It evaluates the sketch with the REPL's scheduler in Node, sends the source, locations, plot table, timetagged highlights and plot samples straight over UDP, and re-evaluates whenever the file changes. Audio and drawing calls are no-ops, and packages that only load in a browser (webaudio, soundfonts, hydra, etc.) are not available.
+
+Inline `._plot()` and `._plot1()` widgets in the sketch are sent along with the source feed, sampled 16 times per cycle, and `vis-tty` draws each one as a sparkline under the source, labelled with the line that declares it.

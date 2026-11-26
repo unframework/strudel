@@ -1,6 +1,6 @@
 # Visualizer data feeds
 
-Branch: `nm/vis`. Status: the source and highlight feed, a terminal reference visualizer and a headless feed generator are built. The signal plot feed is designed but not built. Other feeds are not started.
+Branch: `nm/vis`. Status: the source and highlight feed, the signal plot feed, a terminal reference visualizer and a headless feed generator are built. Other feeds are not started.
 
 ## Intent
 
@@ -15,6 +15,7 @@ This plan covers the feeds the visualizer needs. Each feed is a separate use cas
 - Timed messages go out as OSC bundles, timetagged like the engine's and sent ahead by the scheduler's lookahead. The visualizer schedules them against the timetag rather than drawing them on arrival, with the boxes NTP-synced, the same requirement as the engine.
 - Every address is under `/vis/`, with a sub-path per feed, so receivers can ignore feeds they don't draw.
 - Bridges send every number as an OSC float. That's fine for indices and offsets below 2^24, but receivers shouldn't expect ints.
+- NaN can't cross the bridge's JSON hop and arrives as an OSC nil, so receivers treat any non-number as NaN.
 - Open: many OSC tools ignore bundle timetags and act on arrival, which would make them run early by the lookahead. Test with TouchDesigner. Fixes could be a per-target just-in-time send mode, or a latency offset on the receiver.
 
 ## Feed: source code and highlights
@@ -70,14 +71,15 @@ The editor's `_plot` and `_plot1` widgets draw a pattern's value over a window o
 
 - Only the inline widgets `_plot` and `_plot1` take part, since they have a place in the source. The background `.plot()` doesn't.
 - The transpiler already records each widget call in `meta.widgets` with its `from`/`to` source span and id, and passes the id into the call. The span covers the whole call chain, so the visualizer anchors at `to`, the end of the `._plot(...)` call on the line that declares it.
-- The options that matter (`min`, `max`, `cycles`, `playhead`, `key`) only exist at runtime, when `plot()` runs. So `plot()` also records `{ id, pattern, options }` in a small registry in `@strudel/draw`, cleared on each eval, and the vis module joins it with `meta.widgets` by id after the eval.
+- The options that matter (`min`, `max`, `cycles`, `playhead`, `key`) only exist at runtime, when `plot()` runs. So `plot()` also records the pattern and those options by id in a small registry in `@strudel/draw`, and the vis module joins it with `meta.widgets` by id after the eval and forgets the rest. Pruning rather than clearing keeps the plots of `$:` blocks that weren't re-evaluated.
+- Plots are part of the source feed and follow its checkbox, since their table is part of each eval.
 - The headless `vis-feed` has no editor widgets, so it registers `_plot` and `_plot1` as widget types itself (so the transpiler still passes ids) with DOM-free methods that only record into the registry.
 
 ### Sampling
 
 - The vis module samples each recorded plot on its own clock, like the editor's plot does, rather than at hap onsets. That shows the signal between notes too, and works for plots of sub-patterns that aren't played directly (`const lfo = sine.slow(4)._plot()`, used later in `.lpf(...)`).
-- Samples are taken at a fixed step in cycles (e.g. 16 per cycle), and are reduced to one number per series with `plotValue()`, so `key`, note names and booleans behave as in the editor. Stacked patterns give one series each.
-- A sample describes the cycle it was taken at, so it goes out in a timetagged bundle for the time that cycle sounds, like the highlights. That needs a cycle-to-time mapping in the vis module. The scheduler has one internally, and each trigger also carries one (`hap.whole.begin`, `targetTime`, `cps`).
+- Samples are taken at a fixed step in cycles (16 per cycle), and are reduced to one number per series with `plotValue()`, so `key`, note names and booleans behave as in the editor. Stacked patterns give one series each.
+- A sample describes the cycle it was taken at, so it goes out in a timetagged bundle for the time that cycle sounds, like the highlights. The scheduler's own cycle-to-time mapping is exposed as `Cyclist.timeAt(cycle)`, which its hap triggers also use (internal and external clock), so samples and highlights share one timeline. A timer every 50 ms samples the grid steps up to the scheduler's latest query end (`lastEnd`), so samples go out with the same lookahead as haps and keep going while nothing sounds. A stalled timer (a throttled background tab) catches up by at most one cycle, sending late samples that the visualizer plays on arrival. `NeoCyclist` (sync mode) has no such mapping, so it sends the plot table but no samples.
 
 ### Messages
 
@@ -89,7 +91,6 @@ At 16 samples per cycle and 0.5 cps, a plot sends 8 messages/s, so even several 
 ### Open problems
 
 - **History across evals:** a re-eval gives every plot a new `evalId` and index. The visualizer should carry a plot's history over when the new plot's expression (or its stanza) matches an old one, rather than emptying every graph on each edit.
-- **Sampling clock:** decide between borrowing the scheduler's own cycle-to-time state and deriving it from triggers. Triggers stop when nothing sounds, while plots should keep going.
 - **External input:** the editor resamples upcoming values when MIDI or other input changes them. Sampling only the present avoids that entirely.
 
 ## Visualizer host
@@ -104,6 +105,7 @@ A bare-bones reference visualizer tests the source and highlight feeds without e
 - `packages/osc/vis.mjs`: the REPL side. The website publishes each eval's full buffer and `miniLocations` from `afterEval`, and installs a non-dominant `onTrigger` on every pattern through the REPL's `editPattern` option, so haps are seen whichever output plays them. Frames go out through the same bridge connection as `.osc()`, with the visualizer's `host`/`port` and the same timetag clock.
 - `packages/osc/vis-scene.mjs`: receiver state (current eval, timed highlights), separate from the terminal rendering in `vis-tty.mjs`.
 
+- `packages/osc/vis-plots.mjs`: the plot feed shared by `vis.mjs` and `vis-feed`: joins `meta.widgets` with the plots recorded in `@strudel/draw` (`keepRecordedPlots`, which also forgets plots no longer in the sketch), samples them with `plotValue()`, and steps the sample grid against the scheduler (`PlotClock`). The website passes the editor's scheduler with each eval. `vis-feed` batches all plots of one step into one bundle, while the bridge takes one message per frame. `vis-tty` draws each plot's first series as a sparkline under the source, labelled with the line of its `end` offset.
 - `packages/osc/vis-feed.mjs`: headless feed generator. `pnpm vis-feed sketch.js [host:port]` runs the sketch through core's `repl()` and `Cyclist` on Node's clock, with the website's Node-loadable modules in scope and output-only calls stubbed out, and sends the feed over UDP with no browser, bridge or engine involved. It re-evaluates when the file changes, so it also exercises the switch between evals. Heavy sketches skip a few scheduler ticks while starting up and then run on time.
 - Next: record and replay a live feed (a relay that rewrites bundle timetags on replay) to capture real sessions.
 

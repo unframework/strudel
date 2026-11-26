@@ -6,6 +6,8 @@ export const visAddress = {
   source: '/vis/src',
   locations: '/vis/locs',
   highlight: '/vis/hl',
+  plots: '/vis/plots',
+  plot: '/vis/plot',
 };
 
 export function parseVisTarget(text) {
@@ -14,12 +16,13 @@ export function parseVisTarget(text) {
   return { host, port: Number(port) };
 }
 
-export function createVisEval(source, miniLocations) {
+export function createVisEval(source, miniLocations, plots) {
   const locations = miniLocations.map(([start, end]) => [start, end]);
   return {
     evalId: Math.random().toString(36).slice(2, 10),
     source,
     locations,
+    plots,
     indexOf: new Map(locations.map(([start, end], index) => [`${start}:${end}`, index])),
   };
 }
@@ -34,6 +37,7 @@ export const hapLocationIndices = (visEval, hap) => [
 
 const SOURCE_CHUNK_CHARS = 1024;
 const LOCATIONS_PER_CHUNK = 128;
+const PLOTS_PER_CHUNK = 64;
 
 const slices = (items, size) =>
   Array.from({ length: Math.max(1, Math.ceil(items.length / size)) }, (_, i) => items.slice(i * size, (i + 1) * size));
@@ -42,7 +46,7 @@ const slices = (items, size) =>
 const chunkMessages = (address, evalId, payloads) =>
   payloads.map((payload, index) => ({ address, args: [evalId, index, payloads.length, ...payload] }));
 
-export const evalMessages = ({ evalId, source, locations }) => [
+export const evalMessages = ({ evalId, source, locations, plots }) => [
   ...chunkMessages(
     visAddress.source,
     evalId,
@@ -53,11 +57,23 @@ export const evalMessages = ({ evalId, source, locations }) => [
     evalId,
     slices(locations, LOCATIONS_PER_CHUNK).map((chunk) => chunk.flat()),
   ),
+  ...chunkMessages(
+    visAddress.plots,
+    evalId,
+    slices(plots, PLOTS_PER_CHUNK).map((chunk) =>
+      chunk.flatMap(({ end, min, max, lookback }) => [end, min ?? NaN, max ?? NaN, lookback]),
+    ),
+  ),
 ];
 
 export const highlightMessage = (evalId, durationSeconds, locationIndices) => ({
   address: visAddress.highlight,
   args: [evalId, durationSeconds, ...locationIndices],
+});
+
+export const plotSampleMessage = (evalId, plotIndex, cycle, values) => ({
+  address: visAddress.plot,
+  args: [evalId, plotIndex, cycle, ...values],
 });
 
 export class ChunkAssembly {

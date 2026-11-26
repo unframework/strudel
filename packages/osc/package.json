@@ -41,12 +41,12 @@
   "homepage": "https://codeberg.org/uzu/strudel#readme",
   "dependencies": {
     "@strudel/core": "workspace:*",
+    "@strudel/draw": "workspace:*",
     "osc": "^2.4.5",
     "ws": "^8.18.3"
   },
   "devDependencies": {
     "@strudel/dirt-patches": "workspace:*",
-    "@strudel/draw": "workspace:*",
     "@strudel/edo": "workspace:*",
     "@strudel/linectrl": "workspace:*",
     "@strudel/mini": "workspace:*",

@@ -7,6 +7,8 @@ const PORT = Number(process.env.VIS_PORT ?? DEFAULT_VIS_PORT);
 const FRAME_MS = 33;
 const TRAFFIC_WINDOW_MS = 1000;
 const TAB = '  ';
+const SPARKS = '▁▂▃▄▅▆▇█';
+const READOUT_WIDTH = 9;
 
 const ansi = {
   enterScreen: '\x1b[?1049h\x1b[?25l',
@@ -81,24 +83,52 @@ function renderSource(source, mask, columns, rows) {
   return lines;
 }
 
+const lineNumberAt = (source, offset) => source.slice(0, offset).split('\n').length;
+
+function sparkline(values, min, max) {
+  const finite = values.filter((value) => value !== null);
+  const lo = min ?? Math.min(...finite);
+  const hi = max ?? Math.max(...finite);
+  const level = (value) =>
+    hi > lo ? Math.round(((value - lo) / (hi - lo)) * (SPARKS.length - 1)) : Math.floor(SPARKS.length / 2);
+  return values
+    .map((value) => (value === null ? ' ' : SPARKS[Math.min(SPARKS.length - 1, Math.max(0, level(value)))]))
+    .join('');
+}
+
+function renderPlot(source, plot, history, columns) {
+  const label = `L${lineNumberAt(source, plot.end)} `;
+  const width = Math.max(0, columns - label.length - READOUT_WIDTH);
+  const values = history.slice(-width).map(({ values: [first = null] }) => first);
+  const latest = values.at(-1);
+  const readout = (latest == null ? '' : String(Number(latest.toPrecision(3)))).padStart(READOUT_WIDTH);
+  return `${ansi.dim}${label}${ansi.reset}${sparkline(values, plot.min, plot.max).padStart(width)}${readout}${ansi.clearLine}`;
+}
+
 let lastFrame = '';
 
 function draw() {
   const { columns, rows } = process.stdout;
   const current = scene.current;
-  const { datagramsPerSecond, bytesPerSecond, peakBytesPerSecond } = traffic.read(Date.now());
+  const nowMs = Date.now();
+  const { datagramsPerSecond, bytesPerSecond, peakBytesPerSecond } = traffic.read(nowMs);
   const rates = `${datagramsPerSecond} msg/s · ${kb(bytesPerSecond)} · peak ${kb(peakBytesPerSecond)}`;
   const status = current
-    ? `vis-tty :${PORT} · eval ${current.evalId} · ${current.locations.length} locations · ${rates}`
+    ? `vis-tty :${PORT} · eval ${current.evalId} · ${current.locations.length} locations · ${current.plots.length} plots · ${rates}`
     : `vis-tty :${PORT} · waiting for source · ${rates}`;
+  const plotLines = current
+    ? current.plots.map((plot, index) => renderPlot(current.source, plot, scene.plotHistory(index, nowMs), columns))
+    : [];
+  const sourceRows = Math.max(0, rows - 1 - plotLines.length);
   const body = current
-    ? renderSource(current.source, litMask(current.source.length, scene.activeRanges(Date.now())), columns, rows - 1)
+    ? renderSource(current.source, litMask(current.source.length, scene.activeRanges(nowMs)), columns, sourceRows)
     : [];
   const frame = [...body, ''].join('\n') + ansi.clearBelow;
+  const plotRows = plotLines.map((line, i) => `\x1b[${sourceRows + 1 + i};1H${line}`).join('');
   const statusLine = `\x1b[${rows};1H${ansi.dim}${status.slice(0, columns)}${ansi.reset}${ansi.clearLine}`;
-  if (frame + statusLine === lastFrame) return;
-  lastFrame = frame + statusLine;
-  process.stdout.write(ansi.home + frame + statusLine);
+  if (frame + plotRows + statusLine === lastFrame) return;
+  lastFrame = frame + plotRows + statusLine;
+  process.stdout.write(ansi.home + frame + plotRows + statusLine);
 }
 
 function quit() {

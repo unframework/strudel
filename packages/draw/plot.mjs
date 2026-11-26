@@ -7,6 +7,15 @@ This program is free software: you can redistribute it and/or modify it under th
 import { Pattern, Fraction, isPattern, getControlName, noteToMidi } from '@strudel/core';
 import { getTheme, getDrawContext } from './draw.mjs';
 
+const PLAYHEAD = 0.5;
+const recordedPlots = new Map();
+
+export function keepRecordedPlots(ids) {
+  const kept = new Set(ids);
+  [...recordedPlots.keys()].filter((id) => !kept.has(id)).forEach((id) => recordedPlots.delete(id));
+  return ids.filter((id) => recordedPlots.has(id)).map((id) => recordedPlots.get(id));
+}
+
 export function signalSampler(pat, step) {
   const eps = step.div(1000);
   const stepSize = step.valueOf();
@@ -127,7 +136,7 @@ export function __plot({
   time,
   sample,
   cycles,
-  playhead = 0.5,
+  playhead = PLAYHEAD,
   min,
   max,
   key,
@@ -226,6 +235,8 @@ export function __plot({
  */
 Pattern.prototype.plot = function (options = {}) {
   const { ctx = getDrawContext(), id = 1, cycles = 16, samples = 1024 } = options;
+  const { playhead = PLAYHEAD, min, max, key } = options;
+  recordedPlots.set(id, { id, pattern: this, key, min, max, lookback: cycles * playhead });
   const sample = signalSampler(this, Fraction(cycles).div(samples));
   return this.draw((_, time) => __plot({ ...options, ctx, time, cycles, sample }), { id });
 };

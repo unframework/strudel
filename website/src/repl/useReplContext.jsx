@@ -129,7 +129,12 @@ export function useReplContext() {
         // Get the full buffer content from the editor instead of just the evaluated block
         const fullBufferCode = editorRef.current?.code || code;
         setLatestCode(fullBufferCode);
-        publishVisEval(fullBufferCode, meta?.miniLocations ?? []);
+        publishVisEval(
+          fullBufferCode,
+          meta?.miniLocations ?? [],
+          meta?.widgets ?? [],
+          editorRef.current.repl.scheduler,
+        );
 
         try {
           window.location.hash = '#' + code2hash(fullBufferCode);
