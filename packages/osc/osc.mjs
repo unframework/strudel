@@ -81,6 +81,12 @@ export function parseControlsFromHap(hap, cps) {
   // speed adjustment for CPS is handled on the DSP side in superdirt and pattern side in Strudel,
   // so we need to undo the adjustment before sending the message to superdirt.
   controls.unit === 'c' && controls.speed != null && (controls.speed = controls.speed / cps);
+  // superdough reverses the buffer for negative speed, so begin and end count from the sample's end,
+  // while superdirt keeps them as forward positions; mirror them so both play the same slice.
+  if (controls.speed < 0 && (controls.begin != null || controls.end != null)) {
+    const { begin = 0, end = 1 } = controls;
+    Object.assign(controls, { begin: 1 - end, end: 1 - begin });
+  }
   const channels = controls.channels;
   channels != undefined && (controls.channels = JSON.stringify(channels));
   COLON_LIST_CONTROLS.forEach((key) => Array.isArray(controls[key]) && (controls[key] = controls[key].join(':')));

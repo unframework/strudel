@@ -42,3 +42,15 @@ describe('parseControlsFromHap duck lists', () => {
     expect(controls).toMatchObject({ duckorbit: '2:3', duckattack: '0.4:0.1', duckdepth: 1 });
   });
 });
+
+describe('parseControlsFromHap reverse slices', () => {
+  it('mirrors begin and end for negative speed', () => {
+    expect(controlsOf({ s: 'bd', speed: -1, begin: 0.25 })).toMatchObject({ begin: 0, end: 0.75 });
+    expect(controlsOf({ s: 'bd', speed: -2, begin: 0.25, end: 0.5 })).toMatchObject({ begin: 0.5, end: 0.75 });
+  });
+
+  it('leaves forward slices and unsliced reverse playback alone', () => {
+    expect(controlsOf({ s: 'bd', speed: 1, begin: 0.25 })).toMatchObject({ begin: 0.25 });
+    expect(controlsOf({ s: 'bd', speed: -1 })).not.toHaveProperty('begin');
+  });
+});
